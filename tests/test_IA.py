@@ -1,4 +1,4 @@
-from IA import Interval
+from curis.IA import Interval
 
 def test_add():
     x = Interval(0, 5)
