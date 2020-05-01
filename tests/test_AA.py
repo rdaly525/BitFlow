@@ -27,31 +27,31 @@ def test_sub():
     x = AInterval(-2.0, 6.0, eps_idx=1)
     y = AInterval(2.0, 10.0, eps_idx=2)
     z = x - y
-    #assert z == TODO
+    assert z == AInterval(-4.0, {1: 4.0, 2: -4.0})
 
 def test_mul():
     x = AInterval(-2.0, 6.0, eps_idx=1)
     y = AInterval(2.0, 10.0, eps_idx=2)
     z = x * y
-    #assert z == TODO
+    assert z == AInterval(12.0, {1: 24, 2: 8, 3: 16})
 
 def test_add_const():
     x = AInterval(0.0, 6.0, eps_idx=1)
     y = 5.0
-    z = x - y
-    #assert z == TODO
+    z = x + y
+    assert z == AInterval(8.0, {1: 3})
 
 def test_sub_const():
     x = AInterval(0.0, 6.0, eps_idx=1)
     y = 5.0
     z = x - y
-    #assert z == TODO
+    assert z == AInterval(-2.0, {1: 3})
 
 def test_mul_const():
     x = AInterval(0.0, 6.0, eps_idx=1)
     y = 5.0
     z = x * y
-    #assert z == TODO
+    assert z == AInterval(15, {1: 15})
 
 def test_paper_fig3():
     a = AInterval(-3.0, 2.0, eps_idx=1)
@@ -64,4 +64,3 @@ def test_paper_fig3():
     assert d.to_interval() == Interval(-24.0, 18.0)
     assert e.to_interval() == Interval(-19.7, 22.3)
     assert z.to_interval() == Interval(-25.7, 16.3)
-
