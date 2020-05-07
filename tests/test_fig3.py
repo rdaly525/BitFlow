@@ -13,8 +13,7 @@ def gen_fig3():
     fig3_dag = Dag(output=z, inputs=[a,b])
     return fig3_dag
 
-def test_printng():
-
+def test_printing():
     class Printer(Visitor):
         def __init__(self, dag):
             self.res = "\n"
@@ -43,4 +42,9 @@ def test_fig3_IA():
     a = Interval(0, 5)
     b = Interval(3, 8)
     assert fig3.eval(a, b) == Interval(-1, 14)
+
+def test_fig3_torch():
+    #TODO
+    fig3 = gen_fig3()
+
 
