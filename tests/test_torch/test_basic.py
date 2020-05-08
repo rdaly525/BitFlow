@@ -32,9 +32,9 @@ def test_basic():
 
     #TODO try to design a loss function so that W ends up resolving to be the non-negative solution [3ish, 2ish]
     #  Hint: You want to design a function so that:
-    #  1) When W is close to the "bad" solution, the loss is high
-    #  2) When W is close to the "good" solution, the loss is close to 0
-    #  3) When W moves away from the bad solution towards the good solution, the loss always decreases
+    #  1) When W is negative the loss is high
+    #  2) When W is positive the loss is close to 0
+    #  3) When W takes a tiny step from negative to less negative (towards positive), the loss decreases
     def compute_loss(y, target, W):
         #L2 norm squared
         return torch.sum((y-target)**2)
