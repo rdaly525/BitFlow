@@ -1,4 +1,4 @@
-from IA import Interval
+from .IA import Interval
 
 class AInterval:
     def __init__(self, arg0, arg1, *, eps_idx=None):

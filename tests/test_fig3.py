@@ -1,6 +1,6 @@
-from curis.node import Input, Constant, Dag, Add, Sub, Mul
-from curis.visitor import Visitor
-from curis.IA import Interval
+from Curis.node import Input, Constant, Dag, Add, Sub, Mul
+from Curis.visitor import Visitor
+from Curis.IA import Interval
 
 def gen_fig3():
     a = Input(name="a")
