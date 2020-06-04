@@ -37,7 +37,11 @@ def test_basic():
     #  3) When W takes a tiny step from negative to less negative (towards positive), the loss decreases
     def compute_loss(y, target, W):
         #L2 norm squared
-        return torch.sum((y-target)**2)
+        #Ross's solution
+        target_loss = 1*torch.sum((y-target)**2)
+        w_loss = 1000*torch.sum(torch.max(-W + 0.5, torch.zeros(2)))
+        loss = target_loss + w_loss
+        return loss
 
     #We want our model to always produce this target
 
@@ -53,7 +57,6 @@ def test_basic():
             opt.step()
             if t%10==0:
                 print(loss)
-
 
     def almost(x):
         return all(torch.abs(x) < 0.1)
