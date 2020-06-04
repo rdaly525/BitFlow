@@ -1,4 +1,4 @@
-from .visitor import Visited, Dag
+from DagVisitor import Visited, AbstractDag
 import abc
 import typing as tp
 
@@ -92,28 +92,12 @@ class Mul(DagNode):
         b_val = b.eval(input_values)
         return a_val + b_val
 
-class Dag:
+class Dag(AbstractDag):
     def __init__(self, output: DagNode, inputs: tp.List[DagNode]):
         self.inputs = inputs
-        self._parents = [output]
-
-    def parents(self):
-        yield from self._parents
-
-    @property
-    def num_outputs(self):
-        return self.num_parents
-
-    @property
-    def num_inputs(self):
-        return len(self.inputs)
-
-    @property
-    def num_parents(self):
-        return len(self._parents)
-
+        super().__init__(output)
 
     def eval(self, *input_values):
         assert len(input_values) == len(self.inputs)
         input_dict = {self.inputs[i]:input_values[i] for i in range(len(input_values))}
-        return self._parents[0].eval(input_dict);
+        return list(self.roots())[0].eval(input_dict);

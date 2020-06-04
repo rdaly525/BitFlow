@@ -1,5 +1,5 @@
 from Curis.node import Input, Constant, Dag, Add, Sub, Mul
-from Curis.visitor import Visitor
+from DagVisitor import Visitor
 from Curis.IA import Interval
 
 def gen_fig3():
@@ -15,9 +15,8 @@ def gen_fig3():
 
 def test_printing():
     class Printer(Visitor):
-        def __init__(self, dag):
+        def __init__(self):
             self.res = "\n"
-            super().__init__(dag)
 
         def generic_visit(self, node):
             child_names = ", ".join([str(child.name) for child in node.children()])
@@ -25,8 +24,7 @@ def test_printing():
             Visitor.generic_visit(self, node)
 
     fig3 = gen_fig3()
-    p = Printer(fig3)
-    print(p.res)
+    print(Printer().run(fig3).res)
 
 #Evaluate it in the context of simple values
 def test_fig3_integers():
