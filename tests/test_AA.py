@@ -1,5 +1,5 @@
-from AA import AInterval
-from IA import Interval
+from Curis.AA import AInterval
+from Curis.IA import Interval
 
 def test_to_string():
     #Two different wyas to construct an AInterval
