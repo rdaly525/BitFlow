@@ -13,7 +13,7 @@ setup(
         "Curis",
     ],
     install_requires=[
-        "torch"
+        "torch",
     ],
     python_requires='>=3.7'
 )
