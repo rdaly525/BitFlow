@@ -1,5 +1,5 @@
-from Curis.AA import AInterval
-from Curis.IA import Interval
+from BitFlow.AA import AInterval
+from BitFlow.IA import Interval
 
 def test_to_string():
     #Two different wyas to construct an AInterval
