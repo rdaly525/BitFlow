@@ -1,6 +1,6 @@
-from Curis.node import Input, Constant, Dag, Add, Sub, Mul
+from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul
 from DagVisitor import Visitor
-from Curis.IA import Interval
+from BitFlow.IA import Interval
 
 def gen_fig3():
     a = Input(name="a")
@@ -44,5 +44,3 @@ def test_fig3_IA():
 def test_fig3_torch():
     #TODO
     fig3 = gen_fig3()
-
-

@@ -1,4 +1,4 @@
-from Curis.IA import Interval
+from BitFlow.IA import Interval
 
 def test_add():
     x = Interval(0, 5)
