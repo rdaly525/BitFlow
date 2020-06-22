@@ -23,10 +23,6 @@ class AbstractEval(Visitor):
     def generic_visit(self, node: DagNode):
         Visitor.generic_visit(self, node)
         child_values = [self.node_values[child] for child in node.children()]
-        print(node.kind()[0])
-        print(child_values)
-        print(list(node.children()))
-        print("  ")
         eval_name = f"eval_{node.kind()[0]}"
         assert hasattr(self, eval_name)
         node_val = getattr(self, eval_name)(*child_values, node=node)
@@ -45,28 +41,12 @@ class AbstractEval(Visitor):
     def eval_Add(self, a, b, node: DagNode):
         pass
 
-class IntegerEval(AbstractEval):
-    def eval_Constant(self, node: DagNode):
-        return node.value
-
-    def eval_Add(self, a, b, node: DagNode):
-        return a + b
-
+    @abstractmethod
     def eval_Sub(self, a, b, node: DagNode):
-        return a - b
+        pass
 
+    @abstractmethod
     def eval_Mul(self, a, b, node: DagNode):
-        return a * b
+        pass
 
-class IAEval(AbstractEval):
-    def eval_Constant(self, node: DagNode):
-        return node.value
 
-    def eval_Add(self, a, b, node: DagNode):
-        return a + b
-
-    def eval_Sub(self, a, b, node: DagNode):
-        return a - b
-
-    def eval_Mul(self, a, b, node: DagNode):
-        return a * b
