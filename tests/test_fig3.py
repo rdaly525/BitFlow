@@ -1,6 +1,7 @@
 from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul
 from DagVisitor import Visitor
 from BitFlow.IA import Interval
+from BitFlow.Eval import IAEval, IntegerEval
 
 def gen_fig3():
     a = Input(name="a")
@@ -29,9 +30,10 @@ def test_printing():
 #Evaluate it in the context of simple values
 def test_fig3_integers():
     fig3 = gen_fig3()
+    evaluator = IntegerEval(fig3)
 
     a, b = 3, 5
-    assert fig3.eval(a, b) == 7
+    assert evaluator.eval(a=a, b=b) == 14
 
 #Evaluate it in the context of Intervals
 def test_fig3_IA():
@@ -39,7 +41,8 @@ def test_fig3_IA():
 
     a = Interval(0, 5)
     b = Interval(3, 8)
-    assert fig3.eval(a, b) == Interval(-1, 14)
+    evaluator = IAEval(fig3)
+    assert evaluator.eval(a=a, b=b) == Interval(-1, 14)
 
 def test_fig3_torch():
     #TODO
