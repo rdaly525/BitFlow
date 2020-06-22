@@ -45,6 +45,7 @@ class Input(DagNode):
             return input_values[self]
         raise ValueError("Missing Input")
 
+
 class Constant(DagNode):
     def __init__(self, value, name=None):
         self.value = value
@@ -68,6 +69,7 @@ class Add(DagNode):
         b_val = b.eval(input_values)
         return a_val + b_val
 
+
 class Sub(DagNode):
     def __init__(self, a: DagNode, b: DagNode, *, name=None):
         if name is None:
@@ -80,6 +82,7 @@ class Sub(DagNode):
         b_val = b.eval(input_values)
         return a_val - b_val
 
+
 class Mul(DagNode):
     def __init__(self, a: DagNode, b: DagNode, *, name=None):
         if name is None:
@@ -91,6 +94,19 @@ class Mul(DagNode):
         a_val = a.eval(input_values)
         b_val = b.eval(input_values)
         return a_val + b_val
+
+
+class Round(DagNode):
+    def __init__(self, val: DagNode, prec: DagNode, name=None):
+        if name is None:
+            name = f"{a.name}_round_{prec.name}"
+        super.__init__(self, a, prec)
+
+    def eval(self, input_values):
+        a, prec = tuple(self.children())
+        a_val = a.eval(input_values)
+        prec_val = prec.eval(input_values)
+
 
 class Dag(AbstractDag):
     def __init__(self, output: DagNode, inputs: tp.List[DagNode]):
