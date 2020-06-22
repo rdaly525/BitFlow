@@ -1,5 +1,6 @@
 import torch as t
 
+K = 10
 class _Round(t.autograd.Function):
 
   @staticmethod
@@ -8,7 +9,7 @@ class _Round(t.autograd.Function):
     return t.round(x)
 
   @staticmethod
-  def backward(ctx,dy):
+  def backward(ctx, dy):
     x = ctx.saved_tensors
     rx = t.round(x)
     delta = t.abs(x-rx)
