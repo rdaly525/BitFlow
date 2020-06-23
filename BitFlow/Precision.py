@@ -33,7 +33,6 @@ class PrecisionNode:
                 mystr += f" + {err.value} * 2^(FB{err.node} - 1) ε_{err.node}"
         return mystr
 
-
     def __str__(self):
         mystr = f"{self.value}"
         return generate_print(self.errors)
