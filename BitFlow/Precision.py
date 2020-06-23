@@ -21,10 +21,22 @@ class PrecisionNode:
         self.error = error
         self.error.append(FPEpsilon(symbol))
 
+    def generate_print(errors, mystr):
+        for err in errors:
+            if (isinstance(err, tuple)):
+                mystr += " ("
+                generate_print(err[0], mystr)
+                mystr += ")("
+                generate_print(err[1], mystr)
+                mystr += ") "
+            else:
+                mystr += f" + {err.value} * 2^(FB{err.node} - 1) ε_{err.node}"
+        return mystr
+
+
     def __str__(self):
-        # TODO
-        noise_str = " + ".join(( f"{v}*eps{k}" for k,v in sorted(self.noise.items())))
-        return f"{self.base} + {noise_str}"
+        mystr = f"{self.value}"
+        return generate_print(self.errors)
 
     def __add__(self, rhs, symbol):
         assert isinstance(rhs, PrecisionNode)
