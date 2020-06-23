@@ -1,56 +1,22 @@
-from Precision import PrecisionNode, FPEpsilon
+from Precision import PrecisionNode, FPEpsilon, FPEpsilonMultiplier
 
-# def test_to_string():
-#     #Two different wyas to construct an AInterval
-#
-#     eps_idx = 1
-#     lo, hi = 0.0, 6.0
-#     x = AInterval(lo, hi, eps_idx=eps_idx)
-#     assert str(x) == "3.0 + 3.0*eps1"
-#
-#     base = 3.0
-#     noise = {eps_idx: 3.0}
-#     x = AInterval(3.0, {1: 3.0})
-#     assert str(x) == "3.0 + 3.0*eps1"
-#
-#     #AInterval can be converted to an I interval
-#     assert x.to_interval() == Interval(0.0, 6.0)
-#
-# def test_add():
-#     x = AInterval(0.0, 6.0, eps_idx=1)
-#     y = AInterval(2.0, 8.0, eps_idx=2)
-#     z = x + y
-#     assert z == AInterval(8.0, {1: 3.0, 2: 3.0})
-#
-# def test_sub():
-#     x = AInterval(-2.0, 6.0, eps_idx=1)
-#     y = AInterval(2.0, 10.0, eps_idx=2)
-#     z = x - y
-#     assert z == AInterval(-4.0, {1: 4.0, 2: -4.0})
-#
-# def test_mul():
-#     x = AInterval(-2.0, 6.0, eps_idx=1)
-#     y = AInterval(2.0, 10.0, eps_idx=2)
-#     z = x * y
-#     assert z == AInterval(12.0, {1: 24, 2: 8, 3: 16})
-#
-# def test_add_const():
-#     x = AInterval(0.0, 6.0, eps_idx=1)
-#     y = 5.0
-#     z = x + y
-#     assert z == AInterval(8.0, {1: 3})
-#
-# def test_sub_const():
-#     x = AInterval(0.0, 6.0, eps_idx=1)
-#     y = 5.0
-#     z = x - y
-#     assert z == AInterval(-2.0, {1: 3})
-#
-# def test_mul_const():
-#     x = AInterval(0.0, 6.0, eps_idx=1)
-#     y = 5.0
-#     z = x * y
-#     assert z == AInterval(15, {1: 15})
+def test_add():
+    x = PrecisionNode(5, "x", [])
+    y = PrecisionNode(10, "y", [])
+    z = x.add(y, "z")
+    assert z == PrecisionNode(15, "z", [FPEpsilon("x"), FPEpsilon("y")])
+
+def test_sub():
+    x = PrecisionNode(20, "x", [])
+    y = PrecisionNode(12, "y", [])
+    z = x.sub(y, "z")
+    assert z == PrecisionNode(8, "z", [FPEpsilon("x"), FPEpsilon("y", -1)])
+
+def test_mul():
+    x = PrecisionNode(3, "x", [])
+    y = PrecisionNode(4, "y", [])
+    z = x.mul(y, "z")
+    assert z == PrecisionNode(12, "z", [FPEpsilon("x", 4), FPEpsilon("y", 3), FPEpsilonMultiplier([FPEpsilon("x")], [FPEpsilon("x")])])
 
 def test_paper_fig3():
     a = PrecisionNode(2, "a", [])
@@ -66,4 +32,7 @@ def test_paper_fig3():
     z = e.sub(b, "z")
     print(z)
 
-test_paper_fig3();
+test_paper_fig3()
+test_add()
+test_sub()
+test_mul()
