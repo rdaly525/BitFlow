@@ -28,3 +28,19 @@ def test_paper_fig3():
     z = e.sub(b, "z")
 
     assert z == PrecisionNode(7, "z", [FPEpsilon("a", 3), FPEpsilon("b", 2), FPEpsilonMultiplier([FPEpsilon("b")], [FPEpsilon("a")]), FPEpsilon("d"), FPEpsilon("c"), FPEpsilon("e"), FPEpsilon("b", -1)])
+
+# def test_paper_fig3():
+#     a = PrecisionNode(2, "a", [])
+#     print(a)
+#     b = PrecisionNode(3, "b", [])
+#     print(b)
+#     c = PrecisionNode(4, "c", [])
+#     print(c)
+#     d = a.mul(b, "d")
+#     print(d)
+#     e = d.add(c, "e")
+#     print(e)
+#     z = e.sub(b, "z")
+#     print(z)
+#
+# test_paper_fig3()
