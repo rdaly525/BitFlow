@@ -10,7 +10,30 @@ class FPEpsilon:
         self.val = val
 
     def __str__(self):
-        return f" +{self.val} * 2^(-FB{self.node} - 1) ε_{self.node}" if self.val >= 0 else f" {self.val} * 2^(FB{self.node} - 1) ε_{self.node}"
+        return f" +{self.val}*2^(-FB{self.node}-1)ε_{self.node}" if self.val >= 0 else f" {self.val} * 2^(FB{self.node}-1)ε_{self.node}"
+
+class ErrorMultiplier:
+    def __init__(self, Ex, Ey, val=1):
+        assert isinstance(Ex, list)
+        assert isinstance(Ey, list)
+        self.Ex = Ex
+        self.Ey = Ey
+        self.val = val
+        self.output = ""
+
+    def generate_print(self):
+        self.output += "("
+        for err in self.Ex:
+            self.output += str(err)
+        self.output += " )("
+        for err in self.Ey:
+            self.output += str(err)
+        self.output += " ) "
+        return self.output
+
+    def __str__(self):
+        self.output = f" +{self.val}*"
+        return self.generate_print()
 
 
 class PrecisionNode:
@@ -27,14 +50,7 @@ class PrecisionNode:
 
     def generate_print(self, errors):
         for err in errors:
-            if (isinstance(err, tuple)):
-                self.output += " ("
-                self.generate_print(err[0])
-                self.output += ")("
-                self.generate_print(err[1])
-                self.output += ") "
-            else:
-                self.output += str(err)
+            self.output += str(err)
         return self.output
 
     def __str__(self):
@@ -63,8 +79,7 @@ class PrecisionNode:
         assert isinstance(rhs, PrecisionNode)
         assert isinstance(symbol, str)
 
-        mixed_err = (copy.deepcopy(rhs.error), copy.deepcopy(self.error))
-        print(mixed_err[0][0])
+        mixed_err = ErrorMultiplier(copy.deepcopy(rhs.error), copy.deepcopy(self.error))
 
         rhs_error = copy.deepcopy(rhs.error)
         for (i, error) in enumerate(rhs_error):
