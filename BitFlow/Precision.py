@@ -38,8 +38,18 @@ class FPEpsilonMultiplier:
         self.output = f" +{self.val}*"
         return self.generate_print()
 
+    def check_error_equality(self, rhs, lhs):
+        rhs_error = copy.deepcopy(rhs)
+        for err in lhs:
+            try:
+                i = rhs_error.index(err)
+                del rhs_error[i]
+            except ValueError:
+                return False
+        return rhs_error == []
+
     def __eq__(self, rhs):
-        return self.Ex == rhs.Ex and self.Ey == rhs.Ey and self.val == rhs.val
+        return self.check_error_equality(rhs.Ex, self.Ex) and self.check_error_equality(rhs.Ey, self.Ey) and self.val == rhs.val
 
 
 class PrecisionNode:
@@ -101,5 +111,15 @@ class PrecisionNode:
         # Store multiplication of errors as a tuple whose first element is E_x and second element is E_y
         return PrecisionNode(self.val * rhs.val, symbol, total_err)
 
+    def check_error_equality(self, rhs):
+        rhs_error = copy.deepcopy(rhs)
+        for err in self.error:
+            try:
+                i = rhs_error.index(err)
+                del rhs_error[i]
+            except ValueError:
+                return False
+        return rhs_error == []
+
     def __eq__(self, rhs):
-        return self.error == rhs.error and self.val == rhs.val
+        return self.check_error_equality(rhs.error) and self.val == rhs.val
