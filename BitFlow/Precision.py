@@ -15,6 +15,9 @@ class FPEpsilon:
     def __eq__(self, rhs):
         return self.val == rhs.val
 
+'''
+The most tricky part is multiplying two errors; this object abstracts those error multipliications
+'''
 class FPEpsilonMultiplier:
     def __init__(self, Ex, Ey, val=1):
         assert isinstance(Ex, list)
@@ -108,7 +111,6 @@ class PrecisionNode:
         total_err = lhs_error + rhs_error
         total_err.append(mixed_err)
 
-        # Store multiplication of errors as a tuple whose first element is E_x and second element is E_y
         return PrecisionNode(self.val * rhs.val, symbol, total_err)
 
     def check_error_equality(self, rhs):
