@@ -1,4 +1,4 @@
-from Curis.caseStudies import caseStudy
+from BitFlow.casestudies.caseStudies import caseStudy
 
 def test_poly_approx():
 
