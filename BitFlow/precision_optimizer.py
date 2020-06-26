@@ -1,12 +1,14 @@
 from Precision import PrecisionNode, FPEpsilon, FPEpsilonMultiplier
 from copy import deepcopy
-from sympy import *
+from sympy import sympify
 from sympy.abc import _clash1
 
-class PrecisionOptimizer():
-    def __init__(self, precision_node):
+class BitOptimizer():
+    def __init__(self, precision_node, initial_fb={}):
         assert(isinstance(precision_node, PrecisionNode))
         self.node = precision_node
+        self.initial_fb = initial_fb
+
 
     def maxError(self, error):
         maxErr = deepcopy(error)
@@ -30,14 +32,29 @@ class PrecisionOptimizer():
                 myfn += ")"
         return myfn
 
+    def area(self):
+        # calculate area
+        return
+
+    def errorConstraint(self, errors):
+        myfn = 0
+        for err in errors:
+            if isinstance(err, FPEpsilon):
+                self.initial_fb[err.node] = 2
+                myfn += err.val*2**(-self.initial_fb[err.node]-1)
+            elif isinstance(err, FPEpsilonMultiplier):
+                myfn += err.val*(self.errorConstraint(err.Ex) * self.errorConstraint(err.Ey))
+        return myfn
+
+
     def solve(self):
         maxErr = self.maxError(self.node.error)
         self.node.error = maxErr
         myfn = f"2 ** (-{self.node.symbol}) >=" +  self.constructErrorFn(self.node.error)
         myfn = sympify(myfn, _clash1)
 
-
         print(myfn)
+        print(self.errorConstraint(self.node.error))
 
 a = PrecisionNode(2, "a", [])
 b = PrecisionNode(3, "b", [])
@@ -47,5 +64,5 @@ d = a.mul(b, "d")
 e = d.add(c, "e")
 z = e.sub(b, "z")
 
-po = PrecisionOptimizer(z)
+po = BitOptimizer(z)
 po.solve()
