@@ -77,6 +77,38 @@ class PrecisionNode:
         self.output = f"{self.val}"
         return self.generate_print(self.error) + "\n"
 
+    def constructErrorFn(self, errors):
+        myfn = ""
+        for err in errors:
+            if isinstance(err, FPEpsilon):
+                myfn += f"+{err.val}*2**(-{err.node}-1)" if err.val > 0 else f"{err.val}*2**(-{err.node}-1)"
+            elif isinstance(err, FPEpsilonMultiplier):
+                myfn += f"+{err.val}*("
+                myfn += self.constructErrorFn(err.Ex)
+                myfn += ")*("
+                myfn += self.constructErrorFn(err.Ey)
+                myfn += ")"
+        return myfn
+
+    def constructUFBFn(self, errors):
+        myfn = ""
+        for err in errors:
+            if isinstance(err, FPEpsilon):
+                myfn += f"+{err.val}*2**(-UFB-1)" if err.val > 0 else f"{err.val}*2**(-UFB-1)"
+            elif isinstance(err, FPEpsilonMultiplier):
+                myfn += f"+{err.val}*("
+                myfn += self.constructUFBFn(err.Ex)
+                myfn += ")*("
+                myfn += self.constructUFBFn(err.Ey)
+                myfn += ")"
+        return myfn
+
+    def getExecutableError(self):
+        return f"2**(-{self.symbol}-1)>=" + self.constructErrorFn(self.error)
+
+    def getExecutableUFB(self):
+        return self.constructUFBFn(self.error)
+
     def add(self, rhs, symbol):
         assert isinstance(rhs, PrecisionNode)
         assert isinstance(symbol, str)
