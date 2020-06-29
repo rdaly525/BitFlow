@@ -120,15 +120,14 @@ class BitFlowOptimizer():
         m = namespace["m"]
 
         namespace["UFB"] = m.Var(value=0,integer=True)
-        UFB = namespace["UFB"]
 
         exec(f'''def UFBOptimizerFn(UFB):
             return  {self.ufb_fn}''', namespace)
 
-        m.Equation(namespace["UFBOptimizerFn"](UFB))
+        m.Equation(namespace["UFBOptimizerFn"](namespace["UFB"]))
         m.solve(disp=False)
 
-        sol = ceil(UFB.value[0])
+        sol = ceil(namespace["UFB"].value[0])
         self.initial = sol
         print(f"UFB = {sol}\n")
 
