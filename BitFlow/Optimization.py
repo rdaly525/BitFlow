@@ -116,13 +116,16 @@ class BitFlowOptimizer():
         print(f"UFBB EQ: {self.ufb_fn}")
         print(f"-----------")
 
-        m = GEKKO()
-        UFB = m.Var(value=0,integer=True)
+        namespace = {"m": GEKKO()}
+        m = namespace["m"]
+
+        namespace["UFB"] = m.Var(value=0,integer=True)
+        UFB = namespace["UFB"]
 
         exec(f'''def UFBOptimizerFn(UFB):
-            return  {self.ufb_fn}''', globals())
+            return  {self.ufb_fn}''', namespace)
 
-        m.Equation(UFBOptimizerFn(UFB))
+        m.Equation(namespace["UFBOptimizerFn"](UFB))
         m.solve(disp=False)
 
         sol = ceil(UFB.value[0])
