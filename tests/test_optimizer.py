@@ -17,6 +17,18 @@ def gen_fig3():
     fig3_dag = Dag(output=z, inputs=[a,b])
     return fig3_dag
 
+def gen_dag1():
+    #(a*b) + 4 - b
+    x = Input(name="x")
+    y = Input(name="y")
+    z = Input(name="z")
+    i = Mul(x, y, name="i")
+    j = Sub(y, z, name="j")
+    k = Mul(i, j, name="k")
+
+    dag = Dag(output=k, inputs=[x, y, z])
+    return dag
+
 def test_fig3():
     fig3 = gen_fig3()
     evaluator = IAEval(fig3)
@@ -29,3 +41,19 @@ def test_fig3():
 
     assert bfo.visitor.IBs == {'a': 4, 'b': 5, 'd': 7, 'c': 4, 'e': 6, 'z': 7}
     assert bfo.initial == 12
+
+def test_dag1():
+    dag1 = gen_dag1()
+    evaluator = NumEval(dag1)
+
+    x, y, z = 2, 5, 3
+    evaluator.eval(x=x, y=y, z=z)
+
+    bfo = BitFlowOptimizer(evaluator, 'k', 5)
+    bfo.solve()
+
+    print(bfo.visitor.IBs)
+    print(bfo.initial)
+
+    assert bfo.visitor.IBs == {'x': 3, 'y': 4, 'i': 5, 'z': 3, 'j': 3, 'k': 6}
+    assert bfo.initial == 10
