@@ -68,7 +68,7 @@ class BitFlowVisitor(Visitor):
         self.handleIB(node)
         lhs, rhs = self.getChildren(node)
         self.errors[node.name] = self.errors[lhs.name].add(self.errors[rhs.name], node.name)
-        self.area_fn += f"+max({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
+        self.area_fn += f"+m.max2({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
 
 
     def visit_Sub(self, node: Sub):
@@ -77,7 +77,7 @@ class BitFlowVisitor(Visitor):
         self.handleIB(node)
         lhs, rhs = self.getChildren(node)
         self.errors[node.name] = self.errors[lhs.name].sub(self.errors[rhs.name], node.name)
-        self.area_fn += f"+max({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
+        self.area_fn += f"+m.max2({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
 
 
     def visit_Mul(self, node: Mul):
@@ -94,49 +94,71 @@ class BitFlowOptimizer():
         self.ufb_fn = visitor.errors[output].getExecutableUFB()
         self.area_fn = visitor.area_fn[1:]
         self.output_precision = output_precision
+        self.output = output
 
         vars = list(visitor.node_values)
         for (i, var) in enumerate(vars):
             vars[i] = var.name
         self.vars = vars
 
-        self.calculateInitialValues()
-        self.solve()
-
 
     def calculateInitialValues(self):
         print("CALCULATING INITIAL VALUES USING UFB METHOD...")
         bnd = f"{-2**(-self.output_precision-1)} == 0"
         self.ufb_fn += bnd
+        print(f"UFBB EQ: {self.ufb_fn}")
+        print(f"-----------")
 
         m = GEKKO()
         UFB = m.Var(value=0,integer=True)
 
-        exec(f'''def f(UFB):
+        exec(f'''def UFBOptimizerFn(UFB):
             return  {self.ufb_fn}''', globals())
 
-        m.Equation(f(UFB))
+        m.Equation(UFBOptimizerFn(UFB))
         m.solve(disp=False)
 
         sol = ceil(UFB.value[0])
         self.initial = sol
-        print("UFB = " + str(sol))
+        print(f"UFB = {sol}\n")
 
 
     def solve(self):
+        self.calculateInitialValues()
         print("SOLVING AREA/ERROR...")
-        m = GEKKO()
-        vars_init = ','.join(self.vars) + f" = [m.Var(value={self.initial}, lb=0) for i in range({len(self.vars)})]"
-        exec(vars_init, locals())
-        m.Equation(exec(self.error_fn, locals()))
-        print(vars_init)
-        print(self.error_fn)
-        print(self.area_fn)
+        self.error_fn = f"2**(-{self.output_precision}-1)>=" + self.error_fn
+        print(f"ERROR EQ: {self.error_fn}")
+        print(f"AREA EQ: {self.area_fn}")
+        print(f"-----------")
 
-        m.Obj(exec(self.area_fn))
+        namespace = {"m": GEKKO()}
+        m = namespace["m"]
+
+        filtered_vars = []
+        for var in self.vars:
+            if var != self.output:
+                filtered_vars.append(var)
+
+        vars_init = ','.join(filtered_vars) + f" = [m.Var(value={self.initial}, lb=0) for i in range({len(filtered_vars)})]"
+        exec(vars_init, namespace)
+
+        exec(f'''def ErrorOptimizerFn({','.join(filtered_vars)}):
+            return  {self.error_fn}''', namespace)
+
+        exec(f'''def AreaOptimizerFn({','.join(filtered_vars)}):
+            return  {self.area_fn}''', namespace)
+
+        params = [namespace[v] for v in filtered_vars]
+
+        m.Equation(namespace["ErrorOptimizerFn"](*params))
+        m.Obj(namespace["AreaOptimizerFn"](*params))
         m.solve(disp=False)
 
+        sols = dict(zip(filtered_vars, params))
 
+        for key in sols:
+            sols[key] = ceil(sols[key].value[0])
+            print(f"{key}: {sols[key]}")
 
 
 def test_print():
@@ -151,6 +173,8 @@ def test_print():
     # Visitor classes have a method called 'run' that takes in a dag and runs all the
     # visit methods on each node
     node_printer.run(fig3)
+
     bfo = BitFlowOptimizer(node_printer, 'z', 8)
+    bfo.solve()
 
 test_print()
