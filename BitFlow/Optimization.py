@@ -1,10 +1,10 @@
-from node import Input, Constant, Dag, Add, Sub, Mul, DagNode
+from .node import Input, Constant, Dag, Add, Sub, Mul, DagNode
 from DagVisitor import Visitor
-from IA import Interval
-from Eval.IAEval import IAEval
-from Eval.NumEval import NumEval
+from .IA import Interval
+from .Eval.IAEval import IAEval
+from .Eval.NumEval import NumEval
 from math import log2, ceil
-from Precision import PrecisionNode
+from .Precision import PrecisionNode
 from gekko import GEKKO
 
 
@@ -90,7 +90,13 @@ class BitFlowVisitor(Visitor):
         self.area_fn += f"+({self.IBs[lhs.name]} + {lhs.name})*({self.IBs[rhs.name]} + {rhs.name})"
 
 class BitFlowOptimizer():
-    def __init__(self, visitor, output, output_precision):
+    def __init__(self, evaluator, output, output_precision):
+
+        node_values = evaluator.node_values
+        visitor = BitFlowVisitor(node_values)
+        visitor.run(evaluator.dag)
+
+        self.visitor = visitor
         self.error_fn = visitor.errors[output].getExecutableError()
         self.ufb_fn = visitor.errors[output].getExecutableUFB()
         self.area_fn = visitor.area_fn[1:]
@@ -168,15 +174,8 @@ def test_print():
 
     a, b = Interval(-3, 2), Interval(4, 8)
     evaluator.eval(a=a, b=b)
-    node_values = evaluator.node_values
-    node_printer = BitFlowVisitor(node_values)
 
-    # Visitor classes have a method called 'run' that takes in a dag and runs all the
-    # visit methods on each node
-    node_printer.run(fig3)
-    print(node_printer.IBs)
-
-    bfo = BitFlowOptimizer(node_printer, 'z', 8)
+    bfo = BitFlowOptimizer(evaluator, 'z', 8)
     bfo.solve()
 
 test_print()
