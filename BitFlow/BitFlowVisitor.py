@@ -7,6 +7,7 @@ from math import log2, ceil
 from Precision import PrecisionNode
 from gekko import GEKKO
 
+
 def gen_fig3():
     #(a*b) + 4 - b
     a = Input(name="a")
@@ -139,7 +140,7 @@ class BitFlowOptimizer():
             if var != self.output:
                 filtered_vars.append(var)
 
-        vars_init = ','.join(filtered_vars) + f" = [m.Var(value={self.initial}, lb=0) for i in range({len(filtered_vars)})]"
+        vars_init = ','.join(filtered_vars) + f" = [m.Var(value={self.initial}, lb=0, ub=64) for i in range({len(filtered_vars)})]"
         exec(vars_init, namespace)
 
         exec(f'''def ErrorOptimizerFn({','.join(filtered_vars)}):
@@ -163,9 +164,9 @@ class BitFlowOptimizer():
 
 def test_print():
     fig3 = gen_fig3()
-    evaluator = NumEval(fig3)
+    evaluator = IAEval(fig3)
 
-    a, b = 2, 3
+    a, b = Interval(-3, 2), Interval(4, 8)
     evaluator.eval(a=a, b=b)
     node_values = evaluator.node_values
     node_printer = BitFlowVisitor(node_values)
@@ -173,6 +174,7 @@ def test_print():
     # Visitor classes have a method called 'run' that takes in a dag and runs all the
     # visit methods on each node
     node_printer.run(fig3)
+    print(node_printer.IBs)
 
     bfo = BitFlowOptimizer(node_printer, 'z', 8)
     bfo.solve()
