@@ -124,7 +124,7 @@ class BitFlowOptimizer():
             return  {self.ufb_fn}''', globals())
 
         m.Equation(UFBOptimizerFn(UFB))
-        m.solve(disp=False)
+        m.solve(disp=True)
 
         sol = ceil(UFB.value[0])
         self.initial = sol
@@ -161,7 +161,7 @@ class BitFlowOptimizer():
 
         m.Equation(namespace["ErrorOptimizerFn"](*params))
         m.Obj(namespace["AreaOptimizerFn"](*params))
-        m.solve(disp=False)
+        m.solve(disp=True)
 
         sols = dict(zip(filtered_vars, params))
 
