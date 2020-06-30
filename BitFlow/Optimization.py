@@ -113,21 +113,20 @@ class BitFlowOptimizer():
         print("CALCULATING INITIAL VALUES USING UFB METHOD...")
         bnd = f"{-2**(-self.output_precision-1)} == 0"
         self.ufb_fn += bnd
-        print(f"UFBB EQ: {self.ufb_fn}")
+        print(f"UFB EQ: {self.ufb_fn}")
         print(f"-----------")
 
-        namespace = {"m": GEKKO()}
-        m = namespace["m"]
-
-        namespace["UFB"] = m.Var(value=0,integer=True)
+        m = GEKKO()
+        UFB = m.Var(value=0,integer=True)
+        m.options.SOLVER=3
 
         exec(f'''def UFBOptimizerFn(UFB):
-            return  {self.ufb_fn}''', namespace)
+            return  {self.ufb_fn}''', globals())
 
-        m.Equation(namespace["UFBOptimizerFn"](namespace["UFB"]))
+        m.Equation(UFBOptimizerFn(UFB))
         m.solve(disp=False)
 
-        sol = ceil(namespace["UFB"].value[0])
+        sol = ceil(UFB.value[0])
         self.initial = sol
         print(f"UFB = {sol}\n")
 
@@ -142,13 +141,14 @@ class BitFlowOptimizer():
 
         namespace = {"m": GEKKO()}
         m = namespace["m"]
+        m.options.SOLVER=3
 
         filtered_vars = []
         for var in self.vars:
             if var != self.output:
                 filtered_vars.append(var)
 
-        vars_init = ','.join(filtered_vars) + f" = [m.Var(value={self.initial}, lb=0, ub=64) for i in range({len(filtered_vars)})]"
+        vars_init = ','.join(filtered_vars) + f" = [m.Var(value={self.initial}, integer=True, lb=0, ub=64) for i in range({len(filtered_vars)})]"
         exec(vars_init, namespace)
 
         exec(f'''def ErrorOptimizerFn({','.join(filtered_vars)}):
@@ -169,6 +169,8 @@ class BitFlowOptimizer():
             sols[key] = ceil(sols[key].value[0])
             print(f"{key}: {sols[key]}")
 
+        self.fb_sols = sols
+
 
 def test_print():
     fig3 = gen_fig3()
@@ -179,5 +181,10 @@ def test_print():
 
     bfo = BitFlowOptimizer(evaluator, 'z', 8)
     bfo.solve()
+
+    print("\nRESULTS:")
+    print("node, IB, FB ")
+    for node in bfo.fb_sols.keys():
+        print(f"{node}, {bfo.visitor.IBs[node]}, {bfo.fb_sols[node]}")
 
 test_print()
