@@ -6,7 +6,7 @@ from .Eval.NumEval import NumEval
 from math import log2, ceil
 from .Precision import PrecisionNode
 # from gekko import GEKKO
-import numpy as np
+#import numpy as np
 from scipy.optimize import fsolve, minimize, basinhopping
 
 
