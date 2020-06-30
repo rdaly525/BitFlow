@@ -116,7 +116,7 @@ class BitFlowOptimizer():
         print(f"UFB EQ: {self.ufb_fn}")
         print(f"-----------")
 
-        m = GEKKO()
+        m = GEKKO(remote=False)
         UFB = m.Var(value=0,integer=True)
         m.options.SOLVER=3
 
@@ -139,7 +139,7 @@ class BitFlowOptimizer():
         print(f"AREA EQ: {self.area_fn}")
         print(f"-----------")
 
-        namespace = {"m": GEKKO()}
+        namespace = {"m": GEKKO(remote=False)}
         m = namespace["m"]
         m.options.SOLVER=3
 
