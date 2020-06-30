@@ -5,7 +5,9 @@ from .Eval.IAEval import IAEval
 from .Eval.NumEval import NumEval
 from math import log2, ceil
 from .Precision import PrecisionNode
-from gekko import GEKKO
+# from gekko import GEKKO
+import numpy as np
+from scipy.optimize import fsolve, minimize, basinhopping
 
 
 def gen_fig3():
@@ -69,7 +71,8 @@ class BitFlowVisitor(Visitor):
         self.handleIB(node)
         lhs, rhs = self.getChildren(node)
         self.errors[node.name] = self.errors[lhs.name].add(self.errors[rhs.name], node.name)
-        self.area_fn += f"+m.max2({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
+        # self.area_fn += f"+m.max2({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
+        self.area_fn += f"+max({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
 
 
     def visit_Sub(self, node: Sub):
@@ -78,7 +81,8 @@ class BitFlowVisitor(Visitor):
         self.handleIB(node)
         lhs, rhs = self.getChildren(node)
         self.errors[node.name] = self.errors[lhs.name].sub(self.errors[rhs.name], node.name)
-        self.area_fn += f"+m.max2({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
+        # self.area_fn += f"+m.max2({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
+        self.area_fn += f"+max({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
 
 
     def visit_Mul(self, node: Mul):
@@ -111,67 +115,107 @@ class BitFlowOptimizer():
 
     def calculateInitialValues(self):
         print("CALCULATING INITIAL VALUES USING UFB METHOD...")
-        bnd = f"{-2**(-self.output_precision-1)} == 0"
+        # bnd = f"{-2**(-self.output_precision-1)} == 0"
+        bnd = f"{-2**(-self.output_precision-1)}"
         self.ufb_fn += bnd
         print(f"UFB EQ: {self.ufb_fn}")
         print(f"-----------")
 
-        m = GEKKO()
-        UFB = m.Var(value=0,integer=True)
-        m.options.IMODE=2
-        m.options.SOLVER=3
-
         exec(f'''def UFBOptimizerFn(UFB):
-            return  {self.ufb_fn}''', globals())
+             return  {self.ufb_fn}''', globals())
 
-        m.Equation(UFBOptimizerFn(UFB))
-        m.solve(disp=True)
-
-        sol = ceil(UFB.value[0])
+        sol = ceil(fsolve(UFBOptimizerFn, 0.01))
         self.initial = sol
-        print(f"UFB = {sol}\n")
+
+
+
+        # m = GEKKO()
+        # UFB = m.Var(value=0,integer=True)
+        # m.options.IMODE=2
+        # m.options.SOLVER=3
+        #
+        # exec(f'''def UFBOptimizerFn(UFB):
+        #     return  {self.ufb_fn}''', globals())
+        #
+        # m.Equation(UFBOptimizerFn(UFB))
+        # m.solve(disp=True)
+        #
+        # sol = ceil(UFB.value[0])
+        # self.initial = sol
+        # print(f"UFB = {sol}\n")
 
 
     def solve(self):
         self.calculateInitialValues()
         print("SOLVING AREA/ERROR...")
-        self.error_fn = f"2**(-{self.output_precision}-1)>=" + self.error_fn
+
+        # self.error_fn = f"2**(-{self.output_precision}-1)>=" + self.error_fn
+        self.error_fn = f"2**(-{self.output_precision}-1) - (" + self.error_fn + ")"
+
         print(f"ERROR EQ: {self.error_fn}")
         print(f"AREA EQ: {self.area_fn}")
         print(f"-----------")
-
-        namespace = {"m": GEKKO()}
-        m = namespace["m"]
-        m.options.IMODE=2
-        m.options.SOLVER=3
 
         filtered_vars = []
         for var in self.vars:
             if var != self.output:
                 filtered_vars.append(var)
 
-        vars_init = ','.join(filtered_vars) + f" = [m.Var(value={self.initial}, integer=True, lb=0, ub=64) for i in range({len(filtered_vars)})]"
-        exec(vars_init, namespace)
+        exec(f'''def ErrorOptimizerFn(x):
+             {','.join(filtered_vars)} = x
+             return  {self.error_fn}''', globals())
 
-        exec(f'''def ErrorOptimizerFn({','.join(filtered_vars)}):
-            return  {self.error_fn}''', namespace)
+        exec(f'''def AreaOptimizerFn(x):
+             {','.join(filtered_vars)} = x
+             return  {self.area_fn}''', globals())
 
-        exec(f'''def AreaOptimizerFn({','.join(filtered_vars)}):
-            return  {self.area_fn}''', namespace)
+        x0 = [self.initial for i in range(len(filtered_vars))]
 
-        params = [namespace[v] for v in filtered_vars]
+        con = {'type': 'ineq', 'fun': ErrorOptimizerFn}
+        minimizer_kwargs = {'constraints': ([con])}
+        solution = basinhopping(AreaOptimizerFn, x0, minimizer_kwargs=minimizer_kwargs)
 
-        m.Equation(namespace["ErrorOptimizerFn"](*params))
-        m.Obj(namespace["AreaOptimizerFn"](*params))
-        m.solve(disp=True)
-
-        sols = dict(zip(filtered_vars, params))
+        sols = dict(zip(filtered_vars, solution.x))
 
         for key in sols:
-            sols[key] = ceil(sols[key].value[0])
+            sols[key] = ceil(sols[key])
             print(f"{key}: {sols[key]}")
 
         self.fb_sols = sols
+
+
+        # namespace = {"m": GEKKO()}
+        # m = namespace["m"]
+        # m.options.IMODE=2
+        # m.options.SOLVER=3
+        #
+        # filtered_vars = []
+        # for var in self.vars:
+        #     if var != self.output:
+        #         filtered_vars.append(var)
+        #
+        # vars_init = ','.join(filtered_vars) + f" = [m.Var(value={self.initial}, integer=True, lb=0, ub=64) for i in range({len(filtered_vars)})]"
+        # exec(vars_init, namespace)
+        #
+        # exec(f'''def ErrorOptimizerFn({','.join(filtered_vars)}):
+        #     return  {self.error_fn}''', namespace)
+        #
+        # exec(f'''def AreaOptimizerFn({','.join(filtered_vars)}):
+        #     return  {self.area_fn}''', namespace)
+        #
+        # params = [namespace[v] for v in filtered_vars]
+        #
+        # m.Equation(namespace["ErrorOptimizerFn"](*params))
+        # m.Obj(namespace["AreaOptimizerFn"](*params))
+        # m.solve(disp=True)
+        #
+        # sols = dict(zip(filtered_vars, params))
+        #
+        # for key in sols:
+        #     sols[key] = ceil(sols[key].value[0])
+        #     print(f"{key}: {sols[key]}")
+        #
+        # self.fb_sols = sols
 
 
 def test_print():
