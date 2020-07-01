@@ -2,9 +2,10 @@ from DagVisitor import Visited, AbstractDag
 import abc
 import typing as tp
 
-#Passes will be run on this
+
+# Passes will be run on this
 class DagNode(Visited):
-    def __init__(self, name, *children) :
+    def __init__(self, name, *children):
         self.name = name
         self.set_children(*children)
 
@@ -35,8 +36,16 @@ class DagNode(Visited):
         assert isinstance(rhs, DagNode)
         return Mul(self, rhs)
 
+    def __getitem__(self, rhs):
+        assert isinstance(rhs,int)
+        return Select(self, rhs)
+
 
 class Input(DagNode):
+    def __init__(self, name):
+        super().__init__(name)
+
+class Output(DagNode):
     def __init__(self, name):
         super().__init__(name)
 
@@ -69,14 +78,22 @@ class Mul(DagNode):
         super().__init__(name, a, b)
 
 
+class Select(DagNode):
+    def __init__(self, a: DagNode, index, name=None):
+        self.index=index
+        if name is None:
+            name = f"{a.name}_getitem_{str(index)}"
+        super().__init__(name, a)
+
 class Round(DagNode):
     def __init__(self, val: DagNode, prec: DagNode, name=None):
         if name is None:
-            name = f"{a.name}_round_{prec.name}"
-        super.__init__(self, a, prec)
+            name = f"{val.name}_round_{prec.name}"
+        super.__init__(self, val, prec)
 
 
 class Dag(AbstractDag):
-    def __init__(self, output: DagNode, inputs: tp.List[DagNode]):
+    def __init__(self, outputs: tp.List[DagNode], inputs: tp.List[DagNode]):
         self.inputs = inputs
-        super().__init__(output)
+        self.outputs= outputs
+        super().__init__(*outputs)

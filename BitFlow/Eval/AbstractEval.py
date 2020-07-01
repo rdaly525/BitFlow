@@ -1,5 +1,5 @@
 from DagVisitor import Visitor
-from ..node import Dag, DagNode, Input, Constant, Add, Sub, Mul
+from ..node import Dag, DagNode, Input, Constant, Add, Sub, Mul, Select, Output
 from abc import abstractmethod
 
 class AbstractEval(Visitor):
@@ -47,6 +47,10 @@ class AbstractEval(Visitor):
 
     @abstractmethod
     def eval_Mul(self, a, b, node: DagNode):
+        pass
+
+    @abstractmethod
+    def eval_Select(self, a, node: DagNode):
         pass
 
 
