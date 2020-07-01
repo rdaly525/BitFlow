@@ -161,7 +161,7 @@ class BitFlowOptimizer():
             if var != self.output:
                 filtered_vars.append(var)
 
-        exec(f'''def ErrorOptimizerFn(x):
+        exec(f'''def ErrorConstraintFn(x):
              {','.join(filtered_vars)} = x
              return  {self.error_fn}''', globals())
 
@@ -170,9 +170,12 @@ class BitFlowOptimizer():
              return  {self.area_fn}''', globals())
 
         x0 = [self.initial for i in range(len(filtered_vars))]
+        bounds = [(0, 64) for i in range(len(filtered_vars))]
 
-        con = {'type': 'ineq', 'fun': ErrorOptimizerFn}
-        minimizer_kwargs = {'constraints': ([con])}
+        con = {'type': 'ineq', 'fun': ErrorConstraintFn}
+
+        # note: minimize uses SLSQP by default but I specify it to be explicit; we're using basinhopping to find the global minimum while using SLSQP to find local minima
+        minimizer_kwargs = {'constraints': ([con]), 'bounds': bounds, 'method': "SLSQP"}
         solution = basinhopping(AreaOptimizerFn, x0, minimizer_kwargs=minimizer_kwargs)
 
         sols = dict(zip(filtered_vars, solution.x))
