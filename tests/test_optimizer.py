@@ -5,6 +5,22 @@ from BitFlow.Eval.IAEval import IAEval
 from BitFlow.Eval.NumEval import NumEval
 from BitFlow.Optimization import BitFlowOptimizer
 
+
+def test_print():
+    fig3 = gen_fig3()
+    evaluator = IAEval(fig3)
+
+    a, b = Interval(-3, 2), Interval(4, 8)
+    evaluator.eval(a=a, b=b)
+
+    bfo = BitFlowOptimizer(evaluator, 'z', 8)
+    bfo.solve()
+
+    print("\nRESULTS:")
+    print("node, IB, FB ")
+    for node in bfo.fb_sols.keys():
+        print(f"{node}, {bfo.visitor.IBs[node]}, {bfo.fb_sols[node]}")
+
 def gen_fig3():
     #(a*b) + 4 - b
     a = Input(name="a")
@@ -14,7 +30,7 @@ def gen_fig3():
     e = Add(d, c, name="e")
     z = Sub(e, b, name="z")
 
-    fig3_dag = Dag(output=z, inputs=[a,b])
+    fig3_dag = Dag(outputs=[z], inputs=[a,b])
     return fig3_dag
 
 def gen_dag1():
@@ -26,7 +42,7 @@ def gen_dag1():
     j = Sub(y, z, name="j")
     k = Mul(i, j, name="k")
 
-    dag = Dag(output=k, inputs=[x, y, z])
+    dag = Dag(outputs=[k], inputs=[x, y, z])
     return dag
 
 def test_fig3():
