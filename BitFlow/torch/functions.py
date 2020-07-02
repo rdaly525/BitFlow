@@ -1,7 +1,7 @@
 import torch as t
 
 K = 10
-class _Round(t.autograd.Function):
+class _IntRound(t.autograd.Function):
 
   @staticmethod
   def forward(ctx,x):
@@ -15,4 +15,4 @@ class _Round(t.autograd.Function):
     delta = t.abs(x-rx)
     return (K**(4*delta-1)) * dy
 
-Round = _Round.apply
+IntRound = _IntRound.apply
