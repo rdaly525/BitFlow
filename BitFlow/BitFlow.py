@@ -17,36 +17,37 @@ class BitFlow:
     def __init__(self, dag):
 
         model = self.gen_model(dag)
+        database_size = 2
 
-        X = [[torch.tensor([3]), torch.tensor([4])],
-             [torch.tensor([3]), torch.tensor([4])]]
+        X = torch.tensor([[3., 4.], [-3., 2.], [1., 8.]], requires_grad=False)
+        Y = torch.tensor([12., -4., 4.], requires_grad=False)
 
-        Y = [torch.tensor([3]), torch.tensor([4])]
+        W = torch.tensor([12., 12., 12.], requires_grad=True)
 
-        W = [torch.tensor([12.], requires_grad=True), torch.tensor([12.], requires_grad=True), torch.tensor([12.], requires_grad=True)]
+        # Loss function
+        def compute_loss(target, y):
+            #L1 norm
+            return target-y
 
-        # 5. Loss function
-        def compute_loss(y, target):
-            #L2 norm squared
-            return torch.sqrt(target - y)
-
-        # 6. Run torch on DAG
+        # Run torch on DAG
         epochs = 3
         lr_rate = 0.001
-        opt = torch.optim.SGD(W, lr=.001)
-        losslog=[]
+
+        opt = torch.optim.SGD([W], lr=lr_rate)
+
         for e in range(epochs):
-            for i in range(2):
-                data = {"X": X[i], "W": W}
-                y = model(**data)
+            for i in range(database_size):
+                inputs = {"X": X[i], "W": W}
+                y = model(**inputs)
                 print(y)
 
-                loss = compute_loss(y, Y[i], W)
+                loss = compute_loss(Y[i], y)
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
-                if t%10==0:
-                    print(loss)
+                print(W)
 
+        test = {"X": torch.tensor([4., 4.]), "W": W}
+        print(model(**test))
 
         # print(evaluator)

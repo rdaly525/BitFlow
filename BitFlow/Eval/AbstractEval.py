@@ -15,7 +15,7 @@ class AbstractEval(Visitor):
                 raise ValueError(f"Missing {dag_input} in input values")
         super().run(self.dag)
         outputs = [self.node_values[root] for root in self.dag.roots()]
-        print(outputs, len(outputs), outputs[0])
+        #print(outputs, len(outputs), outputs[0])
         if len(outputs)==1:
             return outputs[0]
         return outputs
