@@ -12,7 +12,7 @@ def gen_fig3():
     e = Add(d, c, name="e")
     z = Sub(e, b, name="z")
 
-    fig3_dag = Dag(output=z, inputs=[a,b])
+    fig3_dag = Dag(outputs=[z], inputs=[a,b])
     return fig3_dag
 
 #Evaluate it in the context of simple values
