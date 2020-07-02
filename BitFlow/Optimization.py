@@ -205,4 +205,3 @@ class BitFlowOptimizer():
         #     print(f"{key}: {sols[key]}")
         #
         # self.fb_sols = sols
-

@@ -1,5 +1,5 @@
 from .AbstractEval import AbstractEval
-from ..node import DagNode
+from .node import DagNode
 
 class NumEval(AbstractEval):
     def eval_Constant(self, node: DagNode):

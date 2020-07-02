@@ -5,7 +5,6 @@ from BitFlow.Eval.IAEval import IAEval
 from BitFlow.Eval.NumEval import NumEval
 from BitFlow.Optimization import BitFlowOptimizer
 
-
 def test_print():
     fig3 = gen_fig3()
     evaluator = IAEval(fig3)
