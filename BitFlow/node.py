@@ -94,6 +94,8 @@ class Round(DagNode):
 
 class Dag(AbstractDag):
     def __init__(self, outputs: tp.List[DagNode], inputs: tp.List[DagNode]):
+        assert isinstance(outputs, list)
+        assert isinstance(inputs, list)
         self.inputs = inputs
         self.outputs= outputs
         super().__init__(*outputs)
