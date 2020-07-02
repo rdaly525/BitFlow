@@ -2,6 +2,7 @@ from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, DagNode
 from DagVisitor import Visitor
 from BitFlow.IA import Interval
 from BitFlow.Eval import IAEval, NumEval
+from BitFlow.Eval.TorchEval import TorchEval
 import torch
 
 def gen_fig3():
@@ -57,8 +58,8 @@ class NodePrinter(Visitor):
 
 
     #Generic visitor method for a node
-    #This method will be run on each node unless 
-    # a visit_<NodeType> method is defined 
+    #This method will be run on each node unless
+    # a visit_<NodeType> method is defined
     def generic_visit(self, node: DagNode):
         #Call this to visit node's children first
         Visitor.generic_visit(self, node)
@@ -86,18 +87,17 @@ def test_print():
     node_values = evaluator.node_values
     node_printer = NodePrinter(node_values)
 
-    # Visitor classes have a method called 'run' that takes in a dag and runs all the 
+    # Visitor classes have a method called 'run' that takes in a dag and runs all the
     # visit methods on each node
     node_printer.run(fig3)
 
 #Evaluate it in the context of Torch
 def test_fig3_IA():
     fig3 = gen_fig3()
-    evaluator = IAEval(fig3)
+    evaluator = TorchEval(fig3)
 
     a = torch.Tensor([3])
     b = torch.Tensor([5])
     res = evaluator.eval(a=a, b=b)
     gold = torch.Tensor([14])
     assert res == gold
-

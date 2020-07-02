@@ -89,7 +89,7 @@ class Round(DagNode):
     def __init__(self, val: DagNode, prec: DagNode, name=None):
         if name is None:
             name = f"{val.name}_round_{prec.name}"
-        super.__init__(self, val, prec)
+        super().__init__(self, val, prec)
 
 
 class Dag(AbstractDag):

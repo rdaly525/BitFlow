@@ -8,6 +8,7 @@ def test_basic():
         def __init__(self, dataset_size):
             self.X = torch.rand(size=[dataset_size, 2]) - 0.5 + torch.tensor([2.0, 3.0]).reshape([1, 2])
             self.target_y = torch.tensor([11, 7])
+
         def __len__(self):
             return len(self.X)
 
