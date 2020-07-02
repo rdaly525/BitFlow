@@ -1,5 +1,5 @@
 from .AbstractEval import AbstractEval
-from .node import DagNode
+from ..node import DagNode
 
 class IAEval(AbstractEval):
     def eval_Constant(self, node: DagNode):
@@ -13,3 +13,6 @@ class IAEval(AbstractEval):
 
     def eval_Mul(self, a, b, node: DagNode):
         return a * b
+
+    def eval_Select(self, a, node: DagNode):
+        raise NotImplementedError("TODO")

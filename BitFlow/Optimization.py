@@ -5,22 +5,7 @@ from .Eval.IAEval import IAEval
 from .Eval.NumEval import NumEval
 from math import log2, ceil
 from .Precision import PrecisionNode
-# from gekko import GEKKO
-#import numpy as np
 from scipy.optimize import fsolve, minimize, basinhopping
-
-
-def gen_fig3():
-    #(a*b) + 4 - b
-    a = Input(name="a")
-    b = Input(name="b")
-    c = Constant(4, name="c")
-    d = Mul(a, b, name="d")
-    e = Add(d, c, name="e")
-    z = Sub(e, b, name="z")
-
-    fig3_dag = Dag(output=z, inputs=[a,b])
-    return fig3_dag
 
 class BitFlowVisitor(Visitor):
     def __init__(self, node_values):
@@ -219,21 +204,3 @@ class BitFlowOptimizer():
         #     print(f"{key}: {sols[key]}")
         #
         # self.fb_sols = sols
-
-
-def test_print():
-    fig3 = gen_fig3()
-    evaluator = IAEval(fig3)
-
-    a, b = Interval(-3, 2), Interval(4, 8)
-    evaluator.eval(a=a, b=b)
-
-    bfo = BitFlowOptimizer(evaluator, 'z', 8)
-    bfo.solve()
-
-    print("\nRESULTS:")
-    print("node, IB, FB ")
-    for node in bfo.fb_sols.keys():
-        print(f"{node}, {bfo.visitor.IBs[node]}, {bfo.fb_sols[node]}")
-
-test_print()
