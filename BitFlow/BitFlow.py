@@ -30,7 +30,7 @@ class BitFlow:
             return target-y
 
         # Run torch on DAG
-        epochs = 3
+        epochs = 64
         lr_rate = 0.001
 
         opt = torch.optim.SGD([W], lr=lr_rate)
@@ -39,15 +39,12 @@ class BitFlow:
             for i in range(database_size):
                 inputs = {"X": X[i], "W": W}
                 y = model(**inputs)
-                print(y)
 
                 loss = compute_loss(Y[i], y)
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
-                print(W)
 
         test = {"X": torch.tensor([4., 4.]), "W": W}
+        print(W)
         print(model(**test))
-
-        # print(evaluator)
