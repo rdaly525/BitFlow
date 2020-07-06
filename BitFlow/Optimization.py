@@ -1,4 +1,4 @@
-from .node import Input, Constant, Dag, Add, Sub, Mul, DagNode
+from .node import Input, Constant, Dag, Add, Sub, Mul, DagNode, Select
 from DagVisitor import Visitor
 from .IA import Interval
 from .Eval.IAEval import IAEval
@@ -44,6 +44,9 @@ class BitFlowVisitor(Visitor):
 
         self.errors[node.name] = PrecisionNode(val, node.name, [])
 
+    def visit_Select(self, node: Select):
+        Visitor.generic_visit(self, node)
+
     def visit_Constant(self, node: Constant):
         self.handleIB(node)
 
@@ -59,7 +62,6 @@ class BitFlowVisitor(Visitor):
         # self.area_fn += f"+m.max2({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
         self.area_fn += f"+max({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
 
-
     def visit_Sub(self, node: Sub):
         Visitor.generic_visit(self, node)
 
@@ -68,7 +70,6 @@ class BitFlowVisitor(Visitor):
         self.errors[node.name] = self.errors[lhs.name].sub(self.errors[rhs.name], node.name)
         # self.area_fn += f"+m.max2({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
         self.area_fn += f"+max({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
-
 
     def visit_Mul(self, node: Mul):
         Visitor.generic_visit(self, node)
@@ -96,6 +97,9 @@ class BitFlowOptimizer():
         for (i, var) in enumerate(vars):
             vars[i] = var.name
         self.vars = vars
+
+
+        self.error_fn = f"2**(-{self.output_precision}-1) - (" + self.error_fn + ")"
 
 
     def calculateInitialValues(self):
@@ -133,9 +137,7 @@ class BitFlowOptimizer():
     def solve(self):
         self.calculateInitialValues()
         print("SOLVING AREA/ERROR...")
-
         # self.error_fn = f"2**(-{self.output_precision}-1)>=" + self.error_fn
-        self.error_fn = f"2**(-{self.output_precision}-1) - (" + self.error_fn + ")"
 
         print(f"ERROR EQ: {self.error_fn}")
         print(f"AREA EQ: {self.area_fn}")

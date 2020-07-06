@@ -6,29 +6,23 @@ from BitFlow.Eval.TorchEval import TorchEval
 from BitFlow.BitFlow import BitFlow
 import torch
 
-def gen_rounded_fig3():
-    # 1. Define the DAG and weight nodes
-    W = Input(name="W")
-    X = Input(name="X")
-
-    a = X[0]
-    b = X[1]
+def gen_fig3():
+    #(a*b) + 4 - b
+    a = Input(name="a")
+    b = Input(name="b")
     c = Constant(4, name="c")
+    d = Mul(a, b, name="d")
+    e = Add(d, c, name="e")
+    z = Sub(e, b, name="z")
 
-    # 2. Add Round Nodes after +/-/* in DAG
-    d = Round(Mul(a, b, name="d"), W[0])
-    e = Round(Add(d, c, name="e"), W[1])
-    z = Round(Sub(e, b, name="z"), W[2])
-
-    fig3 = Dag(outputs=[z], inputs=[X,W])
-
-    return fig3
+    fig3_dag = Dag(outputs=[z], inputs=[a,b])
+    return fig3_dag
 
 def test_fig3():
-    dag = gen_rounded_fig3()
-    evaluator = TorchEval(dag)
 
-    BitFlow(dag)
+    dag = gen_fig3()
+
+    BitFlow(dag, 8)
     return
 
 test_fig3()
