@@ -103,7 +103,7 @@ class BitFlow:
             error = torch.tensor(ErrorConstraintFn(W.tolist())) # >= 0
             L1 = target - y
 
-            loss = L1 + area + error
+            loss = L1 + area + torch.exp(-1/2 * error)
 
             if iter % 500 == 0:
                 print(f"AREA: {area}")
@@ -113,8 +113,8 @@ class BitFlow:
             return loss
 
         # Run torch on DAG
-        epochs = 50
-        lr_rate = 0.005
+        epochs = 500
+        lr_rate = 0.05
 
         opt = torch.optim.AdamW([W], lr=lr_rate)
 
