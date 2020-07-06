@@ -95,7 +95,7 @@ class BitFlow:
         O = torch.tensor([8.])
         X, Y = self.gen_data(model, O, database_size, input_size, weight_size, mean, std)
 
-        W = torch.tensor([10., 10., 10., 10., 10.], requires_grad=True)
+        W = torch.tensor([12., 12., 12., 12., 12.], requires_grad=True)
 
         # Loss function
         def compute_loss(target, y, W, iter):
@@ -103,17 +103,20 @@ class BitFlow:
             error = torch.tensor(ErrorConstraintFn(W.tolist())) # >= 0
             L1 = target - y
 
+            loss = L1 + area + error
+
             if iter % 500 == 0:
                 print(f"AREA: {area}")
                 print(f"ERROR: {error}")
-                print(f"LOSS: {L1[0]}")
-            return (area + error + L1)**2
+                print(f"LOSS: {loss[0]}")
+
+            return loss
 
         # Run torch on DAG
         epochs = 50
-        lr_rate = 0.00001
+        lr_rate = 0.005
 
-        opt = torch.optim.Adam([W], lr=lr_rate)
+        opt = torch.optim.AdamW([W], lr=lr_rate)
 
         iter = 0
         for e in range(epochs):
