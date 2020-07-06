@@ -103,7 +103,7 @@ class BitFlow:
             error = torch.tensor(ErrorConstraintFn(W.tolist())) # >= 0
             L1 = target - y
 
-            loss = L1 + area + torch.exp(-1/2 * error)
+            loss = L1 + area + max(-error, 0)
 
             if iter % 500 == 0:
                 print(f"AREA: {area}")
@@ -130,5 +130,5 @@ class BitFlow:
                 iter += 1
 
         test = {"X": torch.tensor([4., 4.]), "W": W, "O": O}
-        print(W)
+        print(torch.ceil(W))
         print(model(**test))
