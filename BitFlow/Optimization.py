@@ -7,6 +7,7 @@ from math import log2, ceil
 from .Precision import PrecisionNode
 from scipy.optimize import fsolve, minimize, basinhopping
 
+
 class BitFlowVisitor(Visitor):
     def __init__(self, node_values):
         self.node_values = node_values
@@ -58,7 +59,8 @@ class BitFlowVisitor(Visitor):
 
         self.handleIB(node)
         lhs, rhs = self.getChildren(node)
-        self.errors[node.name] = self.errors[lhs.name].add(self.errors[rhs.name], node.name)
+        self.errors[node.name] = self.errors[lhs.name].add(
+            self.errors[rhs.name], node.name)
         # self.area_fn += f"+m.max2({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
         self.area_fn += f"+max({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
 
@@ -67,7 +69,8 @@ class BitFlowVisitor(Visitor):
 
         self.handleIB(node)
         lhs, rhs = self.getChildren(node)
-        self.errors[node.name] = self.errors[lhs.name].sub(self.errors[rhs.name], node.name)
+        self.errors[node.name] = self.errors[lhs.name].sub(
+            self.errors[rhs.name], node.name)
         # self.area_fn += f"+m.max2({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
         self.area_fn += f"+max({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
 
@@ -76,8 +79,10 @@ class BitFlowVisitor(Visitor):
 
         self.handleIB(node)
         lhs, rhs = self.getChildren(node)
-        self.errors[node.name] = self.errors[lhs.name].mul(self.errors[rhs.name], node.name)
+        self.errors[node.name] = self.errors[lhs.name].mul(
+            self.errors[rhs.name], node.name)
         self.area_fn += f"+({self.IBs[lhs.name]} + {lhs.name})*({self.IBs[rhs.name]} + {rhs.name})"
+
 
 class BitFlowOptimizer():
     def __init__(self, evaluator, output, output_precision):
@@ -98,25 +103,22 @@ class BitFlowOptimizer():
             vars[i] = var.name
         self.vars = vars
 
-
-        self.error_fn = f"2**(-{self.output_precision}-1) - (" + self.error_fn + ")"
-
+        self.error_fn = f"2**(-{self.output_precision}-1) - (" + \
+            self.error_fn + ")"
 
     def calculateInitialValues(self):
-        print("CALCULATING INITIAL VALUES USING UFB METHOD...")
+        #print("CALCULATING INITIAL VALUES USING UFB METHOD...")
         # bnd = f"{-2**(-self.output_precision-1)} == 0"
         bnd = f"{-2**(-self.output_precision-1)}"
         self.ufb_fn += bnd
-        print(f"UFB EQ: {self.ufb_fn}")
-        print(f"-----------")
+        #print(f"UFB EQ: {self.ufb_fn}")
+        # print(f"-----------")
 
         exec(f'''def UFBOptimizerFn(UFB):
              return  {self.ufb_fn}''', globals())
 
         sol = ceil(fsolve(UFBOptimizerFn, 0.01))
         self.initial = sol
-
-
 
         # m = GEKKO()
         # UFB = m.Var(value=0,integer=True)
@@ -132,7 +134,6 @@ class BitFlowOptimizer():
         # sol = ceil(UFB.value[0])
         # self.initial = sol
         # print(f"UFB = {sol}\n")
-
 
     def solve(self):
         self.calculateInitialValues()
@@ -162,8 +163,10 @@ class BitFlowOptimizer():
         con = {'type': 'ineq', 'fun': ErrorConstraintFn}
 
         # note: minimize uses SLSQP by default but I specify it to be explicit; we're using basinhopping to find the global minimum while using SLSQP to find local minima
-        minimizer_kwargs = {'constraints': ([con]), 'bounds': bounds, 'method': "SLSQP"}
-        solution = basinhopping(AreaOptimizerFn, x0, minimizer_kwargs=minimizer_kwargs)
+        minimizer_kwargs = {'constraints': (
+            [con]), 'bounds': bounds, 'method': "SLSQP"}
+        solution = basinhopping(AreaOptimizerFn, x0,
+                                minimizer_kwargs=minimizer_kwargs)
 
         sols = dict(zip(filtered_vars, solution.x))
 
@@ -172,7 +175,6 @@ class BitFlowOptimizer():
             print(f"{key}: {sols[key]}")
 
         self.fb_sols = sols
-
 
         # namespace = {"m": GEKKO()}
         # m = namespace["m"]
