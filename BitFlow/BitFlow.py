@@ -126,7 +126,7 @@ class BitFlow:
         input_size = 2  # TODO: adapt to DAG
         weight_size = 6  # TODO: adapt to DAG
         epochs = 50
-        lr_rate = 0.0005
+        lr_rate = 0.001
 
         # output without grad TODO: generalize to DAG
         O = torch.tensor([precision])

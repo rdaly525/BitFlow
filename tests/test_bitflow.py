@@ -24,7 +24,7 @@ def test_fig3():
 
     dag = gen_fig3()
 
-    BitFlow(dag, 5.)
+    BitFlow(dag, 8.)
     return
 
 
