@@ -77,6 +77,13 @@ class BitFlow:
 
         return fig3
 
+    def round_to_precision(self, num, precision):
+        scale = 2.0**precision
+        return torch.round(num * scale) / scale
+
+    def is_within_ulp(self, num, truth, precision):
+        return (self.round_to_precision(truth, precision) + 2**-(precision + 1) > num and self.round_to_precision(truth, precision) - 2**-(precision + 1) < num)
+
     def __init__(self, dag, precision, mean=5., std=3.):
 
         # Run a basic evaluator on the DAG to construct error and area functions
@@ -114,15 +121,15 @@ class BitFlow:
         model = self.gen_model(dag)
 
         # Training details
-        training_size = 500
-        testing_size = 100
+        training_size = 1000
+        testing_size = 200
         input_size = 2  # TODO: adapt to DAG
         weight_size = 6  # TODO: adapt to DAG
-        epochs = 100
-        lr_rate = 0.05
+        epochs = 50
+        lr_rate = 0.0005
 
         # output without grad TODO: generalize to DAG
-        O = torch.tensor([8.])
+        O = torch.tensor([precision])
 
         # generate testing/training data
         train_X, train_Y = self.gen_data(model, O, training_size,
@@ -139,11 +146,14 @@ class BitFlow:
 
             # TODO: error is within 1 ulp of truth
             error = torch.tensor(ErrorConstraintFn(W.tolist()))  # >= 0
-            L1 = torch.abs(target - y)
 
-            loss = L1 + area + max(-error, 0)
+            L1 = (target - y)
+
+            loss = (L1 + area * error)
 
             if iter % 500 == 0:
+                print(
+                    f"iteration {iter} of {epochs * training_size} ({(iter * 100.)/(epochs * training_size)}%)")
                 print(f"AREA: {area}")
                 print(f"ERROR: {error}")
                 print(f"LOSS: {loss[0]}")
@@ -152,8 +162,8 @@ class BitFlow:
 
         # Set up optimizer
         opt = torch.optim.AdamW([W], lr=lr_rate)
-
         # Run training process
+        print("\n##### TRAINING ######")
         iter = 0
         for e in range(epochs):
             for i in range(training_size):
@@ -165,13 +175,28 @@ class BitFlow:
                 opt.step()
                 iter += 1
 
+        W = torch.ceil(W)
+
         # Run testing process
+        success = 0
+        print("\n##### ERRORS ######")
         for i in range(testing_size):
             sample_X = test_X[i]
             sample_Y = test_Y[i]
-            # TEST ACCURACY
+            inputs = {"X": sample_X, "W": W, "O": O}
+            res = model(**inputs)
+            if (self.is_within_ulp(res, sample_Y, precision)):
+                success += 1
+            else:
+                print(f"{res[0]} vs {sample_Y}")
+        acc = (success * 1.)/testing_size
+        print(f"accuracy: {acc}")
+
+        print("\n##### SAMPLE ######")
 
         # Basic sample (truth value = 16)
         test = {"X": torch.tensor([4., 4.]), "W": W, "O": O}
-        print(torch.ceil(W))
+        print(W)
         print(model(**test))
+        print(self.is_within_ulp(model(**test),
+                                 torch.tensor([16.]), precision))

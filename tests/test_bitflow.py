@@ -6,6 +6,7 @@ from BitFlow.Eval.TorchEval import TorchEval
 from BitFlow.BitFlow import BitFlow
 import torch
 
+
 def gen_fig3():
     #(a*b) + 4 - b
     a = Input(name="a")
@@ -15,14 +16,16 @@ def gen_fig3():
     e = Add(d, c, name="e")
     z = Sub(e, b, name="z")
 
-    fig3_dag = Dag(outputs=[z], inputs=[a,b])
+    fig3_dag = Dag(outputs=[z], inputs=[a, b])
     return fig3_dag
+
 
 def test_fig3():
 
     dag = gen_fig3()
 
-    BitFlow(dag, 8)
+    BitFlow(dag, 5.)
     return
+
 
 test_fig3()
