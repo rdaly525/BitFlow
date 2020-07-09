@@ -43,11 +43,11 @@ class BitFlow:
         Y = []
         W = torch.Tensor(1, size_w).fill_(64)[0]
         for i in range(num):
-            # new_x = torch.tensor([((data_range[0][1]-data_range[0][0]) * torch.rand((1, 1)) + data_range[0][0]).item(
-            # ), ((data_range[1][1]-data_range[1][0]) * torch.rand((1, 1)) + data_range[1][0]).item()])
+            new_x = torch.tensor([((data_range[0][1]-data_range[0][0]) * torch.rand((1, 1)) + data_range[0][0]).item(
+            ), ((data_range[1][1]-data_range[1][0]) * torch.rand((1, 1)) + data_range[1][0]).item()])
 
-            new_x = ((data_range[0][1]-data_range[0][0]) *
-                     torch.rand((1, size_x)) + data_range[0][0])[0]
+            # new_x = ((data_range[0][1]-data_range[0][0]) *
+            #          torch.rand((1, size_x)) + data_range[0][0])[0]
 
             # print(new_x)
 
@@ -155,7 +155,7 @@ class BitFlow:
         input_size = 2  # TODO: adapt to DAG
         weight_size = 5  # TODO: adapt to DAG
         epochs = 10
-        lr_rate = 1e-4
+        lr_rate = 1e-5
 
         # output without grad TODO: generalize to DAG
         O = torch.tensor([precision])
