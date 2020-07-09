@@ -43,12 +43,18 @@ class BitFlow:
         Y = []
         W = torch.Tensor(1, size_w).fill_(64)[0]
         for i in range(num):
-            new_x = (data_range[1]-data_range[0]) * \
-                torch.rand((1, size_x)) + data_range[0]
-            inputs = {"X": new_x[0], "W": W, "O": output_precision}
+            # new_x = torch.tensor([((data_range[0][1]-data_range[0][0]) * torch.rand((1, 1)) + data_range[0][0]).item(
+            # ), ((data_range[1][1]-data_range[1][0]) * torch.rand((1, 1)) + data_range[1][0]).item()])
+
+            new_x = ((data_range[0][1]-data_range[0][0]) *
+                     torch.rand((1, size_x)) + data_range[0][0])[0]
+
+            # print(new_x)
+
+            inputs = {"X": new_x, "W": W, "O": output_precision}
             new_y = model(**inputs)
 
-            X.append(new_x.tolist()[0])
+            X.append(new_x.tolist())
             Y.append(new_y.tolist()[0])
 
         return torch.tensor(X), torch.tensor(Y)
@@ -83,7 +89,7 @@ class BitFlow:
         return torch.round(num * scale) / scale
 
     def is_within_ulp(self, num, truth, precision):
-        return (self.round_to_precision(truth, precision) + 2**-(precision + 1) > num and self.round_to_precision(truth, precision) - 2**-(precision + 1) < num)
+        return (self.round_to_precision(truth, precision + 1) + 2**-(precision + 1) > num and self.round_to_precision(truth, precision + 1) - 2**-(precision + 1) < num)
 
     def calc_accuracy(self, name, X, Y, W, O, precision, testing_size, model, should_print):
         success = 0
@@ -101,7 +107,7 @@ class BitFlow:
         acc = (success * 1.)/testing_size
         print(f"accuracy: {acc}")
 
-    def __init__(self, dag, precision, data_range=(-2., 2.)):
+    def __init__(self, dag, precision, data_range=[(-3., 2.), (4., 8.)]):
 
         # Run a basic evaluator on the DAG to construct error and area functions
         evaluator = NumEval(dag)
@@ -144,12 +150,12 @@ class BitFlow:
         model = self.gen_model(dag)
 
         # Training details
-        training_size = 2000
+        training_size = 1000
         testing_size = 200
         input_size = 2  # TODO: adapt to DAG
         weight_size = 5  # TODO: adapt to DAG
-        epochs = 5
-        lr_rate = 0.01
+        epochs = 10
+        lr_rate = 1e-4
 
         # output without grad TODO: generalize to DAG
         O = torch.tensor([precision])
@@ -163,39 +169,48 @@ class BitFlow:
         # weights matrix
         W = torch.Tensor(1, weight_size).fill_(bfo.initial)[0]
         init_W = W.clone()
+        W += 2
         print(W)
         W.requires_grad = True
+
+        self.M = -1e20
+        self.prevM = self.M
 
         # Loss function
         def compute_loss(target, y, W, iter):
             area = torch.tensor(AreaOptimizerFn(W.tolist()))
 
-            N = 1000
-            M = 10000
-            L = 10000
+            N = 1
+            decay = 0.95
 
-            # >= 0
-            ulp_err = K * (int(self.is_within_ulp(y, target, precision)
-                               [0]) - 1)
+            constraint_err = torch.tensor(
+                ErrorConstraintFn(W.tolist()))  # >= 0
 
-            constraint_err = torch.max(-torch.tensor(
-                ErrorConstraintFn(W.tolist())), torch.zeros(1))  # >= 0
+            if constraint_err > 0:
+                self.prevM = self.M
+                self.M *= decay
+            else:
+                self.M = self.prevM
+
+            L = 100
+
+            # ulp_err = (int(self.is_within_ulp(y, target, precision)[0]) - 1)
 
             L2 = torch.sum((y-target)**2)
 
-            loss = (L * L2 + M * constraint_err + area/K) ** 2
+            loss = (L * L2 + self.M * constraint_err + N * area)
 
             if iter % 500 == 0:
                 print(
                     f"iteration {iter} of {epochs * training_size} ({(iter * 100.)/(epochs * training_size)}%)")
                 print(f"AREA: {area}")
-                print(f"ERROR: {constraint_err[0]}")
-                print(f"LOSS: {loss[0]}")
+                print(f"ERROR: {constraint_err}")
+                print(f"LOSS: {loss}")
 
             return loss
 
         # Set up optimizer
-        opt = torch.optim.Adam([W], lr=lr_rate)
+        opt = torch.optim.SGD([W], lr=lr_rate)
 
         # Run training process
         print("\n##### TRAINING ######")
@@ -223,6 +238,10 @@ class BitFlow:
         self.calc_accuracy("UFB TRAIN", train_X, train_Y, init_W,
                            O, precision, testing_size, model, False)
 
+        print("\n##### MODEL DETAILS #####")
+        print(f"ERROR: {ErrorConstraintFn(W.tolist())}")
+        print(f"AREA: {AreaOptimizerFn(W.tolist())}")
+
         print("\n##### SAMPLE ######")
 
         # Basic sample (truth value = 16)
@@ -232,3 +251,13 @@ class BitFlow:
         print(model(**test))
         print(self.is_within_ulp(model(**test),
                                  torch.tensor([16.]), precision))
+
+        print("\n##### FROM OPTIMIZER ######")
+        bfo.solve()
+        test = [bfo.fb_sols['a'], bfo.fb_sols['b'],
+                bfo.fb_sols['c'], bfo.fb_sols['d'], bfo.fb_sols['e']]
+        print(f"ERROR: {ErrorConstraintFn(test)}")
+        print(f"AREA: {AreaOptimizerFn(test)}")
+
+        self.calc_accuracy("OPTIMIZER TEST", test_X, test_Y, torch.tensor(test),
+                           O, precision, testing_size, model, False)
