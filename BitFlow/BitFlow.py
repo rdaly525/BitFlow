@@ -148,8 +148,8 @@ class BitFlow:
         testing_size = 200
         input_size = 2  # TODO: adapt to DAG
         weight_size = 5  # TODO: adapt to DAG
-        epochs = 50
-        lr_rate = 0.005
+        epochs = 5
+        lr_rate = 0.03
 
         # output without grad TODO: generalize to DAG
         O = torch.tensor([precision])
@@ -170,7 +170,8 @@ class BitFlow:
         def compute_loss(target, y, W, iter):
             area = torch.tensor(AreaOptimizerFn(W.tolist()))
 
-            K = 10000
+            K = 1000
+            L = 100000
             # >= 0
             ulp_err = K * (int(self.is_within_ulp(y, target, precision)
                                [0]) - 1)
@@ -180,7 +181,7 @@ class BitFlow:
 
             L2 = torch.sum((y-target)**2)
 
-            loss = (L2 + K * constraint_err + area/K) ** 2
+            loss = (K * L2 + K * constraint_err + area/L) ** 2
 
             if iter % 500 == 0:
                 print(
