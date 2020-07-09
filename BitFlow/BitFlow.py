@@ -198,7 +198,7 @@ class BitFlow:
 
             L2 = torch.sum((y-target)**2)
 
-            # incorporate precsioin into loss
+            # incorporate precision into loss
             loss = (L * L2 + self.M * constraint_err + N * area)
 
             if iter % 1000 == 0:
