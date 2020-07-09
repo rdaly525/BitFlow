@@ -24,7 +24,7 @@ class BitFlow:
             return self.evaluator.eval(**kwargs)
         return model
 
-    def gen_data(self, model, output_precision, num, size_x, size_w, mean, std):
+    def gen_data(self, model, output_precision, num, size_x, size_w, data_range):
         """ Generates ground-truth data from user specifications and model.
 
         Args:
@@ -43,7 +43,8 @@ class BitFlow:
         Y = []
         W = torch.Tensor(1, size_w).fill_(64)[0]
         for i in range(num):
-            new_x = torch.normal(mean, std, (1, size_x))
+            new_x = (data_range[1]-data_range[0]) * \
+                torch.rand((1, size_x)) + data_range[0]
             inputs = {"X": new_x[0], "W": W, "O": output_precision}
             new_y = model(**inputs)
 
@@ -84,13 +85,29 @@ class BitFlow:
     def is_within_ulp(self, num, truth, precision):
         return (self.round_to_precision(truth, precision) + 2**-(precision + 1) > num and self.round_to_precision(truth, precision) - 2**-(precision + 1) < num)
 
-    def __init__(self, dag, precision, mean=5., std=2.):
+    def calc_accuracy(self, name, X, Y, W, O, precision, testing_size, model, should_print):
+        success = 0
+        print(f"\n##### {name} SET ######")
+        for i in range(testing_size):
+            sample_X = X[i]
+            sample_Y = Y[i]
+            inputs = {"X": sample_X, "W": W, "O": O}
+            res = model(**inputs)
+            if (self.is_within_ulp(res, sample_Y, precision)):
+                success += 1
+            else:
+                if should_print:
+                    print(f"prediction: {res[0]} : true: {sample_Y}")
+        acc = (success * 1.)/testing_size
+        print(f"accuracy: {acc}")
+
+    def __init__(self, dag, precision, data_range=(-2., 3.)):
 
         # Run a basic evaluator on the DAG to construct error and area functions
         evaluator = NumEval(dag)
 
         # TODO: generalize this line
-        evaluator.eval(a=3, b=2)
+        evaluator.eval(a=3, b=8)
 
         node_values = evaluator.node_values
         visitor = BitFlowVisitor(node_values)
@@ -132,19 +149,20 @@ class BitFlow:
         input_size = 2  # TODO: adapt to DAG
         weight_size = 5  # TODO: adapt to DAG
         epochs = 50
-        lr_rate = 0.001
+        lr_rate = 0.005
 
         # output without grad TODO: generalize to DAG
         O = torch.tensor([precision])
 
         # generate testing/training data
         train_X, train_Y = self.gen_data(model, O, training_size,
-                                         input_size, weight_size, mean, std)
+                                         input_size, weight_size, data_range)
         test_X, test_Y = self.gen_data(model, O, testing_size,
-                                       input_size, weight_size, mean, std)
+                                       input_size, weight_size, data_range)
 
         # weights matrix
         W = torch.Tensor(1, weight_size).fill_(bfo.initial)[0]
+        init_W = W.clone()
         print(W)
         W.requires_grad = True
 
@@ -152,26 +170,30 @@ class BitFlow:
         def compute_loss(target, y, W, iter):
             area = torch.tensor(AreaOptimizerFn(W.tolist()))
 
-            # K = 1
-            # if not self.is_within_ulp(y, target, precision):
-            #     K = 1e4
-            error = torch.tensor(ErrorConstraintFn(W.tolist()))  # >= 0
+            K = 10000
+            # >= 0
+            ulp_err = K * (int(self.is_within_ulp(y, target, precision)
+                               [0]) - 1)
 
-            L1 = torch.abs(target - y)
+            constraint_err = torch.max(-torch.tensor(
+                ErrorConstraintFn(W.tolist())), torch.zeros(1))  # >= 0
 
-            loss = (L1 + area * error)
+            L2 = torch.sum((y-target)**2)
+
+            loss = (L2 + K * constraint_err + area/K) ** 2
 
             if iter % 500 == 0:
                 print(
                     f"iteration {iter} of {epochs * training_size} ({(iter * 100.)/(epochs * training_size)}%)")
                 print(f"AREA: {area}")
-                print(f"ERROR: {error}")
+                print(f"ERROR: {constraint_err[0]}")
                 print(f"LOSS: {loss[0]}")
 
             return loss
 
         # Set up optimizer
-        opt = torch.optim.AdamW([W], lr=lr_rate)
+        opt = torch.optim.Adam([W], lr=lr_rate)
+
         # Run training process
         print("\n##### TRAINING ######")
         iter = 0
@@ -185,42 +207,25 @@ class BitFlow:
                 opt.step()
                 iter += 1
 
+        print(W)
         W = torch.ceil(W)
 
-        # Run testing process
-        success = 0
-        print("\n##### TEST SET ######")
-        for i in range(testing_size):
-            sample_X = test_X[i]
-            sample_Y = test_Y[i]
-            inputs = {"X": sample_X, "W": W, "O": O}
-            res = model(**inputs)
-            if (self.is_within_ulp(res, sample_Y, precision)):
-                success += 1
-            else:
-                print(f"prediction: {res[0]} : true: {sample_Y}")
-        acc = (success * 1.)/testing_size
-        print(f"accuracy: {acc}")
+        self.calc_accuracy("TEST", test_X, test_Y, W,
+                           O, precision, testing_size, model, True)
+        self.calc_accuracy("UFB TEST", test_X, test_Y, init_W,
+                           O, precision, testing_size, model, False)
 
-        success = 0
-        print("\n##### TRAIN SET ######")
-        for i in range(training_size):
-            sample_X = train_X[i]
-            sample_Y = train_Y[i]
-            inputs = {"X": sample_X, "W": W, "O": O}
-            res = model(**inputs)
-            if (self.is_within_ulp(res, sample_Y, precision)):
-                success += 1
-            else:
-                print(f"prediction: {res[0]} : true: {sample_Y}")
-        acc = (success * 1.)/training_size
-        print(f"accuracy: {acc}")
+        self.calc_accuracy("TRAIN", train_X, train_Y, W,
+                           O, precision, testing_size, model, False)
+        self.calc_accuracy("UFB TRAIN", train_X, train_Y, init_W,
+                           O, precision, testing_size, model, False)
 
         print("\n##### SAMPLE ######")
 
         # Basic sample (truth value = 16)
         test = {"X": torch.tensor([4., 4.]), "W": W, "O": O}
         print(W)
+        print(init_W)
         print(model(**test))
         print(self.is_within_ulp(model(**test),
                                  torch.tensor([16.]), precision))
