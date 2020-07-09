@@ -43,6 +43,8 @@ class BitFlow:
         Y = []
         W = torch.Tensor(1, size_w).fill_(64)[0]
         for i in range(num):
+
+            # TODO: generate data based of properties of data_range
             new_x = torch.tensor([((data_range[0][1]-data_range[0][0]) * torch.rand((1, 1)) + data_range[0][0]).item(
             ), ((data_range[1][1]-data_range[1][0]) * torch.rand((1, 1)) + data_range[1][0]).item()])
 
@@ -173,33 +175,33 @@ class BitFlow:
         print(W)
         W.requires_grad = True
 
-        self.M = -1e20
-        self.prevM = self.M
+        self.R = -1e20
+        self.prevR = self.R
 
         # Loss function
         def compute_loss(target, y, W, iter):
             area = torch.tensor(AreaOptimizerFn(W.tolist()))
 
-            N = 1
+            S = 1
             decay = 0.95
 
             constraint_err = torch.tensor(
                 ErrorConstraintFn(W.tolist()))  # >= 0
 
             if constraint_err > 0:
-                self.prevM = self.M
-                self.M *= decay
+                self.prevR = self.R
+                self.R *= decay
             else:
-                self.M = self.prevM
+                self.R = self.prevR
 
-            L = 100
+            Q = 100
 
             # ulp_err = (int(self.is_within_ulp(y, target, precision)[0]) - 1)
 
             L2 = torch.sum((y-target)**2)
 
             # incorporate precision into loss
-            loss = (L * L2 + self.M * constraint_err + N * area)
+            loss = (Q * L2 + self.R * constraint_err + S * area)
 
             if iter % 1000 == 0:
                 print(
