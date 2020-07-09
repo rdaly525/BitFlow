@@ -74,7 +74,7 @@ class BitFlow:
 
         a = Round(Select(X, 0, name="a"), W[0])
         b = Round(Select(X, 1, name="b"), W[1])
-        c = Round(Constant(4, name="c"), W[2])
+        c = Round(Constant(4.3, name="c"), W[2])
 
         d = Round(Mul(a, b, name="d"), W[3])
         e = Round(Add(d, c, name="e"), W[4])
