@@ -39,7 +39,9 @@ class BitFlow:
         Y = []
         #64 bit precision
         W = torch.Tensor(1, size_w).fill_(64)[0]
+        print("START")
         for i in range(num):
+
              #new_x = torch.normal(mean, std, (1, size_x))
              #new_x = torch.rand((1, size_x))
              new_x = torch.tensor((-4) * torch.rand((size_x)) + 2)
@@ -49,17 +51,17 @@ class BitFlow:
 
              inputs = {"X": new_x, "W": W, "O": output_precision}
              new_y = model(**inputs)
-             print("newx,newy")
-             print(new_x,new_y)
+             # print("newx,newy")
+             # print(new_x,new_y)
 
              X.append(new_x.tolist())
-             Y.append(new_y.tolist()[0])
+             Y.append(new_y.tolist())
 
+             print("X VALUES")
+             print(X)
+             print("Y VALUES")
+             print(Y)
 
-        print(torch.tensor(X))
-        print("NEW")
-        print(torch.tensor(Y))
-        print("1EW")
         return torch.tensor(X), torch.tensor(Y)
 
     def update_dag(self, dag):
@@ -75,7 +77,7 @@ class BitFlow:
 
         a = Round(Select(X, 0, name="a"), W[0])
         b = Round(Select(X, 1, name="b"), W[1])
-        c = Round(Constant(4.3, name="c"), W[2])
+        c = Round(Constant(4, name="c"), W[2])
 
         d = Round(Mul(a, b, name="d"), W[3])
         e = Round(Add(d, c, name="e"), W[4])
@@ -149,6 +151,7 @@ class BitFlow:
         # generate testing/training data
         train_X, train_Y = self.gen_data(model, O, training_size,
                                          input_size, weight_size, mean, std)
+
         test_X, test_Y = self.gen_data(model, O, testing_size,
                                        input_size, weight_size, mean, std)
 
@@ -157,24 +160,14 @@ class BitFlow:
 
         # Loss function
         def compute_loss(target, y, W, iter):
-            area = torch.tensor(AreaOptimizerFn(W.tolist()))
-
-            #error_print = error_value_fn(y, target, precision)
-            print("ENSURE")
+            print("SDSDSDSD")
             print(target)
             print(y)
+            print("1SDSDSDSD")
+            area = torch.tensor(AreaOptimizerFn(W.tolist()))
 
             error_print = torch.abs(target - y) - 2 ** -(precision+1)
 
-            # print(error_print)
-
-            # minimize total area
-            #  target_loss = 1 * torch.sum((area - 0) ** 2)
-            # print("target")
-            # print(target)
-            # print("y")
-            # print(y[0])
-            # constraint_2 y should be within error margin, expected value - calculated value <= 2^-a
             constraint_2 = 500*torch.max(torch.abs(target - y[0]) - 2 ** -(precision + 1), torch.zeros(1))
 
             # constraint_1 is the total bits should be greater than 0, will need to pass in range array as well
@@ -189,12 +182,13 @@ class BitFlow:
             loss = (area + constraint_weight + torch.exp(-1 * constraint_3))
             if constraint_3>0:
                     print("ERROR IS LARGE")
-                    print()
-                    print()
+                    print(error_1)
+                    print(constraint_3)
                     print()
                     print(constraint_3)
                     print("LOSS")
                     print(loss)
+                    print("WEIGHT")
                     print(W)
             if constraint_weight > 0:
                     print("WEIGHTS ARE NEGATIVE")
@@ -220,9 +214,14 @@ class BitFlow:
                 #W.clamp(min=-0.4) #NEW!
                 inputs = {"X": train_X[i], "W": W, "O": O}
                 y = model(**inputs)
+                print("TRAIN Y")
+                print(train_Y[i])
+
+                print("calculated value")
+                print(y)
 
                 #NEW!
-                #y = torch.clamp(y,min=train_Y[i]-2**(-16),max=2**(-16)-train_Y[i])
+                y = torch.clamp(y, min=train_Y[i][0]-2**-(precision+1), max=2**-(precision+1)-train_Y[i][0])
                 loss = compute_loss(train_Y[i], y, W, iter) #takes in a Y-value(target value), calculated y from model, Weights vector, iteration number
 
                 opt.zero_grad()
