@@ -27,7 +27,7 @@ class BitFlow:
             return self.evaluator.eval(**kwargs)
         return model
 
-    def custom_ceil(self, W, factor=0.5):
+    def custom_round(self, W, factor=0.5):
         W = W.tolist()
         for (index, weight) in enumerate(W):
             f, _ = math.modf(weight)
@@ -262,7 +262,7 @@ class BitFlow:
                 iter += 1
 
         print(W)
-        W = self.custom_ceil(W, factor=0.2)
+        W = self.custom_round(W, factor=0.2)
 
         self.calc_accuracy("TEST", test_X, test_Y, W,
                            O, precision, testing_size, model, True)
