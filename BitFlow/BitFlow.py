@@ -57,10 +57,10 @@ class BitFlow:
              X.append(new_x.tolist())
              Y.append(new_y.tolist())
 
-             print("X VALUES")
-             print(X)
-             print("Y VALUES")
-             print(Y)
+        print("X VALUES")
+        print(X)
+        print("Y VALUES")
+        print(Y)
 
         return torch.tensor(X), torch.tensor(Y)
 
@@ -76,6 +76,7 @@ class BitFlow:
         X = Input(name="X")
 
         a = Round(Select(X, 0, name="a"), W[0])
+
         b = Round(Select(X, 1, name="b"), W[1])
         c = Round(Constant(4, name="c"), W[2])
 
@@ -151,6 +152,8 @@ class BitFlow:
         # generate testing/training data
         train_X, train_Y = self.gen_data(model, O, training_size,
                                          input_size, weight_size, mean, std)
+        print("DATA")
+        print(train_X,train_Y)
 
         test_X, test_Y = self.gen_data(model, O, testing_size,
                                        input_size, weight_size, mean, std)
@@ -160,36 +163,41 @@ class BitFlow:
 
         # Loss function
         def compute_loss(target, y, W, iter):
-            print("SDSDSDSD")
-            print(target)
-            print(y)
-            print("1SDSDSDSD")
+
             area = torch.tensor(AreaOptimizerFn(W.tolist()))
 
-            error_print = torch.abs(target - y) - 2 ** -(precision+1)
+            error_print = 10*precision*(torch.abs(target - y) - 2** -(precision+1))
+            print("ERROR PRINT")
+            print(target)
+            print(y)
+            print(error_print)
 
-            constraint_2 = 500*torch.max(torch.abs(target - y[0]) - 2 ** -(precision + 1), torch.zeros(1))
+            #constraint_2 = 500*torch.max(torch.abs(target - y[0]) - 2 ** -(precision + 1), torch.zeros(1))
 
             # constraint_1 is the total bits should be greater than 0, will need to pass in range array as well
             constraint_weight = 100 * torch.sum(torch.max(-(W) + 0.5, torch.zeros(len(W))))
-            constraint_3= 2**(precision)*torch.max(error_print, torch.zeros(1))
+
+            constraint_3= torch.max(error_print, torch.zeros(1))
 
             # TODO: error is within 1 ulp of truth
             error = torch.tensor(ErrorConstraintFn(W.tolist()))  # >= 0
 
             error_1 = torch.abs(target - y) - 2 ** -(precision + 1)
 
-            loss = (area + constraint_weight + torch.exp(-1 * constraint_3))
+            #loss = (area + constraint_weight + torch.exp(-1 * constraint_3))
+            loss = (area + constraint_weight + constraint_3)
+
             if constraint_3>0:
+                    print(constraint_3)
                     print("ERROR IS LARGE")
-                    print(error_1)
-                    print(constraint_3)
-                    print()
-                    print(constraint_3)
-                    print("LOSS")
-                    print(loss)
-                    print("WEIGHT")
-                    print(W)
+                    # print(error_1)
+                    # print(constraint_3)
+                    # print()
+                    # print(constraint_3)
+                    # print("LOSS")
+                    # print(loss)
+                    # print("WEIGHT")
+                    # print(W)
             if constraint_weight > 0:
                     print("WEIGHTS ARE NEGATIVE")
 
@@ -214,16 +222,18 @@ class BitFlow:
                 #W.clamp(min=-0.4) #NEW!
                 inputs = {"X": train_X[i], "W": W, "O": O}
                 y = model(**inputs)
-                print("TRAIN Y")
-                print(train_Y[i])
-
-                print("calculated value")
-                print(y)
+                # print("TRAIN Y")
+                # print(train_Y[i])
+                #
+                # print("calculated value")
+                # print(y)
 
                 #NEW!
-                y = torch.clamp(y, min=train_Y[i][0]-2**-(precision+1), max=2**-(precision+1)-train_Y[i][0])
+                #y = torch.clamp(y, min=train_Y[i][0]-2**-(precision+1), max=2**-(precision+1)-train_Y[i][0])
                 loss = compute_loss(train_Y[i], y, W, iter) #takes in a Y-value(target value), calculated y from model, Weights vector, iteration number
 
+                # print("VALUES!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                # print(train_Y[i],y)
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
