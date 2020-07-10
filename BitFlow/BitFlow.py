@@ -24,7 +24,7 @@ class BitFlow:
             return self.evaluator.eval(**kwargs)
         return model
 
-    def gen_data(self, model, output_precision, num, size_x, size_w, data_range):
+    def gen_data(self, model, num, size_w, data_range, true_width=64.):
         """ Generates ground-truth data from user specifications and model.
 
         Args:
@@ -41,7 +41,7 @@ class BitFlow:
         """
         X = []
         Y = []
-        W = torch.Tensor(1, size_w).fill_(64)[0]
+        W = torch.Tensor(1, size_w).fill_(true_width)[0]
         for i in range(num):
 
             # TODO: generate data based of properties of data_range
@@ -53,7 +53,7 @@ class BitFlow:
 
             # print(new_x)
 
-            inputs = {"X": new_x, "W": W, "O": output_precision}
+            inputs = {"X": new_x, "W": W, "O": torch.tensor([true_width])}
             new_y = model(**inputs)
 
             X.append(new_x.tolist())
@@ -91,7 +91,7 @@ class BitFlow:
         return torch.round(num * scale) / scale
 
     def is_within_ulp(self, num, truth, precision):
-        return (self.round_to_precision(truth, precision + 1) + 2**-(precision + 1) > num and self.round_to_precision(truth, precision + 1) - 2**-(precision + 1) < num)
+        return (self.round_to_precision(truth, precision) + 2**-(precision + 1) > num and self.round_to_precision(truth, precision) - 2**-(precision + 1) < num)
 
     def calc_accuracy(self, name, X, Y, W, O, precision, testing_size, model, should_print):
         success = 0
@@ -105,7 +105,8 @@ class BitFlow:
                 success += 1
             else:
                 if should_print:
-                    print(f"prediction: {res[0]} : true: {sample_Y}")
+                    print(
+                        f"prediction: {res[0]} : true: {self.round_to_precision(sample_Y, precision)}")
         acc = (success * 1.)/testing_size
         print(f"accuracy: {acc}")
 
@@ -153,25 +154,25 @@ class BitFlow:
 
         # Training details
         training_size = 1000
-        testing_size = 200
+        testing_size = 2000
         input_size = 2  # TODO: adapt to DAG
         weight_size = 5  # TODO: adapt to DAG
         epochs = 10
-        lr_rate = 1e-6
+        lr_rate = 3e-5
 
         # output without grad TODO: generalize to DAG
         O = torch.tensor([precision])
 
         # generate testing/training data
-        train_X, train_Y = self.gen_data(model, O, training_size,
-                                         input_size, weight_size, data_range)
-        test_X, test_Y = self.gen_data(model, O, testing_size,
-                                       input_size, weight_size, data_range)
+        train_X, train_Y = self.gen_data(
+            model, training_size, weight_size, data_range)
+        test_X, test_Y = self.gen_data(
+            model, testing_size, weight_size, data_range)
 
         # weights matrix
         W = torch.Tensor(1, weight_size).fill_(bfo.initial)[0]
         init_W = W.clone()
-        W += 2
+        W += 1
         print(W)
         W.requires_grad = True
 
@@ -232,14 +233,14 @@ class BitFlow:
         W = torch.ceil(W)
 
         self.calc_accuracy("TEST", test_X, test_Y, W,
-                           O, precision, testing_size, model, True)
+                           O, precision, testing_size, model, False)
         self.calc_accuracy("UFB TEST", test_X, test_Y, init_W,
                            O, precision, testing_size, model, False)
 
         self.calc_accuracy("TRAIN", train_X, train_Y, W,
-                           O, precision, testing_size, model, False)
+                           O, precision, training_size, model, False)
         self.calc_accuracy("UFB TRAIN", train_X, train_Y, init_W,
-                           O, precision, testing_size, model, False)
+                           O, precision, training_size, model, False)
 
         print("\n##### MODEL DETAILS #####")
         print(f"ERROR: {ErrorConstraintFn(W.tolist())}")
