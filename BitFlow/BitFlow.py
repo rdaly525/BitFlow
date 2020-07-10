@@ -131,10 +131,7 @@ class BitFlow:
         # Update the dag with round nodes and set up the model for torch training
         dag = self.update_dag(dag)
 
-        # Forward pass: compute predicted y by passing x to the model. Module objects
-        # override the __call__ operator so you can call them like functions. When
-        # doing so you pass a Tensor of input data to the Module and it produces
-        # a Tensor of output data.
+        # Forward pass: compute predicted y by passing x to the model.
 
         model = self.gen_model(dag)
 
@@ -166,10 +163,8 @@ class BitFlow:
             print("ENSURE")
             print(target)
             print(y)
-            #print(precision)
+
             error_print = torch.abs(target - y) - 2 ** -(precision+1)
-            #print(error_print)
-            #print('error_print')
 
             # print(error_print)
 
@@ -203,25 +198,6 @@ class BitFlow:
                     print(W)
             if constraint_weight > 0:
                     print("WEIGHTS ARE NEGATIVE")
-
-                    #print(constraint_3)
-
-
-
-
-            # if(error_1[0]>0):
-            #     loss=100*error_1+area
-            # else:
-            #     loss=area + 0*error_1
-
-            # L1 = torch.abs(target - y)
-
-
-
-
-
-            #loss
-            #loss=area
 
             if iter % 100 == 0:
                 print(
@@ -281,7 +257,6 @@ class BitFlow:
                 print(f"{res[0]} vs {sample_Y}")
 
 
-
         acc = (success * 1.)/testing_size
         acc_1 = (success_1 * 1.)/testing_size
         average_error = average_error *1./testing_size
@@ -295,7 +270,13 @@ class BitFlow:
 
         # Basic sample (truth value = 16)
         test = {"X": torch.tensor([4., 4.]), "W": W, "O": O}
+        area = torch.tensor(AreaOptimizerFn(W.tolist()))
+        print("Area")
+        print(area)
         print(W)
         print(model(**test))
-        #print(abs(res-sample_Y)-2**-(precision)<=0)
-        print(self.is_within_ulp(model(**test),torch.tensor([16.]), precision))
+        print("area_1")
+        area_1 = torch.tensor(AreaOptimizerFn(W.tolist()))
+        print(area_1)
+        print(abs(res-sample_Y)-2**-(precision-1)<=0)
+        #print(self.is_within_ulp(model(**test),torch.tensor([16.]), precision))
