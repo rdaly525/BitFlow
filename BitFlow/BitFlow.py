@@ -8,6 +8,9 @@ from .Optimization import BitFlowVisitor, BitFlowOptimizer
 import torch
 from torch.utils import data
 
+import random
+import math
+
 
 class BitFlow:
 
@@ -24,16 +27,28 @@ class BitFlow:
             return self.evaluator.eval(**kwargs)
         return model
 
-    def gen_data(self, model, num, size_w, data_range, true_width=64.):
+    def custom_ceil(self, W, factor=0.5):
+        W = W.tolist()
+        for (index, weight) in enumerate(W):
+            f, _ = math.modf(weight)
+            if f < factor:
+                W[index] = math.floor(weight)
+            else:
+                W[index] = math.ceil(weight)
+        return torch.tensor(W)
+
+    def gen_data(self, model, num, size_w, size_output, data_range, true_width=64., dist=0):
         """ Generates ground-truth data from user specifications and model.
 
         Args:
             model: A dag already set up for torch evaluatiion
-            TODO: generalize to multiple outputs
             output_precision: The requested number of precision bits on the output node
             num: Number of samples to generate
-            size_x : The size of the input array
             size_w: The size of the weight array
+            dist: Type of distribution to use
+                0 ==> UNIFORM
+                1 ==> NORMAL
+
             mean, std: statistics for normal distribution to generate data from
 
         Returns:
@@ -42,18 +57,29 @@ class BitFlow:
         X = []
         Y = []
         W = torch.Tensor(1, size_w).fill_(true_width)[0]
-        for i in range(num):
+        random.seed(42)
 
-            # TODO: generate data based of properties of data_range
-            new_x = torch.tensor([((data_range[0][1]-data_range[0][0]) * torch.rand((1, 1)) + data_range[0][0]).item(
-            ), ((data_range[1][1]-data_range[1][0]) * torch.rand((1, 1)) + data_range[1][0]).item()])
+        for i in range(num):
+            new_x = []
+            for key in data_range:
+                input_range = data_range[key]
+                if dist == 1:
+                    mean = (input_range[1]-input_range[0])/2
+                    std = (mean - input_range[0])/2
+                    new_x.append(random.normalvariate(mean, std))
+                else:
+                    new_x.append(input_range[1]-input_range[0] *
+                                 random.uniform(*input_range) + input_range[0])
+
+            new_x = torch.tensor(new_x)
 
             # new_x = ((data_range[0][1]-data_range[0][0]) *
             #          torch.rand((1, size_x)) + data_range[0][0])[0]
 
             # print(new_x)
 
-            inputs = {"X": new_x, "W": W, "O": torch.tensor([true_width])}
+            inputs = {"X": new_x, "W": W, "O": torch.Tensor(
+                1, size_output).fill_(true_width)[0]}
             new_y = model(**inputs)
 
             X.append(new_x.tolist())
@@ -110,13 +136,17 @@ class BitFlow:
         acc = (success * 1.)/testing_size
         print(f"accuracy: {acc}")
 
-    def __init__(self, dag, precision, data_range=[(-3., 2.), (4., 8.)]):
+    def __init__(self, dag, precision, data_range={'a': (-3., 2.), 'b': (4., 8.)}):
 
         # Run a basic evaluator on the DAG to construct error and area functions
         evaluator = NumEval(dag)
 
-        # TODO: generalize this line
-        evaluator.eval(a=3, b=8)
+        eval_dict = data_range.copy()
+        for key in eval_dict:
+            eval_dict[key] = int(max(abs(eval_dict[key][0]),
+                                     abs(eval_dict[key][1])))
+
+        evaluator.eval(**eval_dict)
 
         node_values = evaluator.node_values
         visitor = BitFlowVisitor(node_values)
@@ -154,20 +184,22 @@ class BitFlow:
 
         # Training details
         training_size = 1000
-        testing_size = 2000
+        testing_size = 200
         input_size = 2  # TODO: adapt to DAG
         weight_size = 5  # TODO: adapt to DAG
+        output_size = 1  # TODO: adapt to DAG
         epochs = 10
-        lr_rate = 3e-5
+        lr_rate = 5e-6
 
         # output without grad TODO: generalize to DAG
-        O = torch.tensor([precision])
+        O = torch.Tensor(
+            1, output_size).fill_(precision)[0]
 
         # generate testing/training data
         train_X, train_Y = self.gen_data(
-            model, training_size, weight_size, data_range)
+            model, training_size, weight_size, output_size, data_range)
         test_X, test_Y = self.gen_data(
-            model, testing_size, weight_size, data_range)
+            model, testing_size, weight_size, output_size, data_range)
 
         # weights matrix
         W = torch.Tensor(1, weight_size).fill_(bfo.initial)[0]
@@ -230,10 +262,10 @@ class BitFlow:
                 iter += 1
 
         print(W)
-        W = torch.ceil(W)
+        W = self.custom_ceil(W, factor=0.2)
 
         self.calc_accuracy("TEST", test_X, test_Y, W,
-                           O, precision, testing_size, model, False)
+                           O, precision, testing_size, model, True)
         self.calc_accuracy("UFB TEST", test_X, test_Y, init_W,
                            O, precision, testing_size, model, False)
 
