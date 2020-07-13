@@ -193,7 +193,7 @@ class BitFlow:
         epochs = 10
 
         # lr -> (1e-7 (2 bits), 5e-6 (8 bits))
-        lr_rate = 1e-7
+        lr_rate = 5e-6
 
         # output without grad TODO: generalize to DAG
         O = torch.Tensor(
@@ -244,11 +244,12 @@ class BitFlow:
 
             Q = 100
 
+            # ulp_err = (int(self.is_within_ulp(y, target, precision)[0]) - 1)
+
             L2 = torch.sum((y-target)**2)
 
             # incorporate precision into loss
-            loss = (Q * L2 + self.R *
-                    torch.exp(-self.R * constraint_err) + S * area)
+            loss = (Q * L2 + self.R * torch.exp(-constraint_err) + S * area)
 
             if iter % 1000 == 0:
                 print(
@@ -270,7 +271,7 @@ class BitFlow:
             for i in range(training_size):
                 inputs = {"X": train_X[i], "W": W, "O": O}
                 y = model(**inputs)
-                loss = compute_loss(train_Y[i], y, W, iter, error_type=2)
+                loss = compute_loss(train_Y[i], y, W, iter, error_type=1)
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
