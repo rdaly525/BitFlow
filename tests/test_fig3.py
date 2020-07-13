@@ -1,5 +1,5 @@
-from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, DagNode
-from DagVisitor import Visitor
+from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, DagNode, Round, Output
+from DagVisitor import Visitor, Transformer, AbstractDag
 from BitFlow.IA import Interval
 from BitFlow.Eval import IAEval, NumEval
 import torch
@@ -38,6 +38,30 @@ def test_fig3_IA():
     gold = Interval(-4, 41)
     assert res == gold
 
+def test_print():
+    fig3 = gen_fig3()
+    evaluator = NumEval(fig3)
+
+    a, b = 3, 5
+    evaluator.eval(a=a, b=b)
+    node_values = evaluator.node_values
+    node_printer = NodePrinter(node_values)
+
+    # Visitor classes have a method called 'run' that takes in a dag and runs all the
+    # visit methods on each node
+    node_printer.run(fig3)
+
+#Evaluate it in the context of Torch
+def test_fig3_IA():
+    fig3 = gen_fig3()
+    evaluator = IAEval(fig3)
+
+    a = torch.Tensor([3])
+    b = torch.Tensor([5])
+    res = evaluator.eval(a=a, b=b)
+    gold = torch.Tensor([14])
+    assert res == gold
+
 class NodePrinter(Visitor):
     def __init__(self, node_values):
         self.node_values = node_values
@@ -57,8 +81,8 @@ class NodePrinter(Visitor):
 
 
     #Generic visitor method for a node
-    #This method will be run on each node unless 
-    # a visit_<NodeType> method is defined 
+    #This method will be run on each node unless
+    # a visit_<NodeType> method is defined
     def generic_visit(self, node: DagNode):
         #Call this to visit node's children first
         Visitor.generic_visit(self, node)
@@ -76,28 +100,51 @@ class NodePrinter(Visitor):
         for child_node in node.children():
             print(f"  {child_node}:  {self.node_values[child_node]}")
 
+class AddRoundNodes(Transformer):
 
-def test_print():
-    fig3 = gen_fig3()
-    evaluator = NumEval(fig3)
+    def __init__(self, prec, round_count):
+        self.prec = prec
+        self.round_count = round_count
 
-    a, b = 3, 5
-    evaluator.eval(a=a, b=b)
-    node_values = evaluator.node_values
-    node_printer = NodePrinter(node_values)
+    def doit(self, dag: DagNode):
+        # self.round_count = round_count
+        self.prec = Input(name="precision")
+        # self.round_count = 0
+        # Transformer class have a method called 'run' that takes in a dag and runs all the
+        # Transformer methods on each node
+        self.run(dag)
+        # return a new dag with precision input
 
-    # Visitor classes have a method called 'run' that takes in a dag and runs all the 
-    # visit methods on each node
-    node_printer.run(fig3)
+        new_outputs = dag.outputs()
+        new_inputs = dag.inputs() + self.prec[self.round_count]
+        # Dag(outputs=[z], inputs=[a, b])
+        # return Dag( outputs=dag.outputs, inputs=dag.inputs + self.prec[self.round_count]) #return dag that has taken precision as an input
+        return Dag(outputs=new_outputs,
+                   inputs=new_inputs)  # return dag that has taken precision as an input
 
-#Evaluate it in the context of Torch
-def test_fig3_IA():
-    fig3 = gen_fig3()
-    evaluator = IAEval(fig3)
+    def generic_visit(self, node: DagNode):
+        # round_count_val = 0
+        if isinstance(node, Output):
+            return None
+        Transformer.generic_visit(self, node)
+        for child in node.children():
+            assert isinstance(child, Round)  # assert that previous nodes have been rounded
 
-    a = torch.Tensor([3])
-    b = torch.Tensor([5])
-    res = evaluator.eval(a=a, b=b)
-    gold = torch.Tensor([14])
-    assert res == gold
+        # prec_input = self.prec[self.round_count]
+        prec_input = self.doit(node)
+        self.round_count += 1
+        new_round = Round(Input(prec_input), self.prec[self.round_count],
+                          name=node.name + "_round")  # current node + need to get prec_input
+
+        return new_round
+
+    def generic_Output(self, node: Output):
+        # output node has the most number of children
+        assert isinstance(node, Output)
+        return None
+
+
+
+
+
 
