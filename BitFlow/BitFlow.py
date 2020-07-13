@@ -37,7 +37,7 @@ class BitFlow:
                 W[index] = math.ceil(weight)
         return torch.tensor(W)
 
-    def gen_data(self, model, num, size_w, size_output, data_range, true_width=64., dist=0):
+    def gen_data(self, model, num, size_w, size_output, data_range, true_width=20., dist=0):
         """ Generates ground-truth data from user specifications and model.
 
         Args:
@@ -48,7 +48,6 @@ class BitFlow:
             dist: Type of distribution to use
                 0 ==> UNIFORM
                 1 ==> NORMAL
-
             mean, std: statistics for normal distribution to generate data from
 
         Returns:
@@ -58,6 +57,8 @@ class BitFlow:
         Y = []
         W = torch.Tensor(1, size_w).fill_(true_width)[0]
         random.seed(42)
+
+        # TODO: create a mode to set constant precision for inputs
 
         for i in range(num):
             new_x = []
@@ -137,6 +138,7 @@ class BitFlow:
         print(f"accuracy: {acc}")
 
     def __init__(self, dag, precision, data_range={'a': (-3., 2.), 'b': (4., 8.)}):
+        # TODO: construct data_range from dag.inputs
 
         # Run a basic evaluator on the DAG to construct error and area functions
         evaluator = NumEval(dag)
@@ -189,7 +191,9 @@ class BitFlow:
         weight_size = 5  # TODO: adapt to DAG
         output_size = 1  # TODO: adapt to DAG
         epochs = 10
-        lr_rate = 5e-6
+
+        # lr -> (1e-7 (2 bits), 5e-6 (8 bits))
+        lr_rate = 1e-7
 
         # output without grad TODO: generalize to DAG
         O = torch.Tensor(
@@ -204,43 +208,54 @@ class BitFlow:
         # weights matrix
         W = torch.Tensor(1, weight_size).fill_(bfo.initial)[0]
         init_W = W.clone()
-        W += 1
         print(W)
         W.requires_grad = True
 
-        self.R = -1e20
-        self.prevR = self.R
+        self.R = 1e20
 
         # Loss function
-        def compute_loss(target, y, W, iter):
+        def compute_loss(target, y, W, iter, error_type=1):
+            """
+            Args:
+                error_type:
+                    1 ==> Paper Error
+                    2 ==> Soft-Loss on ULP
+
+            """
             area = torch.tensor(AreaOptimizerFn(W.tolist()))
 
             S = 1
             decay = 0.95
 
-            constraint_err = torch.tensor(
-                ErrorConstraintFn(W.tolist()))  # >= 0
+            constraint_err = 0
+            if error_type == 1:
+                constraint_err = torch.tensor(
+                    ErrorConstraintFn(W.tolist()))  # >= 0
+            elif error_type == 2:
+                error_print = 10*precision * \
+                    (torch.abs(self.round_to_precision(
+                        target, precision) - y) - 2 ** -(precision+1))
+                constraint_err = torch.max(error_print, torch.zeros(1))[0]
 
-            if constraint_err > 0:
-                self.prevR = self.R
+            if self.is_within_ulp(y, target, precision)[0]:
                 self.R *= decay
             else:
-                self.R = self.prevR
+                self.R /= decay
 
             Q = 100
-
-            # ulp_err = (int(self.is_within_ulp(y, target, precision)[0]) - 1)
 
             L2 = torch.sum((y-target)**2)
 
             # incorporate precision into loss
-            loss = (Q * L2 + self.R * constraint_err + S * area)
+            loss = (Q * L2 + self.R *
+                    torch.exp(-self.R * constraint_err) + S * area)
 
             if iter % 1000 == 0:
                 print(
                     f"iteration {iter} of {epochs * training_size} ({(iter * 100.)/(epochs * training_size)}%)")
                 print(f"AREA: {area}")
                 print(f"ERROR: {constraint_err}")
+                print(f"ERROR CONST: {self.R}")
                 print(f"LOSS: {loss}")
 
             return loss
@@ -255,7 +270,7 @@ class BitFlow:
             for i in range(training_size):
                 inputs = {"X": train_X[i], "W": W, "O": O}
                 y = model(**inputs)
-                loss = compute_loss(train_Y[i], y, W, iter)
+                loss = compute_loss(train_Y[i], y, W, iter, error_type=2)
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
