@@ -207,11 +207,11 @@ class BitFlow:
         input_size = 2  # TODO: adapt to DAG
         weight_size = 5  # TODO: adapt to DAG
         output_size = 1  # TODO: adapt to DAG
-        epochs = 10
+        epochs = 100
         batch_size = 16
 
         # lr -> (1e-7 (2 bits), 5e-6 (8 bits))
-        lr_rate = 5e-3
+        lr_rate = 5e-4
 
         # output without grad TODO: generalize to DAG
         O = torch.Tensor(
@@ -327,7 +327,7 @@ class BitFlow:
                 inputs = {"X": X, "W": W, "O": O}
                 y = model(**inputs)
                 loss = compute_loss(target_y, y, W, iter,
-                                    error_type=1, should_print=True)
+                                    error_type=2, should_print=True)
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
