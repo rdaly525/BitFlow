@@ -1,0 +1,22 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.8.3, pytest-5.4.2, py-1.8.1, pluggy-0.13.1
+rootdir: /Users/varunshenoy/Documents/20-29 Research/25 Curis 2020/BitFlow
+collected 0 items / 1 error
+
+==================================== ERRORS ====================================
+____________________ ERROR collecting tests/test_bitflow.py ____________________
+tests/test_bitflow.py:44: in <module>
+    test_fig3()
+tests/test_bitflow.py:40: in test_fig3
+    BitFlow(dag, 8.)
+BitFlow/BitFlow.py:220: in __init__
+    training_set = self.gen_data(
+BitFlow/BitFlow.py:95: in gen_data
+    return Dataset(model, dataset_size, size_w, size_output, data_range, true_width, dist)
+BitFlow/BitFlow.py:86: in __init__
+    X.append(new_x.tolist())
+E   NameError: name 'X' is not defined
+=========================== short test summary info ============================
+ERROR tests/test_bitflow.py - NameError: name 'X' is not defined
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+=============================== 1 error in 2.73s ===============================
