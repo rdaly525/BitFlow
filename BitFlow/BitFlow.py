@@ -208,10 +208,10 @@ class BitFlow:
         weight_size = 5  # TODO: adapt to DAG
         output_size = 1  # TODO: adapt to DAG
         epochs = 100
-        batch_size = 16
+        batch_size = 20
 
         # lr -> (1e-7 (2 bits), 5e-6 (8 bits))
-        lr_rate = 5e-4
+        lr_rate = 5e-6
 
         # output without grad TODO: generalize to DAG
         O = torch.Tensor(
@@ -235,7 +235,9 @@ class BitFlow:
         print(W)
         W.requires_grad = True
 
-        self.R = 100
+        self.R = 1e20
+        self.initR = self.R
+        self.prevR = self.R
 
         # Loss function
         def compute_loss(target_arr, y_arr, W, iter, error_type=1, should_print=True):
@@ -249,11 +251,11 @@ class BitFlow:
 
             area = torch.tensor(AreaOptimizerFn(W.tolist()))
 
-            # if self.hasNegatives(area):
-            #     raise ValueError(f"AREA ERR: {W}, {area}")
+            if self.hasNegatives(area):
+                raise ValueError(f"AREA ERR: {W}, {area}")
 
-            # if self.hasNegatives(W):
-            #     raise ValueError(f"WEIGHT ERR: {W}, {area}")
+            if self.hasNegatives(W):
+                raise ValueError(f"WEIGHT ERR: {W}, {area}")
 
             S = 1
             Q = 1
@@ -261,6 +263,7 @@ class BitFlow:
             decay = 0.95
 
             loss = 0
+
             for i in range(y_arr.shape[0]):
 
                 y = y_arr[i].float()
@@ -271,20 +274,24 @@ class BitFlow:
                     constraint_err = torch.tensor(
                         ErrorConstraintFn(W.tolist()))  # >= 0
 
-                    # if self.hasNegatives(constraint_err):
-                    #     raise ValueError(
-                    #         f"ERR NEGATIVE: {constraint_err}, {W}, {area}")
+                    if self.hasNegatives(constraint_err):
+                        raise ValueError(
+                            f"ERR NEGATIVE: {constraint_err}, {W}, {area}")
+
+                    #constraint_err = self.within_ulp_err(y, target, precision)
 
                     if self.is_within_ulp(y, target, precision):
+                        self.prevR = self.R
                         self.R *= decay
                     else:
-                        self.R /= decay
+                        if self.R < self.initR:
+                            self.R /= self.prevR
 
                     L2 = torch.sum((y-target)**2)
 
                     # incorporate precision into loss
                     loss += (Q * L2 + self.R *
-                             torch.exp(-constraint_err) + S * area)
+                             torch.exp(-10 * constraint_err) + S * area)
 
                 elif error_type == 2:
 
@@ -304,36 +311,41 @@ class BitFlow:
 
                     loss += (area + constraint_err + constraint_weight)
 
-                #print(f"iter {iter}: WEIGHTS: {W}")
-                if iter % 1000 == 0 and should_print == True:
-                    print(
-                        f"iteration {iter} of {epochs * training_size} ({(iter * 100.)/(epochs * training_size)}%)")
-                    print(f"AREA: {area}")
-                    print(f"ERROR: {constraint_err}")
-                    if error_type == 1:
-                        print(f"ERROR CONST: {self.R}")
-                    print(f"LOSS: {loss}")
+            #print(f"iter {iter}: WEIGHTS: {W}")
+            if iter % 500 == 0 and should_print == True:
+                print(
+                    f"iteration {iter} of {epochs * training_size/batch_size} ({(iter * 100.)/(epochs * training_size/batch_size)}%)")
+                print(f"AREA: {area}")
+                print(f"ERROR: {constraint_err}")
+                if error_type == 1:
+                    print(f"ERROR CONST: {self.R}")
+                print(f"LOSS: {loss}")
 
+            loss.requires_grad = True
             return loss
 
         # Set up optimizer
-        opt = torch.optim.Adam([W], lr=lr_rate)
+        opt = torch.optim.AdamW([W], lr=lr_rate)
 
         # Run training process
         print("\n##### TRAINING ######")
         iter = 0
         for e in range(epochs):
             for t, (X, target_y) in enumerate(train_gen):
-                inputs = {"X": X, "W": W, "O": O}
-                y = model(**inputs)
+                y = []
+                for input_x in X:
+                    inputs = {"X": input_x, "W": W, "O": O}
+                    y.append(model(**inputs))
+                y = torch.tensor(y)
                 loss = compute_loss(target_y, y, W, iter,
-                                    error_type=2, should_print=True)
+                                    error_type=1, should_print=True)
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
                 iter += 1
 
         print(W)
+        print(iter)
         W = self.custom_round(W, factor=0.2)
 
         self.calc_accuracy("TEST", test_gen, W,
