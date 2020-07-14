@@ -263,7 +263,7 @@ class BitFlow:
                     f"iteration {iter} of {epochs * training_size} ({(iter * 100.)/(epochs * training_size)}%)")
                 print(f"AREA: {area}")
                 print(f"ERROR: {constraint_err}")
-                if error_type == 2:
+                if error_type == 1:
                     print(f"ERROR CONST: {self.R}")
                 print(f"LOSS: {loss}")
 
