@@ -137,6 +137,9 @@ class BitFlow:
         acc = (success * 1.)/testing_size
         print(f"accuracy: {acc}")
 
+    def within_ulp_err(self, num, truth, precision):
+        return abs(truth - num) - 2 ** -(precision + 1)
+
     def __init__(self, dag, precision, data_range={'a': (-3., 2.), 'b': (4., 8.)}):
         # TODO: construct data_range from dag.inputs
 
@@ -193,7 +196,7 @@ class BitFlow:
         epochs = 10
 
         # lr -> (1e-7 (2 bits), 5e-6 (8 bits))
-        lr_rate = 5e-6
+        lr_rate = 5e-7
 
         # output without grad TODO: generalize to DAG
         O = torch.Tensor(
@@ -231,32 +234,37 @@ class BitFlow:
             if error_type == 1:
                 constraint_err = torch.tensor(
                     ErrorConstraintFn(W.tolist()))  # >= 0
+
+                if self.is_within_ulp(y, target, precision)[0]:
+                    self.R *= decay
+                else:
+                    self.R /= decay
+
+                Q = 100
+
+                L2 = torch.sum((y-target)**2)
+
+                # incorporate precision into loss
+                loss = (Q * L2 + self.R *
+                        torch.exp(25 * -constraint_err) + S * area)
+
             elif error_type == 2:
-                error_print = 10*precision * \
-                    (torch.abs(self.round_to_precision(
-                        target, precision) - y) - 2 ** -(precision+1))
-                constraint_err = torch.max(error_print, torch.zeros(1))[0]
 
-            if self.is_within_ulp(y, target, precision)[0]:
-                self.R *= decay
-            else:
-                self.R /= decay
+                error_print = 10 * precision * \
+                    self.within_ulp_err(y, target, precision)
+                constraint_err = torch.max(error_print, torch.zeros(1))
+                constraint_weight = 100 * \
+                    torch.sum(torch.max(-(W) + 0.5, torch.zeros(len(W))))
 
-            Q = 100
-
-            # ulp_err = (int(self.is_within_ulp(y, target, precision)[0]) - 1)
-
-            L2 = torch.sum((y-target)**2)
-
-            # incorporate precision into loss
-            loss = (Q * L2 + self.R * torch.exp(-constraint_err) + S * area)
+                loss = (area + constraint_err + constraint_weight)
 
             if iter % 1000 == 0:
                 print(
                     f"iteration {iter} of {epochs * training_size} ({(iter * 100.)/(epochs * training_size)}%)")
                 print(f"AREA: {area}")
                 print(f"ERROR: {constraint_err}")
-                print(f"ERROR CONST: {self.R}")
+                if error_type == 2:
+                    print(f"ERROR CONST: {self.R}")
                 print(f"LOSS: {loss}")
 
             return loss
@@ -271,7 +279,7 @@ class BitFlow:
             for i in range(training_size):
                 inputs = {"X": train_X[i], "W": W, "O": O}
                 y = model(**inputs)
-                loss = compute_loss(train_Y[i], y, W, iter, error_type=1)
+                loss = compute_loss(train_Y[i], y, W, iter, error_type=2)
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
