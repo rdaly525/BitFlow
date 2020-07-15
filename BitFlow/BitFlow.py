@@ -208,10 +208,10 @@ class BitFlow:
         weight_size = 5  # TODO: adapt to DAG
         output_size = 1  # TODO: adapt to DAG
         epochs = 100
-        batch_size = 20
+        batch_size = 16
 
         # lr -> (1e-7 (2 bits), 5e-6 (8 bits))
-        lr_rate = 5e-6
+        lr_rate = 5e-3
 
         # output without grad TODO: generalize to DAG
         O = torch.Tensor(
@@ -230,12 +230,13 @@ class BitFlow:
         test_gen = data.DataLoader(test_set, **params)
 
         # weights matrix
-        W = torch.Tensor(1, weight_size).fill_(bfo.initial)[0]
+        W = torch.Tensor(weight_size).fill_(bfo.initial)
         init_W = W.clone()
         print(W)
         W.requires_grad = True
+        init_W.requires_grad = True
 
-        self.R = 1e20
+        self.R = 1e10
         self.initR = self.R
         self.prevR = self.R
 
@@ -249,14 +250,6 @@ class BitFlow:
 
             """
 
-            area = torch.tensor(AreaOptimizerFn(W.tolist()))
-
-            if self.hasNegatives(area):
-                raise ValueError(f"AREA ERR: {W}, {area}")
-
-            if self.hasNegatives(W):
-                raise ValueError(f"WEIGHT ERR: {W}, {area}")
-
             S = 1
             Q = 1
 
@@ -264,21 +257,30 @@ class BitFlow:
 
             loss = 0
 
-            for i in range(y_arr.shape[0]):
+            for i in range(len(y_arr)):
 
                 y = y_arr[i].float()
                 target = target_arr[i].float()
 
                 constraint_err = 0
                 if error_type == 1:
+
                     constraint_err = torch.tensor(
                         ErrorConstraintFn(W.tolist()))  # >= 0
+
+                    area = torch.tensor(AreaOptimizerFn(W.tolist()))
+
+                    if self.hasNegatives(area):
+                        raise ValueError(f"AREA ERR: {W}, {area}")
+
+                    if self.hasNegatives(W):
+                        raise ValueError(f"WEIGHT ERR: {W}, {area}")
 
                     if self.hasNegatives(constraint_err):
                         raise ValueError(
                             f"ERR NEGATIVE: {constraint_err}, {W}, {area}")
 
-                    #constraint_err = self.within_ulp_err(y, target, precision)
+                    # constraint_err = self.within_ulp_err(y, target, precision)
 
                     if self.is_within_ulp(y, target, precision):
                         self.prevR = self.R
@@ -294,6 +296,8 @@ class BitFlow:
                              torch.exp(-10 * constraint_err) + S * area)
 
                 elif error_type == 2:
+
+                    area = torch.tensor(AreaOptimizerFn(W.tolist()))
 
                     error_print = 10 * precision * \
                         self.within_ulp_err(
@@ -311,7 +315,7 @@ class BitFlow:
 
                     loss += (area + constraint_err + constraint_weight)
 
-            #print(f"iter {iter}: WEIGHTS: {W}")
+            # print(f"iter {iter}: WEIGHTS: {W}")
             if iter % 500 == 0 and should_print == True:
                 print(
                     f"iteration {iter} of {epochs * training_size/batch_size} ({(iter * 100.)/(epochs * training_size/batch_size)}%)")
@@ -321,11 +325,10 @@ class BitFlow:
                     print(f"ERROR CONST: {self.R}")
                 print(f"LOSS: {loss}")
 
-            loss.requires_grad = True
-            return loss
+            return loss/batch_size
 
         # Set up optimizer
-        opt = torch.optim.AdamW([W], lr=lr_rate)
+        opt = torch.optim.Adam([W], lr=lr_rate)
 
         # Run training process
         print("\n##### TRAINING ######")
@@ -336,7 +339,10 @@ class BitFlow:
                 for input_x in X:
                     inputs = {"X": input_x, "W": W, "O": O}
                     y.append(model(**inputs))
-                y = torch.tensor(y)
+
+                inputs = {"X": X, "W": W, "O": O}
+                other_y = model(**inputs)
+
                 loss = compute_loss(target_y, y, W, iter,
                                     error_type=1, should_print=True)
                 opt.zero_grad()
