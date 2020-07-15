@@ -1,6 +1,6 @@
 from .AbstractEval import AbstractEval
 from ..node import DagNode
-from .torch.functions import IntRound
+from ..torch.functions import IntRound
 import torch as t
 
 class TorchEval(AbstractEval):
@@ -19,3 +19,6 @@ class TorchEval(AbstractEval):
     def eval_Round(self, a, prec, node: DagNode):
         scale = 2.0**prec
         return IntRound(a * scale) / scale
+
+    def eval_Select(self, a, node: DagNode):
+        return a[node.index]

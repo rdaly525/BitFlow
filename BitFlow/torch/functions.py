@@ -10,7 +10,7 @@ class _IntRound(t.autograd.Function):
 
   @staticmethod
   def backward(ctx, dy):
-    x = ctx.saved_tensors
+    x = ctx.saved_tensors[0]
     rx = t.round(x)
     delta = t.abs(x-rx)
     return (K**(4*delta-1)) * dy
