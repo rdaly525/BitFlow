@@ -56,7 +56,7 @@ class BitFlow:
 
         class Dataset(data.Dataset):
             def __init__(self, model, dataset_size, size_w, size_output, data_range, true_width, dist):
-                self.X = []
+                self.X = {k: [] for k in data_range.keys()}
                 self.Y = []
 
                 # TODO: create a mode to set constant precision for inputs
@@ -65,33 +65,35 @@ class BitFlow:
                 random.seed(42)
 
                 for i in range(dataset_size):
-                    new_x = []
                     for key in data_range:
                         input_range = data_range[key]
                         if dist == 1:
                             mean = (input_range[1]-input_range[0])/2
                             std = (mean - input_range[0])/2
-                            new_x.append(random.normalvariate(mean, std))
+                            self.X[key].append(torch.tensor(
+                                random.normalvariate(mean, std)))
                         else:
-                            new_x.append(random.uniform(*input_range))
+                            self.X[key].append(torch.tensor(
+                                random.uniform(*input_range)))
 
-                    new_x = torch.tensor(new_x)
-
-                    inputs = {"X": new_x, "W": W, "O": torch.Tensor(
-                        1, size_output).fill_(true_width)[0]}
+                    inputs = {k: self.X[k][i] for k in data_range.keys()}
+                    inputs["W"] = W
+                    inputs["O"] = torch.Tensor(
+                        1, size_output).fill_(true_width)[0]
+                    print(inputs)
                     new_y = model(**inputs)
-
-                    self.X.append(new_x.tolist())
+                    print(new_y)
+                    assert 0
                     self.Y.append(new_y.tolist()[0])
 
-                self.X = torch.tensor(self.X)
-                self.Y = torch.tensor(self.Y)
+                print(self.X)
+                print(self.Y)
 
             def __len__(self):
-                return len(self.X)
+                return len(self.X[list(data_range.keys())[0]])
 
             def __getitem__(self, index):
-                return self.X[index], self.Y[index]
+                return {k: self.X[k][index] for k in data_range.keys()}, self.Y[index]
 
         return Dataset(model, dataset_size, size_w, size_output, data_range, true_width, dist)
 
@@ -106,17 +108,19 @@ class BitFlow:
         """
         W = Input(name="W")
         O = Input(name="O")
-        X = Input(name="X")
 
-        a = Round(Select(X, 0, name="a"), W[0])
-        b = Round(Select(X, 1, name="b"), W[1])
+        a_input = Input(name="a")
+        b_input = Input(name="b")
+
+        a = Round(a_input, W[0])
+        b = Round(b_input, W[1])
         c = Round(Constant(4.3, name="c"), W[2])
 
         d = Round(Mul(a, b, name="d"), W[3])
         e = Round(Add(d, c, name="e"), W[4])
         z = Round(Sub(e, b, name="z"), O[0])
 
-        fig3 = Dag(outputs=[z], inputs=[X, W, O])
+        fig3 = Dag(outputs=[z], inputs=[a_input, b_input, W, O])
 
         return fig3
 
@@ -135,6 +139,8 @@ class BitFlow:
             for i in range(Y.shape[0]):
                 sample_X = X[i]
                 sample_Y = Y[i]
+
+                # FIX!!!
                 inputs = {"X": sample_X, "W": W, "O": O}
                 res = model(**inputs)
                 total += 1
@@ -207,11 +213,11 @@ class BitFlow:
         input_size = 2  # TODO: adapt to DAG
         weight_size = 5  # TODO: adapt to DAG
         output_size = 1  # TODO: adapt to DAG
-        epochs = 10
+        epochs = 50
         batch_size = 8
 
         # lr -> (1e-7 (2 bits), 5e-6 (8 bits))
-        lr_rate = 8e-3
+        lr_rate = 8e-4
 
         # output without grad TODO: generalize to DAG
         O = torch.Tensor(
@@ -233,7 +239,7 @@ class BitFlow:
         W = torch.Tensor(weight_size).fill_(bfo.initial)
         init_W = W.clone()
         print(W)
-        W += -2
+        W += 2
         W.requires_grad = True
         init_W.requires_grad = True
 
@@ -273,10 +279,9 @@ class BitFlow:
                     self.prevR = self.R
                     self.R *= decay
                 else:
-                    if self.R < self.initR:
-                        self.R = self.prevR
+                    self.R = self.initR
 
-                L2 = torch.sum((torch.stack(y)-target)**2)
+                L2 = torch.sum((y-target)**2)
 
                 S = 1
                 Q = 100
@@ -296,7 +301,6 @@ class BitFlow:
                 loss = (constraint_err + constraint_W + area/100)/batch_size
 
             # Catch negative values for area and weights
-
             if shouldErrorCheck:
                 if self.hasNegatives(area):
                     raise ValueError(f"AREA ERR: {W}, {area}")
@@ -310,6 +314,7 @@ class BitFlow:
                     f"iteration {iter} of {epochs * training_size/batch_size} ({(iter * 100.)/(epochs * training_size/batch_size)}%)")
                 print(f"AREA: {area}")
                 print(f"ERROR: {constraint_err}")
+                print(f"WEIGHTS: {W}")
                 if error_type == 1:
                     print(f"ERROR CONST: {self.R}")
                 print(f"LOSS: {loss}")
@@ -323,14 +328,20 @@ class BitFlow:
         print("\n##### TRAINING ######")
         iter = 0
         for e in range(epochs):
-            for t, (X, target_y) in enumerate(train_gen):
-                y = []
-                for input_x in X:
-                    inputs = {"X": input_x, "W": W, "O": O}
-                    y.append(model(**inputs))
+            for t, (inputs, target_y) in enumerate(train_gen):
+                inputs["W"] = W
+                inputs["O"] = O
+
+                print(f"INPUTS: {inputs}")
+
+                y = model(**inputs)
+
+                print(f"PREDS: {y}")
+                print(f"TRUE: {target_y}")
 
                 loss = compute_loss(target_y, y, W, iter,
-                                    error_type=2, should_print=True)
+                                    error_type=1, should_print=True)
+
                 opt.zero_grad()
                 loss.backward()
                 opt.step()

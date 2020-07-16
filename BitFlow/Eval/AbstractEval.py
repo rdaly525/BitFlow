@@ -2,6 +2,7 @@ from DagVisitor import Visitor
 from abc import abstractmethod
 from ..node import Dag, DagNode, Input, Constant, Add, Mul, Select, Output
 
+
 class AbstractEval(Visitor):
     def __init__(self, dag: Dag):
         self.dag = dag
@@ -16,7 +17,7 @@ class AbstractEval(Visitor):
         super().run(self.dag)
         outputs = [self.node_values[root] for root in self.dag.roots()]
         #print(outputs, len(outputs), outputs[0])
-        if len(outputs)==1:
+        if len(outputs) == 1:
             return outputs[0]
         return outputs
 
@@ -28,7 +29,6 @@ class AbstractEval(Visitor):
         node_val = getattr(self, eval_name)(*child_values, node=node)
         assert node_val is not None
         self.node_values[node] = node_val
-
 
     def eval_Input(self, node: DagNode):
         return self.input_values[node.name]
