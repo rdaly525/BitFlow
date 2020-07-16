@@ -148,7 +148,7 @@ class BitFlow:
         print(f"accuracy: {acc}")
 
     def within_ulp_err(self, num, truth, precision):
-        return abs(truth - num) - 2 ** -(precision + 1)
+        return torch.abs(truth - num) - 2 ** -(precision + 1)
 
     def hasNegatives(self, tensor):
         vals = tensor < 0
@@ -207,11 +207,11 @@ class BitFlow:
         input_size = 2  # TODO: adapt to DAG
         weight_size = 5  # TODO: adapt to DAG
         output_size = 1  # TODO: adapt to DAG
-        epochs = 100
-        batch_size = 16
+        epochs = 10
+        batch_size = 8
 
         # lr -> (1e-7 (2 bits), 5e-6 (8 bits))
-        lr_rate = 5e-3
+        lr_rate = 8e-3
 
         # output without grad TODO: generalize to DAG
         O = torch.Tensor(
@@ -233,15 +233,16 @@ class BitFlow:
         W = torch.Tensor(weight_size).fill_(bfo.initial)
         init_W = W.clone()
         print(W)
+        W += -2
         W.requires_grad = True
         init_W.requires_grad = True
 
-        self.R = 1e10
+        self.R = 1e20
         self.initR = self.R
         self.prevR = self.R
 
         # Loss function
-        def compute_loss(target_arr, y_arr, W, iter, error_type=1, should_print=True):
+        def compute_loss(target, y, W, iter, error_type=1, should_print=True, shouldErrorCheck=False):
             """
             Args:
                 error_type:
@@ -249,74 +250,62 @@ class BitFlow:
                     2 ==> Soft-Loss on ULP
 
             """
-
-            S = 1
-            Q = 1
-
-            decay = 0.95
+            area = torch.tensor(AreaOptimizerFn(W.tolist()))
 
             loss = 0
+            if error_type == 1:
 
-            for i in range(len(y_arr)):
+                # Calculate erros
+                constraint_err = torch.tensor(
+                    ErrorConstraintFn(W.tolist()))
+                ulp_error = torch.mean(torch.sum(
+                    self.within_ulp_err(torch.tensor(y), target, precision)))
 
-                y = y_arr[i].float()
-                target = target_arr[i].float()
-
-                constraint_err = 0
-                if error_type == 1:
-
-                    constraint_err = torch.tensor(
-                        ErrorConstraintFn(W.tolist()))  # >= 0
-
-                    area = torch.tensor(AreaOptimizerFn(W.tolist()))
-
-                    if self.hasNegatives(area):
-                        raise ValueError(f"AREA ERR: {W}, {area}")
-
-                    if self.hasNegatives(W):
-                        raise ValueError(f"WEIGHT ERR: {W}, {area}")
-
+                # Sanity error check
+                if shouldErrorCheck:
                     if self.hasNegatives(constraint_err):
                         raise ValueError(
                             f"ERR NEGATIVE: {constraint_err}, {W}, {area}")
 
-                    # constraint_err = self.within_ulp_err(y, target, precision)
+                # If ulp error is reasonable, relax error constraints
+                decay = 0.95
+                if torch.abs(ulp_error) < 1:
+                    self.prevR = self.R
+                    self.R *= decay
+                else:
+                    if self.R < self.initR:
+                        self.R = self.prevR
 
-                    if self.is_within_ulp(y, target, precision):
-                        self.prevR = self.R
-                        self.R *= decay
-                    else:
-                        if self.R < self.initR:
-                            self.R /= self.prevR
+                L2 = torch.sum((torch.stack(y)-target)**2)
 
-                    L2 = torch.sum((y-target)**2)
+                S = 1
+                Q = 100
+                loss = (Q * L2 + self.R *
+                        torch.exp(-10 * constraint_err) + S * area)/batch_size
 
-                    # incorporate precision into loss
-                    loss += (Q * L2 + self.R *
-                             torch.exp(-10 * constraint_err) + S * area)
+            else:
+                ulp_error = precision * torch.mean(torch.sum(
+                    self.within_ulp_err(torch.tensor(y), target, precision)))
 
-                elif error_type == 2:
+                constraint_err = torch.max(
+                    ulp_error, torch.zeros(1))
 
-                    area = torch.tensor(AreaOptimizerFn(W.tolist()))
+                constraint_W = 100 * \
+                    torch.sum(torch.max(-(W) + 0.5, torch.zeros(len(W))))
 
-                    error_print = 10 * precision * \
-                        self.within_ulp_err(
-                            y, target, precision)
+                loss = (constraint_err + constraint_W + area/100)/batch_size
 
-                    constraint_err = torch.max(
-                        error_print, torch.zeros(1))
+            # Catch negative values for area and weights
 
-                    if self.hasNegatives(constraint_err):
-                        raise ValueError(
-                            f"ERR NEGATIVE: {constraint_err}, {W}, {area}")
+            if shouldErrorCheck:
+                if self.hasNegatives(area):
+                    raise ValueError(f"AREA ERR: {W}, {area}")
 
-                    constraint_weight = 100 * \
-                        torch.sum(torch.max(-(W) + 0.5, torch.zeros(len(W))))
+                if self.hasNegatives(W):
+                    raise ValueError(f"WEIGHT ERR: {W}, {area}")
 
-                    loss += (area + constraint_err + constraint_weight)
-
-            # print(f"iter {iter}: WEIGHTS: {W}")
-            if iter % 500 == 0 and should_print == True:
+           # Print out model details every so often
+            if iter % 1000 == 0 and should_print == True:
                 print(
                     f"iteration {iter} of {epochs * training_size/batch_size} ({(iter * 100.)/(epochs * training_size/batch_size)}%)")
                 print(f"AREA: {area}")
@@ -325,10 +314,10 @@ class BitFlow:
                     print(f"ERROR CONST: {self.R}")
                 print(f"LOSS: {loss}")
 
-            return loss/batch_size
+            return loss
 
         # Set up optimizer
-        opt = torch.optim.Adam([W], lr=lr_rate)
+        opt = torch.optim.AdamW([W], lr=lr_rate)
 
         # Run training process
         print("\n##### TRAINING ######")
@@ -340,11 +329,8 @@ class BitFlow:
                     inputs = {"X": input_x, "W": W, "O": O}
                     y.append(model(**inputs))
 
-                inputs = {"X": X, "W": W, "O": O}
-                other_y = model(**inputs)
-
                 loss = compute_loss(target_y, y, W, iter,
-                                    error_type=1, should_print=True)
+                                    error_type=2, should_print=True)
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
