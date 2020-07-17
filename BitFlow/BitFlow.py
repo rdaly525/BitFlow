@@ -56,44 +56,39 @@ class BitFlow:
 
         class Dataset(data.Dataset):
             def __init__(self, model, dataset_size, size_w, size_output, data_range, true_width, dist):
-                self.X = {k: [] for k in data_range.keys()}
+                self.X = {k: [] for k in data_range}
                 self.Y = []
 
                 # TODO: create a mode to set constant precision for inputs
 
                 W = torch.Tensor(1, size_w).fill_(true_width)[0]
-                random.seed(42)
+                torch.manual_seed(42)
+
+                for key in data_range:
+                    # Create random tensor
+                    input_range = data_range[key]
+                    if dist == 1:
+                        mean = (input_range[1]-input_range[0])/2
+                        std = (mean - input_range[0])/2
+                        self.X[key] = torch.normal(mean=mean, std=std)
+                    else:
+                        self.X[key] = (input_range[1] - input_range[0]) * \
+                            torch.rand(dataset_size) + input_range[0]
 
                 for i in range(dataset_size):
-                    for key in data_range:
-                        input_range = data_range[key]
-                        if dist == 1:
-                            mean = (input_range[1]-input_range[0])/2
-                            std = (mean - input_range[0])/2
-                            self.X[key].append(torch.tensor(
-                                random.normalvariate(mean, std)))
-                        else:
-                            self.X[key].append(torch.tensor(
-                                random.uniform(*input_range)))
+                    inputs = {k: self.X[k][i] for k in data_range}
 
-                    inputs = {k: self.X[k][i] for k in data_range.keys()}
                     inputs["W"] = W
                     inputs["O"] = torch.Tensor(
                         1, size_output).fill_(true_width)[0]
-                    print(inputs)
                     new_y = model(**inputs)
-                    print(new_y)
-                    assert 0
                     self.Y.append(new_y.tolist()[0])
-
-                print(self.X)
-                print(self.Y)
 
             def __len__(self):
                 return len(self.X[list(data_range.keys())[0]])
 
             def __getitem__(self, index):
-                return {k: self.X[k][index] for k in data_range.keys()}, self.Y[index]
+                return {k: self.X[k][index] for k in data_range}, self.Y[index]
 
         return Dataset(model, dataset_size, size_w, size_output, data_range, true_width, dist)
 
@@ -129,27 +124,31 @@ class BitFlow:
         return torch.round(num * scale) / scale
 
     def is_within_ulp(self, num, truth, precision):
-        return (self.round_to_precision(truth, precision) + 2**-(precision + 1) > num and self.round_to_precision(truth, precision) - 2**-(precision + 1) < num)
+        r = torch.abs(num - self.round_to_precision(truth, precision))
+        ulp = 2**-(precision + 1)
+        return(torch.where(r <= ulp, torch.ones(r.shape), torch.zeros(r.shape)))
 
     def calc_accuracy(self, name, test_gen, W, O, precision, model, should_print):
         success = 0
         total = 0
         print(f"\n##### {name} SET ######")
-        for t, (X, Y) in enumerate(test_gen):
-            for i in range(Y.shape[0]):
-                sample_X = X[i]
-                sample_Y = Y[i]
+        for t, (inputs, Y) in enumerate(test_gen):
+            inputs["W"] = W
+            inputs["O"] = O
 
-                # FIX!!!
-                inputs = {"X": sample_X, "W": W, "O": O}
-                res = model(**inputs)
-                total += 1
-                if (self.is_within_ulp(res, sample_Y, precision)):
-                    success += 1
-                else:
-                    if should_print:
-                        print(
-                            f"prediction: {res[0]} : true: {self.round_to_precision(sample_Y, precision)}")
+            res = model(**inputs)
+
+            ulp = self.is_within_ulp(res, Y, precision)
+
+            success += torch.sum(ulp)
+            total += ulp.shape[0]
+
+            if should_print:
+                indices = (ulp == 0).nonzero()[:, 0].tolist()
+                for index in indices:
+                    print(
+                        f"guess: {res[index]}, true: {self.round_to_precision(Y[index], precision)} ")
+
         acc = (success * 1.)/total
         print(f"accuracy: {acc}")
 
@@ -265,7 +264,7 @@ class BitFlow:
                 constraint_err = torch.tensor(
                     ErrorConstraintFn(W.tolist()))
                 ulp_error = torch.mean(torch.sum(
-                    self.within_ulp_err(torch.tensor(y), target, precision)))
+                    self.within_ulp_err(y, target, precision)))
 
                 # Sanity error check
                 if shouldErrorCheck:
@@ -332,12 +331,7 @@ class BitFlow:
                 inputs["W"] = W
                 inputs["O"] = O
 
-                print(f"INPUTS: {inputs}")
-
                 y = model(**inputs)
-
-                print(f"PREDS: {y}")
-                print(f"TRUE: {target_y}")
 
                 loss = compute_loss(target_y, y, W, iter,
                                     error_type=1, should_print=True)
@@ -368,7 +362,7 @@ class BitFlow:
         print("\n##### SAMPLE ######")
 
         # Basic sample (truth value = 16)
-        test = {"X": torch.tensor([2., 4.]), "W": W, "O": O}
+        test = {"a": torch.tensor(2.), "b": torch.tensor(4.), "W": W, "O": O}
         print(W)
         print(init_W)
         print(model(**test))

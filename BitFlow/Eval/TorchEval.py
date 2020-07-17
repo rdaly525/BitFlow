@@ -19,7 +19,7 @@ class TorchEval(AbstractEval):
 
     def eval_Round(self, a, prec, node: DagNode):
         scale = 2.0**prec
-        return IntRound(a)
+        return IntRound(a * scale)/scale
 
     def eval_Select(self, a, node: DagNode):
         if len(a.shape) == 1:
