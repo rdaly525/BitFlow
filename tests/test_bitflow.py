@@ -11,7 +11,7 @@ def gen_fig3():
     #(a*b) + 4 - b
     a = Input(name="a")
     b = Input(name="b")
-    c = Constant(4, name="c")
+    c = Constant(4.3, name="c")
     d = Mul(a, b, name="d")
     e = Add(d, c, name="e")
     z = Sub(e, b, name="z")
@@ -37,8 +37,12 @@ def test_fig3():
 
     dag = gen_fig3()
 
-    BitFlow(dag, 8.)
+    BitFlow(dag, 8., {'a': (-3., 2.), 'b': (4., 8.)})
     return
 
 
-test_fig3()
+def test_ex1():
+    dag = gen_ex1()
+
+    BitFlow(dag, 5., {'a': (-3., 2.), 'b': (4., 8.), 'c': (-1., 1.)})
+    return
