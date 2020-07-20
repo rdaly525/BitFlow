@@ -3,10 +3,10 @@ import torch
 from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, Select, Output
 from BitFlow.IA import Interval
 from BitFlow.Eval.TorchEval import TorchEval
-from tests.test_fig3 import AddRoundNodes
-from tests.test_fig3 import NodePrinter1
+from BitFlow.AddRoundNodes import AddRoundNodes
 from BitFlow.casestudies.caseStudies import caseStudy
 from BitFlow.Eval import IAEval, NumEval
+
 
 def update_dag(dag):
     """ TODO: Adds Round Nodes, Weight Input Nodes (grad allowed) and Output Precision Nodes (grad not allowed)
@@ -41,8 +41,9 @@ def gen_fig3():
     e = Add(d, c, name="e")
     z = Sub(e, b, name="z")
 
-    fig3_dag = Dag(outputs=[z], inputs=[a,b])
+    fig3_dag = Dag(outputs=[z], inputs=[a, b])
     return fig3_dag
+
 
 def gen_ex1():
     #(a * b) + (b * c)
@@ -55,6 +56,7 @@ def gen_ex1():
 
     dag = Dag(outputs=[z], inputs=[a, b, c])
     return dag
+
 
 def test_fig3():
     print("###############TEST FIG3###############")
@@ -78,7 +80,7 @@ def test_fig3():
     a1, b1 = 10.45454524545452, 10.2323223232
 
     print("EVAL After Rounding")
-    inputs1 = {"a":a1,"b":b1,"W": W1, "O": O1}
+    inputs1 = {"a": a1, "b": b1, "W": W1, "O": O1}
 
     evaluator1 = TorchEval(newDag)
 
@@ -88,6 +90,7 @@ def test_fig3():
     print(y_val)
 
     return
+
 
 def test_ex1():
     print("###############TEST EX1###############")
@@ -110,7 +113,7 @@ def test_ex1():
     a1, b1, c1 = 10.45454524545452, 10.2323223232, 8.231343
 
     print("EVAL After Rounding")
-    inputs1 = {"a":a1,"b":b1, "c":c1,"W": W1, "O": O1}
+    inputs1 = {"a": a1, "b": b1, "c": c1, "W": W1, "O": O1}
 
     evaluator1 = TorchEval(newDag)
 
@@ -157,16 +160,17 @@ def test_fig3_integers():
 
     return
 
+
 def test_poly_approx():
     print("###############POLY APPROX###############")
     tmp = caseStudy
     fig_casestudy = tmp.poly_approx()
 
-    W = torch.tensor([15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15.])
+    W = torch.tensor([15., 15., 15., 15., 15., 15., 15.,
+                      15., 15., 15., 15., 15., 15., 15.])
 
     O = torch.tensor([15.])
     a, c = torch.tensor([1., 3., -6., -10., -1.]), 3.3
-
 
     print("EVAL Before Rounding")
     evaluator = TorchEval(fig_casestudy)
@@ -178,7 +182,8 @@ def test_poly_approx():
 
     #W1 = torch.tensor([2., 2., 2., 2., 2., 2., 2., 2., 2., 10., 11., 12., 13., 14.])
 
-    W1 = torch.tensor([15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15.])
+    W1 = torch.tensor([15., 15., 15., 15., 15., 15., 15.,
+                       15., 15., 15., 15., 15., 15., 15.])
 
     O1 = torch.tensor([15.])
     a1, c1 = torch.tensor([1., 3., -6., -10., -1.]), 3.3
@@ -196,6 +201,7 @@ def test_poly_approx():
 
     return
 
+
 def test_RGB_to_YCbCr():
     print("###############RGB to YCbCr###############")
     tmp = caseStudy
@@ -204,8 +210,7 @@ def test_RGB_to_YCbCr():
     W = torch.tensor(
         [15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15.])
 
-
-    O = torch.tensor([15.,15.,15.])
+    O = torch.tensor([15., 15., 15.])
     a = torch.tensor([22., 103., 200.])
 
     print("EVAL Before Rounding")
@@ -223,7 +228,6 @@ def test_RGB_to_YCbCr():
     O1 = torch.tensor([15., 15., 15.])
     a1 = torch.tensor([22., 103., 200.])
 
-
     print("EVAL After Rounding")
     inputs1 = {"a": a1, "W": W1, "O": O1}
     print(inputs1)
@@ -237,6 +241,7 @@ def test_RGB_to_YCbCr():
 
     return
 
+
 def test_Matrix_Multiplication():
     print("###############Matrix Multiplication###############")
     tmp = caseStudy
@@ -247,26 +252,24 @@ def test_Matrix_Multiplication():
          15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15.,
          15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15.])
 
-    O = torch.tensor([15.,15.,15.,15.])
+    O = torch.tensor([15., 15., 15., 15.])
     a = torch.tensor([[1.1, 2.2], [3, 4]])
     b = torch.tensor([[5, 6], [7, 8]])
 
-
     print("EVAL Before Rounding")
     evaluator = TorchEval(fig_casestudy)
-    res = evaluator.eval(a=a,b=b)
+    res = evaluator.eval(a=a, b=b)
     print("y value with full precision")
     print(res)
 
     newDag = update_dag(fig_casestudy)
 
     W1 = torch.tensor(
-        [1., 1., 1., 1., 1., 1., 1., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15.,15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15.,15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15.,15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15.])
+        [1., 1., 1., 1., 1., 1., 1., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15.])
 
     O1 = torch.tensor([1., 1., 1., 1.])
     a1 = torch.tensor([[1.1, 2.2], [3, 4]])
     b1 = torch.tensor([[5, 6], [7, 8]])
-
 
     print("EVAL After Rounding")
     inputs1 = {"a": a1, "b": b1, "W": W1, "O": O1}
@@ -280,6 +283,7 @@ def test_Matrix_Multiplication():
     print(y_val)
 
     return
+
 
 test_fig3()
 test_ex1()

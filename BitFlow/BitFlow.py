@@ -4,6 +4,7 @@ from .Eval.IAEval import IAEval
 from .Eval.NumEval import NumEval
 from .Eval.TorchEval import TorchEval
 from .Optimization import BitFlowVisitor, BitFlowOptimizer
+from .AddRoundNodes import AddRoundNodes
 
 import torch
 from torch.utils import data
@@ -82,7 +83,10 @@ class BitFlow:
                     inputs["O"] = torch.Tensor(
                         1, size_output).fill_(true_width)[0]
                     new_y = model(**inputs)
-                    self.Y.append(new_y.tolist()[0])
+                    if isinstance(new_y.tolist(), list):
+                        self.Y.append(new_y.tolist()[0])
+                    else:
+                        self.Y.append(new_y.tolist())
 
             def __len__(self):
                 return len(self.X[list(data_range.keys())[0]])
@@ -93,8 +97,7 @@ class BitFlow:
         return Dataset(model, dataset_size, size_w, size_output, data_range, true_width, dist)
 
     def update_dag(self, dag):
-        """ TODO: Adds Round Nodes, Weight Input Nodes (grad allowed) and Output Precision Nodes (grad not allowed)
-
+        """ 
         Args:
             dag: Input dag
 
@@ -104,20 +107,10 @@ class BitFlow:
         W = Input(name="W")
         O = Input(name="O")
 
-        a_input = Input(name="a")
-        b_input = Input(name="b")
+        rounder = AddRoundNodes(W, O)
+        roundedDag = rounder.doit(dag)
 
-        a = Round(a_input, W[0])
-        b = Round(b_input, W[1])
-        c = Round(Constant(4.3, name="c"), W[2])
-
-        d = Round(Mul(a, b, name="d"), W[3])
-        e = Round(Add(d, c, name="e"), W[4])
-        z = Round(Sub(e, b, name="z"), O[0])
-
-        fig3 = Dag(outputs=[z], inputs=[a_input, b_input, W, O])
-
-        return fig3
+        return roundedDag, rounder.round_count, rounder.input_count, rounder.output_count
 
     def round_to_precision(self, num, precision):
         scale = 2.0**precision
@@ -159,7 +152,7 @@ class BitFlow:
         vals = tensor < 0
         return vals.any()
 
-    def __init__(self, dag, precision, data_range={'a': (-3., 2.), 'b': (4., 8.)}):
+    def __init__(self, dag, precision, data_range):
         # TODO: construct data_range from dag.inputs
 
         # Run a basic evaluator on the DAG to construct error and area functions
@@ -203,15 +196,12 @@ class BitFlow:
              return  {error_fn}''', globals())
 
         # Update the dag with round nodes and set up the model for torch training
-        dag = self.update_dag(dag)
+        dag, weight_size, input_size, output_size = self.update_dag(dag)
         model = self.gen_model(dag)
 
         # Training details
         training_size = 1000
         testing_size = 200
-        input_size = 2  # TODO: adapt to DAG
-        weight_size = 5  # TODO: adapt to DAG
-        output_size = 1  # TODO: adapt to DAG
         epochs = 50
         batch_size = 8
 
@@ -332,7 +322,7 @@ class BitFlow:
                 y = model(**inputs)
 
                 loss = compute_loss(target_y, y, W, iter,
-                                    error_type=2, should_print=True)
+                                    error_type=1, should_print=True)
 
                 opt.zero_grad()
                 loss.backward()
@@ -357,22 +347,22 @@ class BitFlow:
         print(f"ERROR: {ErrorConstraintFn(W.tolist())}")
         print(f"AREA: {AreaOptimizerFn(W.tolist())}")
 
-        print("\n##### SAMPLE ######")
+        # print("\n##### SAMPLE ######")
 
-        # Basic sample (truth value = 16)
-        test = {"a": torch.tensor(2.), "b": torch.tensor(4.), "W": W, "O": O}
-        print(W)
-        print(init_W)
-        print(model(**test))
-        print(self.is_within_ulp(model(**test),
-                                 torch.tensor([8.3]), precision))
+        # # Basic sample (truth value = 16)
+        # test = {"a": torch.tensor(2.), "b": torch.tensor(4.), "W": W, "O": O}
+        # print(W)
+        # print(init_W)
+        # print(model(**test))
+        # print(self.is_within_ulp(model(**test),
+        #                          torch.tensor([8.3]), precision))
 
-        print("\n##### FROM OPTIMIZER ######")
-        bfo.solve()
-        test = [bfo.fb_sols['a'], bfo.fb_sols['b'],
-                bfo.fb_sols['c'], bfo.fb_sols['d'], bfo.fb_sols['e']]
-        print(f"ERROR: {ErrorConstraintFn(test)}")
-        print(f"AREA: {AreaOptimizerFn(test)}")
+        # print("\n##### FROM OPTIMIZER ######")
+        # bfo.solve()
+        # test = [bfo.fb_sols['a'], bfo.fb_sols['b'],
+        #         bfo.fb_sols['c'], bfo.fb_sols['d'], bfo.fb_sols['e']]
+        # print(f"ERROR: {ErrorConstraintFn(test)}")
+        # print(f"AREA: {AreaOptimizerFn(test)}")
 
-        self.calc_accuracy("OPTIMIZER TEST", test_gen, torch.tensor(test),
-                           O, precision, model, False)
+        # self.calc_accuracy("OPTIMIZER TEST", test_gen, torch.tensor(test),
+        #                    O, precision, model, False)

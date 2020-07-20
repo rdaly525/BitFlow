@@ -3,6 +3,8 @@ import copy
 '''
 Since every instance of epsilon is only associated with precision bit error term, we can bundle them together under one class.
 '''
+
+
 class FPEpsilon:
     def __init__(self, node, val=1):
         assert isinstance(node, str)
@@ -15,9 +17,12 @@ class FPEpsilon:
     def __eq__(self, rhs):
         return self.val == rhs.val
 
+
 '''
 The most tricky part is multiplying two errors; this object abstracts those error multipliications
 '''
+
+
 class FPEpsilonMultiplier:
     def __init__(self, Ex, Ey, val=1):
         assert isinstance(Ex, list)
@@ -57,7 +62,7 @@ class FPEpsilonMultiplier:
 
 class PrecisionNode:
     def __init__(self, val, symbol, error):
-        assert isinstance(val, int)
+        assert isinstance(val, (int, float))
         assert isinstance(symbol, str)
         assert isinstance(error, list)
 
@@ -132,7 +137,8 @@ class PrecisionNode:
         assert isinstance(rhs, PrecisionNode)
         assert isinstance(symbol, str)
 
-        mixed_err = FPEpsilonMultiplier(copy.deepcopy(rhs.error), copy.deepcopy(self.error))
+        mixed_err = FPEpsilonMultiplier(
+            copy.deepcopy(rhs.error), copy.deepcopy(self.error))
 
         rhs_error = copy.deepcopy(rhs.error)
         for (i, error) in enumerate(rhs_error):
