@@ -157,45 +157,6 @@ def test_fig3_integers():
 
     return
 
-
-#Evaluate it in the context of Intervals
-def test_fig3_IA():
-    fig3 = gen_fig3()
-    print("###############TEST FIG3 IA###############")
-
-    a = Interval(0, 5)
-    b = Interval(3, 8)
-
-    W = torch.tensor([20., 20., 20., 20., 20.])
-    O = torch.tensor([20.])
-
-    print("EVAL Before Rounding")
-    evaluator = IAEval(fig3)
-    res = evaluator.eval(a=a, b=b)
-    print("y value with full precision")
-    print(res)
-
-    newDag = update_dag(fig3)
-
-    a1 = Interval(0, 5)
-    b1 = Interval(3, 8)
-
-    W1 = torch.tensor([20., 20., 20., 20., 20.])
-    O1 = torch.tensor([20.])
-
-    print("EVAL After Rounding")
-    inputs1 = {"a": a1, "b": b1, "W": W1, "O": O1}
-
-    evaluator1 = TorchEval(newDag)
-
-    y_val = evaluator1.eval(**inputs1)
-
-    print("y value with rounded precision")
-    print(y_val)
-
-    return
-
-
 def test_poly_approx():
     print("###############POLY APPROX###############")
     tmp = caseStudy
