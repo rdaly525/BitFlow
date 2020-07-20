@@ -290,9 +290,7 @@ class BitFlow:
             else:
                 ulp_error = precision * torch.mean(torch.sum(
                     self.within_ulp_err(torch.tensor(y), target, precision)))
-
-                constraint_err = torch.max(
-                    ulp_error, torch.zeros(1))
+                constraint_err = torch.max(ulp_error.float(), torch.zeros(1))
 
                 constraint_W = 100 * \
                     torch.sum(torch.max(-(W) + 0.5, torch.zeros(len(W))))
@@ -334,7 +332,7 @@ class BitFlow:
                 y = model(**inputs)
 
                 loss = compute_loss(target_y, y, W, iter,
-                                    error_type=1, should_print=True)
+                                    error_type=2, should_print=True)
 
                 opt.zero_grad()
                 loss.backward()
