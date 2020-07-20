@@ -102,8 +102,6 @@ class NodePrinter(Visitor):
             print(f"  {child_node}:  {self.node_values[child_node]}")
 
 
-
-
 class AddRoundNodes(Transformer):
 
     def __init__(self, W, O):
@@ -124,7 +122,6 @@ class AddRoundNodes(Transformer):
         self.run(dag)
 
         new_inputs.append(self.W)
-        #new_inputs.append(self.X)
         new_inputs.append(self.O)
 
         new_outputs = list(self.rounded_outputs)
@@ -136,7 +133,6 @@ class AddRoundNodes(Transformer):
         if isinstance(node, Output):
             return None
 
-
         Transformer.generic_visit(self, node) #make sure code run on all children nodes first
 
         for child in node.children():
@@ -145,8 +141,6 @@ class AddRoundNodes(Transformer):
         if isinstance(node, Input):
             returnNode = Round(node, Select(self.W, self.round_count),name=node.name + "_round")  # current node + need to get prec_input
             self.input_count += 1
-
-
 
         else:
             if(node in self.allroots):
@@ -161,7 +155,6 @@ class AddRoundNodes(Transformer):
                                    name=node.name + "_round_W")
         self.round_count += 1
         return returnNode
-
 
 class NodePrinter1(Visitor):
 

@@ -281,6 +281,7 @@ def test_Matrix_Multiplication():
 
     return
 
+
 test_fig3()
 test_ex1()
 test_fig3_integers()
