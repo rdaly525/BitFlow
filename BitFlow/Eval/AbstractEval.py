@@ -2,6 +2,7 @@ from DagVisitor import Visitor
 from abc import abstractmethod
 from ..node import Dag, DagNode, Input, Constant, Add, Mul, Select, Output, Round
 
+
 class AbstractEval(Visitor):
     def __init__(self, dag: Dag):
         self.dag = dag
@@ -15,8 +16,8 @@ class AbstractEval(Visitor):
                 raise ValueError(f"Missing {dag_input} in input values")
         super().run(self.dag)
         outputs = [self.node_values[root] for root in self.dag.roots()]
-        print(outputs, len(outputs), outputs[0])
-        if len(outputs)==1:
+        #print(outputs, len(outputs), outputs[0])
+        if len(outputs) == 1:
             return outputs[0]
         return outputs
 
@@ -29,7 +30,6 @@ class AbstractEval(Visitor):
 
         assert node_val is not None
         self.node_values[node] = node_val
-
 
     def eval_Input(self, node: DagNode):
         return self.input_values[node.name]
