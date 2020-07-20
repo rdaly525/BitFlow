@@ -1,6 +1,6 @@
 from DagVisitor import Visitor
 from abc import abstractmethod
-from ..node import Dag, DagNode, Input, Constant, Add, Mul, Select, Output
+from ..node import Dag, DagNode, Input, Constant, Add, Mul, Select, Output, Round
 
 
 class AbstractEval(Visitor):
@@ -27,6 +27,7 @@ class AbstractEval(Visitor):
         eval_name = f"eval_{node.kind()[0]}"
         assert hasattr(self, eval_name)
         node_val = getattr(self, eval_name)(*child_values, node=node)
+
         assert node_val is not None
         self.node_values[node] = node_val
 
