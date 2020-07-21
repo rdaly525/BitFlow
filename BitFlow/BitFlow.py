@@ -127,7 +127,7 @@ class BitFlow:
         ulp = 2**-(precision + 1)
         if len(precision) > 1:
             sol = torch.ones(r.shape[1])
-            for x, _ in enumerate(sol):
+            for x in range(len(sol)):
                 for y in range(len(precision)):
                     val = r[y][x]
                     if val > ulp[y]:

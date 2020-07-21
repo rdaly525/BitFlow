@@ -34,12 +34,12 @@ def gen_ex1():
     return dag
 
 
-# def test_fig3():
+def test_fig3():
 
-#     dag = gen_fig3()
+    dag = gen_fig3()
 
-#     BitFlow(dag, {"z": 8.}, {'a': (-3., 2.), 'b': (4., 8.)})
-#     return
+    BitFlow(dag, {"z": 8.}, {'a': (-3., 2.), 'b': (4., 8.)})
+    return
 
 
 def test_ex1():
