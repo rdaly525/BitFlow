@@ -45,6 +45,6 @@ def gen_ex1():
 def test_ex1():
     dag = gen_ex1()
 
-    BitFlow(dag, {"z_1": 5., "z_2": 5.}, {
+    BitFlow(dag, {"z_1": 5., "z_2": 8.}, {
             'a': (-3., 2.), 'b': (4., 8.), 'c': (-1., 1.)})
     return

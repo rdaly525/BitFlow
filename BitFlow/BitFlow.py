@@ -109,19 +109,32 @@ class BitFlow:
 
         return roundedDag, rounder.round_count, rounder.input_count, rounder.output_count
 
-    # BIG TODO:
     def round_to_precision(self, num, precision):
-        scale = 2.0**precision
-        print(num)
-        print(torch.cat((num, scale), 1))
-        assert 0
-        return torch.round(num * scale) / scale
+        if len(precision) > 1:
+            scale = 2.0**precision
+            for (ind, val) in enumerate(scale):
+                num[ind] *= val
+            num = torch.round(num)
+            for (ind, val) in enumerate(scale):
+                num[ind] /= val
+            return num
+        else:
+            scale = 2.0**precision
+            return torch.round(num * scale) / scale
 
     def is_within_ulp(self, num, truth, precision):
         r = torch.abs(num - self.round_to_precision(truth, precision))
         ulp = 2**-(precision + 1)
-
-        return(torch.where(r <= ulp, torch.ones(r.shape), torch.zeros(r.shape)))
+        if len(precision) > 1:
+            sol = torch.ones(r.shape[1])
+            for x, _ in enumerate(sol):
+                for y in range(len(precision)):
+                    val = r[y][x]
+                    if val > ulp[y]:
+                        sol[x] = 0
+            return sol
+        else:
+            return(torch.where(r <= ulp, torch.ones(r.shape), torch.zeros(r.shape)))
 
     def calc_accuracy(self, name, test_gen, W, O, precision, model, should_print):
         success = 0
@@ -133,12 +146,16 @@ class BitFlow:
 
             res = model(**inputs)
 
+            if isinstance(res, list):
+                res = torch.stack(res)
+                Y = torch.stack(Y)
+
             ulp = self.is_within_ulp(res, Y, precision)
 
             success += torch.sum(ulp)
             total += ulp.shape[0]
 
-            if should_print:
+            if should_print and len(precision) == 1:
                 indices = (ulp == 0).nonzero()[:, 0].tolist()
                 for index in indices:
                     print(
@@ -179,8 +196,6 @@ class BitFlow:
         node_values = evaluator.node_values
         visitor = BitFlowVisitor(node_values)
         visitor.run(evaluator.dag)
-
-        # TODO: replace 'z' with appropriate outputs
 
         bfo = BitFlowOptimizer(evaluator, outputs)
         bfo.calculateInitialValues()
@@ -372,12 +387,11 @@ class BitFlow:
         # print(self.is_within_ulp(model(**test),
         #                          torch.tensor([8.3]), precision))
 
-        # print("\n##### FROM OPTIMIZER ######")
-        # bfo.solve()
-        # test = [bfo.fb_sols['a'], bfo.fb_sols['b'],
-        #         bfo.fb_sols['c'], bfo.fb_sols['d'], bfo.fb_sols['e']]
-        # print(f"ERROR: {ErrorConstraintFn(test)}")
-        # print(f"AREA: {AreaOptimizerFn(test)}")
+        print("\n##### FROM OPTIMIZER ######")
+        bfo.solve()
+        test = list(bfo.fb_sols.values())
+        print(f"ERROR: {ErrorConstraintFn(test)}")
+        print(f"AREA: {AreaOptimizerFn(test)}")
 
-        # self.calc_accuracy("OPTIMIZER TEST", test_gen, torch.tensor(test),
-        #                    O, precision, model, False)
+        self.calc_accuracy("OPTIMIZER TEST", test_gen, torch.tensor(test),
+                           O, precision, model, False)
