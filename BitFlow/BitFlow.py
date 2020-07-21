@@ -82,8 +82,8 @@ class BitFlow:
                     inputs["W"] = W
                     inputs["O"] = torch.Tensor(
                         1, size_output).fill_(true_width)[0]
-                    new_y = torch.tensor(model(**inputs))
-                    self.Y.append(new_y.squeeze().tolist())
+                    new_y = model(**inputs)
+                    self.Y.append(new_y)
 
             def __len__(self):
                 return len(self.X[list(data_range.keys())[0]])
