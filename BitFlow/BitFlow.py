@@ -240,11 +240,11 @@ class BitFlow:
         # Training details
         training_size = 1000
         testing_size = 200
-        epochs = 50
-        batch_size = 8
+        epochs = 300
+        batch_size = 16
 
         # lr -> (1e-7 (2 bits), 5e-6 (8 bits))
-        lr_rate = 8e-4
+        lr_rate = 5e-4
 
         # output without grad
         O = torch.Tensor(list(outputs.values()))
@@ -264,13 +264,14 @@ class BitFlow:
 
         # weights matrix
         W = torch.Tensor(weight_size).fill_(bfo.initial)
+        #W = torch.Tensor(weight_size).fill_(1.)
         init_W = W.clone()
         print(W)
-        W += 2
+        W += 10
         W.requires_grad = True
         init_W.requires_grad = True
 
-        self.R = 1e20
+        self.R = 1e5
         self.initR = self.R
         self.prevR = self.R
 
@@ -283,7 +284,11 @@ class BitFlow:
                     2 ==> Soft-Loss on ULP
 
             """
-            area = torch.tensor(AreaOptimizerFn(W.tolist()))
+            unpacked_W = []
+            for weight in W:
+                unpacked_W.append(weight)
+
+            area = AreaOptimizerFn(unpacked_W)
 
             if isinstance(target, list):
                 target = torch.stack(target)
@@ -293,10 +298,7 @@ class BitFlow:
             if error_type == 1:
 
                 # Calculate erros
-                constraint_err = torch.tensor(
-                    ErrorConstraintFn(W.tolist()))
-                ulp_error = torch.mean(torch.sum(
-                    self.within_ulp_err(y, target, precision)))
+                constraint_err = ErrorConstraintFn(unpacked_W)
 
                 # Sanity error check
                 if shouldErrorCheck:
@@ -306,7 +308,7 @@ class BitFlow:
 
                 # If ulp error is reasonable, relax error constraints
                 decay = 0.95
-                if torch.abs(ulp_error) < 1:
+                if constraint_err > 0:
                     self.prevR = self.R
                     self.R *= decay
                 else:
@@ -316,18 +318,26 @@ class BitFlow:
 
                 S = 1
                 Q = 100
-                loss = (Q * L2 + self.R *
-                        torch.exp(-10 * constraint_err) + S * area)/batch_size
+                loss = (self.R *
+                        torch.exp(-1 * constraint_err) + S * area)/batch_size
 
             else:
                 ulp_error = torch.mean(torch.sum(
-                    self.within_ulp_err(torch.tensor(y), target, precision)))
+                    self.within_ulp_err(y, target, precision)))
                 constraint_err = torch.max(ulp_error.float(), torch.zeros(1))
+
+                # If ulp error is reasonable, relax error constraints
+                decay = 0.995
+                if torch.abs(ulp_error) < 1:
+                    self.prevR = self.R
+                    self.R *= decay
+                else:
+                    self.R = self.initR
 
                 constraint_W = 100 * \
                     torch.sum(torch.max(-(W) + 0.5, torch.zeros(len(W))))
 
-                loss = (constraint_err + constraint_W + area/100)/batch_size
+                loss = (self.R * ulp_error)/batch_size
 
             # Catch negative values for area and weights
             if shouldErrorCheck:
@@ -351,7 +361,7 @@ class BitFlow:
             return loss
 
         # Set up optimizer
-        opt = torch.optim.AdamW([W], lr=lr_rate)
+        opt = torch.optim.Adam([W], lr=lr_rate)
 
         # Run training process
         print("\n##### TRAINING ######")
@@ -362,7 +372,6 @@ class BitFlow:
                 inputs["O"] = O
 
                 y = model(**inputs)
-
                 loss = compute_loss(target_y, y, W, iter,
                                     error_type=1, should_print=True)
 
@@ -372,11 +381,11 @@ class BitFlow:
                 iter += 1
 
         print(W)
-        print(iter)
         W = self.custom_round(W, factor=0.2)
+        print(W)
 
         self.calc_accuracy("TEST", test_gen, W,
-                           O, precision, model, True)
+                           O, precision, model, False)
         self.calc_accuracy("UFB TEST", test_gen, init_W,
                            O, precision, model, False)
 

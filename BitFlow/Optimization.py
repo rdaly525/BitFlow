@@ -81,7 +81,7 @@ class BitFlowVisitor(Visitor):
         lhs, rhs = self.getChildren(node)
         self.errors[node.name] = self.errors[lhs.name].mul(
             self.errors[rhs.name], node.name)
-        self.area_fn += f"+({self.IBs[lhs.name]} + {lhs.name})*({self.IBs[rhs.name]} + {rhs.name})"
+        self.area_fn += f"+1 * ({self.IBs[lhs.name]} + {lhs.name})*({self.IBs[rhs.name]} + {rhs.name})"
 
 
 class BitFlowOptimizer():
