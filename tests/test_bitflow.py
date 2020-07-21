@@ -27,22 +27,24 @@ def gen_ex1():
     c = Input(name="c")
     d = Mul(a, b, name="d")
     e = Mul(b, c, name="e")
-    z = Add(e, d, name="z")
+    z_1 = Add(e, d, name="z_1")
+    z_2 = Add(a, d, name="z_2")
 
-    dag = Dag(outputs=[z], inputs=[a, b, c])
+    dag = Dag(outputs=[z_1, z_2], inputs=[a, b, c])
     return dag
 
 
-def test_fig3():
+# def test_fig3():
 
-    dag = gen_fig3()
+#     dag = gen_fig3()
 
-    BitFlow(dag, 8., {'a': (-3., 2.), 'b': (4., 8.)})
-    return
+#     BitFlow(dag, {"z": 8.}, {'a': (-3., 2.), 'b': (4., 8.)})
+#     return
 
 
 def test_ex1():
     dag = gen_ex1()
 
-    BitFlow(dag, 5., {'a': (-3., 2.), 'b': (4., 8.), 'c': (-1., 1.)})
+    BitFlow(dag, {"z_1": 5., "z_2": 5.}, {
+            'a': (-3., 2.), 'b': (4., 8.), 'c': (-1., 1.)})
     return
