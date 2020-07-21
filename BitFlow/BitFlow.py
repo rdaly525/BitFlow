@@ -38,7 +38,7 @@ class BitFlow:
                 W[index] = math.ceil(weight)
         return torch.tensor(W)
 
-    def gen_data(self, model, dataset_size, size_w, size_output, data_range, true_width=20., dist=0):
+    def gen_data(self, model, dataset_size, size_w, size_output, data_range, range_bits, true_width=20., dist=0):
         """ Generates ground-truth data from user specifications and model.
 
         Args:
@@ -56,7 +56,7 @@ class BitFlow:
         """
 
         class Dataset(data.Dataset):
-            def __init__(self, model, dataset_size, size_w, size_output, data_range, true_width, dist):
+            def __init__(self, model, dataset_size, size_w, size_output, data_range, range_bits, true_width, dist):
                 self.X = {k: [] for k in data_range}
                 self.Y = []
 
@@ -68,13 +68,23 @@ class BitFlow:
                 for key in data_range:
                     # Create random tensor
                     input_range = data_range[key]
+
+                    # calculate range bounds using range bits
+                    ib = range_bits[key]
+                    min_range = -1 * (2 ** (ib - 1))
+                    max_range = 2 ** (ib - 1) - 1
+
+                    val = 0
                     if dist == 1:
                         mean = (input_range[1]-input_range[0])/2
-                        std = (mean - input_range[0])/2
-                        self.X[key] = torch.normal(mean=mean, std=std)
+                        std = (mean - input_range[0])/3
+                        val = torch.normal(mean=mean, std=std)
                     else:
-                        self.X[key] = (input_range[1] - input_range[0]) * \
+                        val = (input_range[1] - input_range[0]) * \
                             torch.rand(dataset_size) + input_range[0]
+
+                    val = torch.clamp(val, min_range, max_range)
+                    self.X[key] = val
 
                 for i in range(dataset_size):
                     inputs = {k: self.X[k][i] for k in data_range}
@@ -91,7 +101,7 @@ class BitFlow:
             def __getitem__(self, index):
                 return {k: self.X[k][index] for k in data_range}, self.Y[index]
 
-        return Dataset(model, dataset_size, size_w, size_output, data_range, true_width, dist)
+        return Dataset(model, dataset_size, size_w, size_output, data_range, range_bits, true_width, dist)
 
     def update_dag(self, dag):
         """
@@ -197,6 +207,8 @@ class BitFlow:
         visitor = BitFlowVisitor(node_values)
         visitor.run(evaluator.dag)
 
+        range_bits = visitor.IBs
+
         bfo = BitFlowOptimizer(evaluator, outputs)
         bfo.calculateInitialValues()
 
@@ -244,10 +256,10 @@ class BitFlow:
 
         # generate testing/training data
         training_set = self.gen_data(
-            model, training_size, weight_size, output_size, data_range)
+            model, training_size, weight_size, output_size, data_range, range_bits)
         train_gen = data.DataLoader(training_set, **params)
         test_set = self.gen_data(
-            model, testing_size, weight_size, output_size, data_range)
+            model, testing_size, weight_size, output_size, data_range, range_bits)
         test_gen = data.DataLoader(test_set, **params)
 
         # weights matrix
