@@ -70,16 +70,19 @@ def RGB_to_YCbCr():
 def test_rgb_case_study():
     dag = RGB_to_YCbCr()
 
-    # evaluator = NumEval(dag)
-    # data = {"r": 6.6567, "g": -3.1908, "b": -9.9331}
-    # print(evaluator.eval(**data))
+    params = dict(
+        training_size=2000,
+        testing_size=200,
+        epochs=50,
+        batch_size=16,
+        lr=1e-4
+    )
 
     bf = BitFlow(dag, {"col_1": 10., "col_2": 10., "col_3": 10.}, {
-        'r': (-10., 10.), 'b': (-10., 10.), 'g': (-10., 10.)})
+        'r': (-10., 10.), 'b': (-10., 10.), 'g': (-10., 10.)}, **params)
 
+    # Sample Matrix Product
     test = {"r": 2., "g": 4., "b": -3., "W": bf.W, "O": bf.O}
     print(bf.model(**test))
-
-    # assert [torch.tensor([2.6040]), torch.tensor([-3.1625]), torch.tensor([-0.4308])] == bf.model(**test)
 
     return
