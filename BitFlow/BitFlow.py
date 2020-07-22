@@ -17,9 +17,7 @@ class BitFlow:
 
     def gen_model(self, dag):
         """ Sets up a given dag for torch evaluation.
-
         Args: Input dag (should already have Round nodes)
-
         Returns: A trainable model
         """
         self.evaluator = TorchEval(dag)
@@ -38,9 +36,8 @@ class BitFlow:
                 W[index] = math.ceil(weight)
         return torch.tensor(W)
 
-    def gen_data(self, model, dataset_size, size_w, size_output, data_range, range_bits, true_width=20., dist=0):
+    def gen_data(self, model, dataset_size, size_w, size_output, data_range, range_bits, true_width=20., dist=2):
         """ Generates ground-truth data from user specifications and model.
-
         Args:
             model: A dag already set up for torch evaluatiion
             output_precision: The requested number of precision bits on the output node
@@ -49,8 +46,8 @@ class BitFlow:
             dist: Type of distribution to use
                 0 ==> UNIFORM
                 1 ==> NORMAL
+                2 ==> ARCSINE
             mean, std: statistics for normal distribution to generate data from
-
         Returns:
             (X, Y): generated data
         """
@@ -76,9 +73,16 @@ class BitFlow:
 
                     val = 0
                     if dist == 1:
-                        mean = (input_range[1]-input_range[0])/2
+                        mean = (input_range[1]+input_range[0])/2
                         std = (mean - input_range[0])/3
-                        val = torch.normal(mean=mean, std=std)
+                        val = torch.normal(
+                            mean=mean, std=std, size=(1, dataset_size)).squeeze()
+                    elif dist == 2:
+                        beta = torch.distributions.beta.Beta(
+                            torch.tensor([0.5]), torch.tensor([0.5]))
+                        val = (input_range[1] - input_range[0]) * \
+                            beta.sample((dataset_size,)).squeeze() + \
+                            input_range[0]
                     else:
                         val = (input_range[1] - input_range[0]) * \
                             torch.rand(dataset_size) + input_range[0]
@@ -92,8 +96,8 @@ class BitFlow:
                     inputs["W"] = W
                     inputs["O"] = torch.Tensor(
                         1, size_output).fill_(true_width)[0]
-                    new_y = torch.tensor(model(**inputs))
-                    self.Y.append(new_y.squeeze().tolist())
+                    new_y = model(**inputs)
+                    self.Y.append(new_y)
 
             def __len__(self):
                 return len(self.X[list(data_range.keys())[0]])
@@ -107,7 +111,6 @@ class BitFlow:
         """
         Args:
             dag: Input dag
-
         Returns:
             updated dag: A dag which BitFlow can be run on
         """
@@ -121,6 +124,7 @@ class BitFlow:
 
     def round_to_precision(self, num, precision):
         if len(precision) > 1:
+            num = num.clone()
             scale = 2.0**precision
             for (ind, val) in enumerate(scale):
                 num[ind] *= val
@@ -136,12 +140,11 @@ class BitFlow:
         r = torch.abs(num - self.round_to_precision(truth, precision))
         ulp = 2**-(precision + 1)
         if len(precision) > 1:
-            sol = torch.ones(r.shape[1])
-            for x in range(len(sol)):
-                for y in range(len(precision)):
-                    val = r[y][x]
+            sol = torch.ones(r.shape)
+            for (y, row) in enumerate(r):
+                for (x, val) in enumerate(row):
                     if val > ulp[y]:
-                        sol[x] = 0
+                        sol[y][x] = 0
             return sol
         else:
             return(torch.where(r <= ulp, torch.ones(r.shape), torch.zeros(r.shape)))
@@ -155,15 +158,15 @@ class BitFlow:
             inputs["O"] = O
 
             res = model(**inputs)
-
             if isinstance(res, list):
                 res = torch.stack(res)
-                Y = torch.stack(Y)
+                Y = torch.stack(Y).squeeze()
+            else:
+                Y = Y.squeeze()
 
             ulp = self.is_within_ulp(res, Y, precision)
-
             success += torch.sum(ulp)
-            total += ulp.shape[0]
+            total += torch.numel(ulp)
 
             if should_print and len(precision) == 1:
                 indices = (ulp == 0).nonzero()[:, 0].tolist()
@@ -191,7 +194,6 @@ class BitFlow:
         return vals.any()
 
     def __init__(self, dag, outputs, data_range):
-        # TODO: construct data_range from dag.inputs
 
         # Run a basic evaluator on the DAG to construct error and area functions
         evaluator = NumEval(dag)
@@ -238,13 +240,13 @@ class BitFlow:
         model = self.gen_model(dag)
 
         # Training details
-        training_size = 1000
+        training_size = 2000
         testing_size = 200
         epochs = 300
         batch_size = 16
 
         # lr -> (1e-7 (2 bits), 5e-6 (8 bits))
-        lr_rate = 5e-4
+        lr_rate = 5e-5
 
         # output without grad
         O = torch.Tensor(list(outputs.values()))
@@ -264,10 +266,10 @@ class BitFlow:
 
         # weights matrix
         W = torch.Tensor(weight_size).fill_(bfo.initial)
-        #W = torch.Tensor(weight_size).fill_(1.)
+        # W = torch.Tensor(weight_size).fill_(1.)
         init_W = W.clone()
         print(W)
-        W += 10
+        W += 0
         W.requires_grad = True
         init_W.requires_grad = True
 
@@ -282,7 +284,6 @@ class BitFlow:
                 error_type:
                     1 ==> Paper Error
                     2 ==> Soft-Loss on ULP
-
             """
             unpacked_W = []
             for weight in W:
@@ -314,7 +315,7 @@ class BitFlow:
                 else:
                     self.R = self.initR
 
-                L2 = torch.sum((y-target)**2)
+                L2 = torch.sum((y-target.squeeze())**2)
 
                 S = 1
                 Q = 100
@@ -370,10 +371,13 @@ class BitFlow:
             for t, (inputs, target_y) in enumerate(train_gen):
                 inputs["W"] = W
                 inputs["O"] = O
-
                 y = model(**inputs)
+
+                if isinstance(y, list):
+                    y = torch.stack(model(**inputs))
+                    target_y = torch.stack(target_y).squeeze()
                 loss = compute_loss(target_y, y, W, iter,
-                                    error_type=1, should_print=True)
+                                    error_type=1, should_print=False)
 
                 opt.zero_grad()
                 loss.backward()
@@ -416,3 +420,9 @@ class BitFlow:
 
         self.calc_accuracy("OPTIMIZER TEST", test_gen, torch.tensor(test),
                            O, precision, model, False)
+
+        self.model = model
+        self.W = W
+        self.O = O
+
+# [tensor([-0.7070]), tensor([2.6563]), tensor([1.9308])]

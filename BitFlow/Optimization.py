@@ -19,11 +19,11 @@ class BitFlowVisitor(Visitor):
         ib = 0
         x = self.node_values[node]
         if isinstance(x, Interval):
-            alpha = 2 if (log2(x.hi) % 1 == 0) else 1
+            alpha = 2 if (log2(abs(x.hi)) % 1 == 0) else 1
             ib = ceil(log2(max(abs(x.lo), abs(x.hi)))) + alpha
         else:
-            alpha = 2 if (log2(x) % 1 == 0) else 1
-            ib = ceil(log2(x)) + alpha
+            alpha = 2 if (log2(abs(x)) % 1 == 0) else 1
+            ib = ceil(log2(abs(x))) + alpha
         self.IBs[node.name] = int(ib)
 
     def getChildren(self, node):
