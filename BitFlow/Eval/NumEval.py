@@ -23,11 +23,4 @@ class NumEval(AbstractEval):
 
     def eval_Reduce(self, a, node: DagNode):
         sum = t.sum(a, dim=node.reduce_dim)
-        #
-        # sum = a[0]
-        #
-        # i = 1
-        # for i in range(1, len(a)):
-        #     sum = sum + a[i]
-
         return sum
