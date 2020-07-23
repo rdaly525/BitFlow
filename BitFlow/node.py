@@ -96,39 +96,17 @@ class Reduce(DagNode):
         if name is None:
             name = f"{a.name}_reduce"
         super().__init__(name, a)
-    #pass
-    #dot product, multiply of two vectors,
-    #sum node, summing across top dimension of the array
-    #reduce/fold sum
-    #dot product will be a library which will stamp out of sum and multiply node
-    #reduce is summing along one of the axi
 
-    #assume we have a vector with terms multiplied
-
-    #get number of elements in dagnode?
-    #for i number of iterations, add dagnodes
-
-
-
-    #def DotProduct(list1, list2):
-        #return sum(ElementWiseMultiplication(list1, list2))
-
-    pass
 
 class Relu(DagNode):
     def __init__(self, a: DagNode, *, name=None):
         if name is None:
             name = f"{a.name}_relu"
         super().__init__(name, a)
-    #R(z) = max(0,z)
 
 
-class Tanh(DagNode) :
-    #
-    # 2/(1+e^-2x) - 1
-    #gradient steeper than sigmoid
-    #squashes a real-valued number to the range [-1, 1]
-    pass
+class Tanh(DagNode):
+      pass
 
 
 
