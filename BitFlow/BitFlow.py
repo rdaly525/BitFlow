@@ -11,6 +11,7 @@ from torch.utils import data
 
 import random
 import math
+import copy
 
 
 class BitFlow:
@@ -226,9 +227,9 @@ class BitFlow:
         for key in eval_dict:
             eval_dict[key] = int(max(abs(eval_dict[key][0]),
                                      abs(eval_dict[key][1])))
+        self.eval_dict = eval_dict
 
         evaluator.eval(**eval_dict)
-        self.evaluator = evaluator
 
         range_bits, filtered_vars = self.calculateRange(evaluator, outputs)
 
@@ -281,7 +282,7 @@ class BitFlow:
         return O, P, init_P, R, init_R
 
     # Loss function
-    def compute_loss(self, target, y, P, R, iter, batch_size, epochs, training_size, error_type=1, should_print=True, shouldErrorCheck=False, train_range=False):
+    def compute_loss(self, target, y, P, R, iter, filtered_vars, batch_size, epochs, training_size, error_type=1, should_print=True, shouldErrorCheck=False, train_range=False):
         """
         Args:
             error_type:
@@ -294,13 +295,21 @@ class BitFlow:
 
         area = 0
         if train_range:
-            node_values = self.evaluator.node_values
+            ldict = {"P": P, "R": R}
+            evaluator = NumEval(self.original_dag)
+            evaluator.eval(**self.eval_dict)
+
+            node_values = evaluator.node_values
             visitor = BitFlowVisitor(node_values, calculate_IB=False)
-            visitor.run(self.evaluator.dag)
+            visitor.run(evaluator.dag)
 
             area_fn = visitor.area_fn
-            print(area_fn)
-            assert 0
+            exec(f"{','.join(filtered_vars)}=P", ldict)
+            ib_vars = [f"{f}_ib" for f in list(visitor.node_values)]
+            exec(f"{','.join(ib_vars)}=R", ldict)
+            exec(f"area = {area_fn}", ldict)
+
+            area = ldict["area"]
         else:
             area = AreaOptimizerFn(unpacked_P)
 
@@ -333,7 +342,7 @@ class BitFlow:
             S = 1
             Q = 100
             loss = (self.L *
-                    torch.exp(-1 * constraint_err) + S * area + torch.sum(R))/batch_size
+                    torch.exp(-1 * constraint_err) + S * area)/batch_size
 
         else:
             ulp_error = torch.mean(torch.sum(
@@ -366,7 +375,9 @@ class BitFlow:
 
         return loss
 
-    def __init__(self, dag, outputs, data_range, training_size=2000, testing_size=200, batch_size=16, lr=1e-4, error_type=1, test_optimizer=True, test_ufb=False, train_range=True):
+    def __init__(self, dag, outputs, data_range, training_size=2000, testing_size=200, batch_size=16, lr=1e-4, error_type=1, test_optimizer=True, test_ufb=False, train_range=False, range_lr=1e-4):
+
+        self.original_dag = copy.deepcopy(dag)
 
         # Run a basic evaluator on the DAG to construct error and area functions
         bfo, range_bits, filtered_vars = self.constructOptimizationFunctions(
@@ -413,6 +424,8 @@ class BitFlow:
         self.init_R = init_R
         self.bfo = bfo
         self.train_range = train_range
+        self.filtered_vars = filtered_vars
+        self.range_lr = range_lr
 
     def train(self, epochs=10):
 
@@ -433,9 +446,12 @@ class BitFlow:
         lr = self.lr
         bfo = self.bfo
         train_range = self.train_range
+        filtered_vars = self.filtered_vars
+        range_lr = self.range_lr
 
         # Set up optimizer
-        opt = torch.optim.Adam([P, R], lr=lr)
+        opt = torch.optim.Adam(
+            [{"params": P}, {"params": R, "lr": range_lr}], lr=lr)
 
         # Run training process
         print("\n##### TRAINING ######")
@@ -451,7 +467,7 @@ class BitFlow:
                     y = torch.stack(y)
                     target_y = torch.stack(target_y).squeeze()
 
-                loss = self.compute_loss(target_y, y, P, R, iter, batch_size, epochs, training_size,
+                loss = self.compute_loss(target_y, y, P, R, iter, filtered_vars, batch_size, epochs, training_size,
                                          error_type=error_type, should_print=True, train_range=train_range)
 
                 opt.zero_grad()
@@ -462,6 +478,7 @@ class BitFlow:
         # Show final results for weight and round them
         print(P)
         P = self.custom_round(P, factor=0.2)
+        R = self.custom_round(R, factor=0.2)
         print(P)
 
         self.calc_accuracy("TEST", test_gen, P, R,
@@ -496,4 +513,5 @@ class BitFlow:
         # Save outputs to object
         self.model = model
         self.P = P
+        self.R = R
         self.O = O

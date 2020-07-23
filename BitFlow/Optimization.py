@@ -38,14 +38,15 @@ class BitFlowVisitor(Visitor):
     def visit_Input(self, node: Input):
         self.handleIB(node)
 
-        val = 0
-        if isinstance(self.node_values[node], Interval):
-            x = self.node_values[node]
-            val = max(abs(x.lo), abs(x.hi))
-        else:
-            val = self.node_values[node]
+        if self.calculate_IB:
+            val = 0
+            if isinstance(self.node_values[node], Interval):
+                x = self.node_values[node]
+                val = max(abs(x.lo), abs(x.hi))
+            else:
+                val = self.node_values[node]
 
-        self.errors[node.name] = PrecisionNode(val, node.name, [])
+            self.errors[node.name] = PrecisionNode(val, node.name, [])
 
     def visit_Select(self, node: Select):
         Visitor.generic_visit(self, node)
@@ -53,17 +54,21 @@ class BitFlowVisitor(Visitor):
     def visit_Constant(self, node: Constant):
         self.handleIB(node)
 
-        val = self.node_values[node]
-        self.errors[node.name] = PrecisionNode(val, node.name, [])
+        if self.calculate_IB:
+            val = self.node_values[node]
+            self.errors[node.name] = PrecisionNode(val, node.name, [])
 
     def visit_Add(self, node: Add):
         Visitor.generic_visit(self, node)
 
         self.handleIB(node)
+
         lhs, rhs = self.getChildren(node)
-        self.errors[node.name] = self.errors[lhs.name].add(
-            self.errors[rhs.name], node.name)
-        # self.area_fn += f"+m.max2({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
+
+        if self.calculate_IB:
+            self.errors[node.name] = self.errors[lhs.name].add(
+                self.errors[rhs.name], node.name)
+
         if self.calculate_IB:
             self.area_fn += f"+max({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
         else:
@@ -74,9 +79,11 @@ class BitFlowVisitor(Visitor):
 
         self.handleIB(node)
         lhs, rhs = self.getChildren(node)
-        self.errors[node.name] = self.errors[lhs.name].sub(
-            self.errors[rhs.name], node.name)
-        # self.area_fn += f"+m.max2({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
+
+        if self.calculate_IB:
+            self.errors[node.name] = self.errors[lhs.name].sub(
+                self.errors[rhs.name], node.name)
+
         if self.calculate_IB:
             self.area_fn += f"+max({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
         else:
@@ -87,8 +94,11 @@ class BitFlowVisitor(Visitor):
 
         self.handleIB(node)
         lhs, rhs = self.getChildren(node)
-        self.errors[node.name] = self.errors[lhs.name].mul(
-            self.errors[rhs.name], node.name)
+
+        if self.calculate_IB:
+            self.errors[node.name] = self.errors[lhs.name].mul(
+                self.errors[rhs.name], node.name)
+
         if self.calculate_IB:
             self.area_fn += f"+1 * ({self.IBs[lhs.name]} + {lhs.name})*({self.IBs[rhs.name]} + {rhs.name})"
         else:
