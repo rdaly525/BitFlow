@@ -16,14 +16,15 @@ def update_dag(dag):
         updated dag: A dag with round nodes on each dag node which BitFlow can be run on
     """
 
-    W = Input(name="W")
+    P = Input(name="P")
+    R = Input(name="R")
     O = Input(name="O")
 
     # print("DAG before Round Nodes added:")
     # printer = NodePrinter1()
     # printer.run(dag)
 
-    addedRoundNode = AddRoundNodes(W, O)
+    addedRoundNode = AddRoundNodes(P, R, O)
     newDag = addedRoundNode.doit(dag)
 
     # print("DAG after Round Nodes added:")
@@ -75,12 +76,13 @@ def test_fig3():
 
     newDag = update_dag(fig3)
 
-    W1 = torch.tensor([20., 20., 20., 20., 20.])
+    P1 = torch.tensor([20., 20., 20., 20., 20.])
+    R1 = torch.tensor([20., 20., 20., 20., 20., 20.])
     O1 = torch.tensor([20])
     a1, b1 = 10.45454524545452, 10.2323223232
 
     print("EVAL After Rounding")
-    inputs1 = {"a": a1, "b": b1, "W": W1, "O": O1}
+    inputs1 = {"a": a1, "b": b1, "P": P1, "R": R1, "O": O1}
 
     evaluator1 = TorchEval(newDag)
 
@@ -108,12 +110,13 @@ def test_ex1():
 
     newDag = update_dag(fig3)
 
-    W1 = torch.tensor([20., 20., 20., 20., 20.])
+    P1 = torch.tensor([20., 20., 20., 20., 20.])
+    R1 = torch.tensor([20., 20., 20., 20., 20., 20.])
     O1 = torch.tensor([20])
     a1, b1, c1 = 10.45454524545452, 10.2323223232, 8.231343
 
     print("EVAL After Rounding")
-    inputs1 = {"a": a1, "b": b1, "c": c1, "W": W1, "O": O1}
+    inputs1 = {"a": a1, "b": b1, "c": c1, "P": P1, "R": R1, "O": O1}
 
     evaluator1 = TorchEval(newDag)
 
@@ -145,11 +148,12 @@ def test_fig3_integers():
 
     a1, b1 = 3, 5
 
-    W1 = torch.tensor([20., 20., 20., 20., 20.])
+    P1 = torch.tensor([20., 20., 20., 20., 20.])
+    R1 = torch.tensor([20., 20., 20., 20., 20., 20.])
     O1 = torch.tensor([20.])
 
     print("EVAL After Rounding")
-    inputs1 = {"a": a1, "b": b1, "W": W1, "O": O1}
+    inputs1 = {"a": a1, "b": b1, "P": P1, "R": R1, "O": O1}
 
     evaluator1 = TorchEval(newDag)
 
@@ -182,14 +186,16 @@ def test_poly_approx():
 
     #W1 = torch.tensor([2., 2., 2., 2., 2., 2., 2., 2., 2., 10., 11., 12., 13., 14.])
 
-    W1 = torch.tensor([15., 15., 15., 15., 15., 15., 15.,
+    P1 = torch.tensor([15., 15., 15., 15., 15., 15., 15.,
                        15., 15., 15., 15., 15., 15., 15.])
+    R1 = torch.tensor([15., 15., 15., 15., 15., 15., 15.,
+                       15., 15., 15., 15., 15., 15., 15., 15.])
 
     O1 = torch.tensor([15.])
     a1, c1 = torch.tensor([1., 3., -6., -10., -1.]), 3.3
 
     print("EVAL After Rounding")
-    inputs1 = {"a": a1, "c": c1, "W": W1, "O": O1}
+    inputs1 = {"a": a1, "c": c1, "P": P1, "R": R1, "O": O1}
     print(inputs1)
 
     evaluator1 = TorchEval(newDag)
@@ -221,15 +227,19 @@ def test_RGB_to_YCbCr():
 
     newDag = update_dag(fig_casestudy)
 
-    W1 = torch.tensor(
+    P1 = torch.tensor(
         [15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15.,
          15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15.])
+
+    R1 = torch.tensor(
+        [15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15.,
+         15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15.])
 
     O1 = torch.tensor([15., 15., 15.])
     a1 = torch.tensor([22., 103., 200.])
 
     print("EVAL After Rounding")
-    inputs1 = {"a": a1, "W": W1, "O": O1}
+    inputs1 = {"a": a1, "P": P1, "R": R1, "O": O1}
     print(inputs1)
 
     evaluator1 = TorchEval(newDag)
@@ -264,15 +274,16 @@ def test_Matrix_Multiplication():
 
     newDag = update_dag(fig_casestudy)
 
-    W1 = torch.tensor(
+    P1 = torch.tensor(
         [1., 1., 1., 1., 1., 1., 1., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15.])
-
+    R1 = torch.tensor(
+        [1., 1., 1., 1., 1., 1., 1., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15., 15.])
     O1 = torch.tensor([1., 1., 1., 1.])
     a1 = torch.tensor([[1.1, 2.2], [3, 4]])
     b1 = torch.tensor([[5, 6], [7, 8]])
 
     print("EVAL After Rounding")
-    inputs1 = {"a": a1, "b": b1, "W": W1, "O": O1}
+    inputs1 = {"a": a1, "b": b1, "P": P1, "R": R1, "O": O1}
     print(inputs1)
 
     evaluator1 = TorchEval(newDag)
