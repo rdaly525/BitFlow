@@ -3,9 +3,8 @@ from BitFlow.Eval import IAEval, NumEval
 
 
 def test_poly_approx():
-    tmp = caseStudy
 
-    fig_casestudy = tmp.poly_approx()
+    fig_casestudy = caseStudy.poly_approx()
     evaluator = NumEval(fig_casestudy)
 
     a, c = [1, 3, -6, -10, -1], 3
@@ -16,9 +15,8 @@ def test_poly_approx():
 
 
 def test_RGB_to_YCbCr():
-    tmp = caseStudy
 
-    fig_casestudy = tmp.RGB_to_YCbCr()
+    fig_casestudy = caseStudy.RGB_to_YCbCr()
     evaluator = NumEval(fig_casestudy)
 
     a = [22, 103, 200]
@@ -30,9 +28,8 @@ def test_RGB_to_YCbCr():
 
 
 def test_Matrix_Multiplication():
-    tmp = caseStudy
 
-    fig_casestudy = tmp.Matrix_Multiplication()
+    fig_casestudy = caseStudy.Matrix_Multiplication()
     evaluator = NumEval(fig_casestudy)
 
     a = [[1, 2], [3, 4]]
