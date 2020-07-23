@@ -9,22 +9,24 @@ from scipy.optimize import fsolve, minimize, basinhopping
 
 
 class BitFlowVisitor(Visitor):
-    def __init__(self, node_values):
+    def __init__(self, node_values, calculate_IB=True):
         self.node_values = node_values
         self.errors = {}
         self.IBs = {}
         self.area_fn = ""
+        self.calculate_IB = calculate_IB
 
     def handleIB(self, node):
-        ib = 0
-        x = self.node_values[node]
-        if isinstance(x, Interval):
-            alpha = 2 if (log2(abs(x.hi)) % 1 == 0) else 1
-            ib = ceil(log2(max(abs(x.lo), abs(x.hi)))) + alpha
-        else:
-            alpha = 2 if (log2(abs(x)) % 1 == 0) else 1
-            ib = ceil(log2(abs(x))) + alpha
-        self.IBs[node.name] = int(ib)
+        if self.calculate_IB:
+            ib = 0
+            x = self.node_values[node]
+            if isinstance(x, Interval):
+                alpha = 2 if (log2(abs(x.hi)).is_integer()) else 1
+                ib = ceil(log2(max(abs(x.lo), abs(x.hi)))) + alpha
+            else:
+                alpha = 2 if (log2(abs(x)).is_integer()) else 1
+                ib = ceil(log2(abs(x))) + alpha
+            self.IBs[node.name] = int(ib)
 
     def getChildren(self, node):
         children = []
@@ -62,7 +64,10 @@ class BitFlowVisitor(Visitor):
         self.errors[node.name] = self.errors[lhs.name].add(
             self.errors[rhs.name], node.name)
         # self.area_fn += f"+m.max2({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
-        self.area_fn += f"+max({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
+        if self.calculate_IB:
+            self.area_fn += f"+max({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
+        else:
+            self.area_fn += f"+max({lhs.name}_ib + {lhs.name}, {rhs.name}_ib + {rhs.name})"
 
     def visit_Sub(self, node: Sub):
         Visitor.generic_visit(self, node)
@@ -72,7 +77,10 @@ class BitFlowVisitor(Visitor):
         self.errors[node.name] = self.errors[lhs.name].sub(
             self.errors[rhs.name], node.name)
         # self.area_fn += f"+m.max2({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
-        self.area_fn += f"+max({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
+        if self.calculate_IB:
+            self.area_fn += f"+max({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
+        else:
+            self.area_fn += f"+max({lhs.name}_ib + {lhs.name}, {rhs.name}_ib + {rhs.name})"
 
     def visit_Mul(self, node: Mul):
         Visitor.generic_visit(self, node)
@@ -81,7 +89,10 @@ class BitFlowVisitor(Visitor):
         lhs, rhs = self.getChildren(node)
         self.errors[node.name] = self.errors[lhs.name].mul(
             self.errors[rhs.name], node.name)
-        self.area_fn += f"+1 * ({self.IBs[lhs.name]} + {lhs.name})*({self.IBs[rhs.name]} + {rhs.name})"
+        if self.calculate_IB:
+            self.area_fn += f"+1 * ({self.IBs[lhs.name]} + {lhs.name})*({self.IBs[rhs.name]} + {rhs.name})"
+        else:
+            self.area_fn += f"+1 * ({lhs.name}_ib + {lhs.name})*({rhs.name}_ib + {rhs.name})"
 
 
 class BitFlowOptimizer():
