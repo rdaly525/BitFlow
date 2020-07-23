@@ -38,15 +38,17 @@ def test_fig3():
 
     dag = gen_fig3()
 
-    BitFlow(dag, {"z": 8.}, {'a': (-3., 2.), 'b': (4., 8.)})
+    bf = BitFlow(dag, {"z": 8.}, {'a': (-3., 2.), 'b': (4., 8.)}, lr=5e-4)
+    bf.train(epochs=5)
     return
 
 
 def test_ex1():
     dag = gen_ex1()
 
-    BitFlow(dag, {"z_1": 5., "z_2": 8.}, {
-            'a': (-3., 2.), 'b': (4., 8.), 'c': (-1., 1.)})
+    bf = BitFlow(dag, {"z_1": 5., "z_2": 8.}, {
+        'a': (-3., 2.), 'b': (4., 8.), 'c': (-1., 1.)})
+    bf.train(epochs=5)
     return
 
 
@@ -73,13 +75,13 @@ def test_rgb_case_study():
     params = dict(
         training_size=2000,
         testing_size=200,
-        epochs=50,
         batch_size=16,
         lr=1e-4
     )
 
     bf = BitFlow(dag, {"col_1": 10., "col_2": 10., "col_3": 10.}, {
         'r': (-10., 10.), 'b': (-10., 10.), 'g': (-10., 10.)}, **params)
+    bf.train(epochs=5)
 
     # Sample Matrix Product
     test = {"r": 2., "g": 4., "b": -3., "W": bf.W, "O": bf.O}

@@ -356,7 +356,7 @@ class BitFlow:
 
         return loss
 
-    def __init__(self, dag, outputs, data_range, training_size=2000, testing_size=200, epochs=10, batch_size=16, lr=1e-4, error_type=1, test_optimizer=True, test_ufb=False):
+    def __init__(self, dag, outputs, data_range, training_size=2000, testing_size=200, batch_size=16, lr=1e-4, error_type=1, test_optimizer=True, test_ufb=False):
 
         # Run a basic evaluator on the DAG to construct error and area functions
         bfo, range_bits, filtered_vars = self.constructOptimizationFunctions(
@@ -385,6 +385,40 @@ class BitFlow:
             self.initR = self.R
             self.prevR = self.R
 
+        # store data to object
+        self.train_gen = train_gen
+        self.test_gen = test_gen
+        self.lr = lr
+        self.W = W
+        self.O = O
+        self.model = model
+        self.batch_size = batch_size
+        self.precision = precision
+        self.training_size = training_size
+        self.error_type = error_type
+        self.test_optimizer = test_optimizer
+        self.test_ufb = test_ufb
+        self.init_W = init_W
+        self.bfo = bfo
+
+    def train(self, epochs=10):
+
+        # retrieve initialized data from object
+        train_gen = self.train_gen
+        test_gen = self.test_gen
+        W = self.W
+        O = self.O
+        model = self.model
+        batch_size = self.batch_size
+        precision = self.precision
+        training_size = self.training_size
+        error_type = self.error_type
+        test_optimizer = self.test_optimizer
+        test_ufb = self.test_ufb
+        init_W = self.init_W
+        lr = self.lr
+        bfo = self.bfo
+
         # Set up optimizer
         opt = torch.optim.Adam([W], lr=lr)
 
@@ -398,7 +432,7 @@ class BitFlow:
                 y = model(**inputs)
 
                 if isinstance(y, list):
-                    y = torch.stack(model(**inputs))
+                    y = torch.stack(y)
                     target_y = torch.stack(target_y).squeeze()
 
                 loss = self.compute_loss(target_y, y, W, iter, batch_size, precision, epochs, training_size,
