@@ -22,10 +22,11 @@ class TorchEval(AbstractEval):
         return IntRound(a * scale)/scale
 
     def eval_Relu(self, a, node: DagNode):
-            if a > 0:
-                return a
-            else:
-                return 0
+            return t.relu(a)
+            # if a > 0:
+            #     return a
+            # else:
+            #     return 0
 
     def eval_Select(self, a, node: DagNode):
 
@@ -35,11 +36,12 @@ class TorchEval(AbstractEval):
             return a[:, node.index]
 
     def eval_Reduce(self, a, node: DagNode):
-
-        sum = a[0]
-
-        i = 1
-        for i in range(1, len(a)):
-            sum = sum + a[i]
+        sum = t.sum(a, dim=node.reduce_dim)
+        #
+        # sum = a[0]
+        #
+        # i = 1
+        # for i in range(1, len(a)):
+        #     sum = sum + a[i]
 
         return sum

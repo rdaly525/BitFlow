@@ -32,9 +32,23 @@ def gen_relu():
     fig = Dag(outputs=[b], inputs=[a])
     return fig
 
-def gen_reduce():
+def gen_reduce_x():
     a = Input(name="a")
-    b = Reduce(a, name="b")
+    b = Reduce(a, 0, name="b")
+
+    fig = Dag(outputs=[b], inputs=[a])
+    return fig
+
+def gen_reduce_y():
+    a = Input(name="a")
+    b = Reduce(a, 1, name="b")
+
+    fig = Dag(outputs=[b], inputs=[a])
+    return fig
+
+def gen_reduce_z():
+    a = Input(name="a")
+    b = Reduce(a, 2, name="b")
 
     fig = Dag(outputs=[b], inputs=[a])
     return fig
@@ -78,36 +92,50 @@ def test_Relu():
         tmp = gen_relu()
         evaluator = NumEval(tmp)
 
-        a = -1
+        a = torch.tensor([100])
+        res = evaluator.eval(a=a)
+        gold = 100
+        assert res == gold
+
+        a = torch.tensor([-1000])
         res = evaluator.eval(a=a)
         gold = 0
         assert res == gold
 
-        a = 0
+        a = torch.tensor([100.2])
         res = evaluator.eval(a=a)
-        gold = 0
+        gold = 100.2
         assert res == gold
 
-        a = -1000
-        res = evaluator.eval(a=a)
-        gold = 0
-        assert res == gold
-
-        a = 1000
-        res = evaluator.eval(a=a)
-        gold = 1000
-        assert res == gold
-
-        a = 3.14
+        a = torch.tensor([3.14])
         res = evaluator.eval(a=a)
         gold = 3.14
         assert res == gold
+
+        a = torch.tensor([3.14,2.5,3.2])
+        res = evaluator.eval(a=a)
+        gold = torch.tensor([3.14,2.5,3.2])
+        assert torch.all(torch.eq(res, gold))
+
+        a = torch.tensor([-3.14, -2.5, -3.2])
+        res = evaluator.eval(a=a)
+        gold = torch.tensor([0, 0, 0])
+        assert torch.all(torch.eq(res, gold))
+
+        a = torch.tensor([-3.14, -2.5, 5.53, -3.2])
+        res = evaluator.eval(a=a)
+        gold = torch.tensor([0, 0, 5.53, 0])
+        assert torch.all(torch.eq(res, gold))
+
         return
 
 
 def test_Reduce():
-    tmp = gen_reduce()
-    evaluator = NumEval(tmp)
+    tmp_x = gen_reduce_x()
+    tmp_y = gen_reduce_y()
+    tmp_z = gen_reduce_z()
+
+    evaluator = NumEval(tmp_x)
 
     a = torch.tensor([2,4,1,3])
     res = evaluator.eval(a=a)
@@ -130,6 +158,27 @@ def test_Reduce():
     res = evaluator.eval(a=a)
     gold = 112.3
     assert res == gold
+
+
+    a = torch.tensor([[112,11],[1,10]])
+    res = evaluator.eval(a=a)
+    gold = torch.tensor([113,  21])
+    assert torch.all(torch.eq(res, gold))
+
+    evaluator_y = NumEval(tmp_y)
+
+    a = torch.tensor([[112, 11], [1, 10]])
+    res = evaluator_y.eval(a=a)
+    gold = torch.tensor([123,  11])
+    assert torch.all(torch.eq(res, gold))
+
+    evaluator_z = NumEval(tmp_z)
+
+    a = torch.tensor([[[11,112], [10,11]], [[1,2], [3,10]]])
+    res = evaluator_z.eval(a=a)
+    gold = torch.tensor([[123,  21],[3,13]])
+    assert torch.all(torch.eq(res, gold))
+
     return
 
 test_Relu()

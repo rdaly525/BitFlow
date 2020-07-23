@@ -1,7 +1,7 @@
 from DagVisitor import Visitor
 from abc import abstractmethod
 from ..node import Dag, DagNode, Input, Constant, Add, Mul, Select, Output, Round, Relu, Reduce
-
+import torch
 
 class AbstractEval(Visitor):
     def __init__(self, dag: Dag):

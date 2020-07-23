@@ -13,7 +13,7 @@ import torch as t
 
 def dot_product(a: DagNode, b:DagNode):
     common = Mul(a,b)
-    return Reduce(common,name="dot product")
+    return Reduce(common, 0,name="dot product")
 
 
 def matrix_multiply():

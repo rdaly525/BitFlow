@@ -92,7 +92,8 @@ class Round(DagNode):
         super().__init__(name, val, prec)
 
 class Reduce(DagNode):
-    def __init__(self, a: DagNode, *, name=None):
+    def __init__(self, a: DagNode, reduce_dim, name=None):
+        self.reduce_dim = reduce_dim
         if name is None:
             name = f"{a.name}_reduce"
         super().__init__(name, a)
@@ -107,7 +108,6 @@ class Relu(DagNode):
 
 class Tanh(DagNode):
       pass
-
 
 
 class Dag(AbstractDag):
