@@ -4,7 +4,6 @@ from BitFlow.IA import Interval
 from BitFlow.Eval import IAEval, NumEval, AbstractEval
 import torch
 
-
 class AddRoundNodes(Transformer):
 
     def __init__(self, P, R, O):
