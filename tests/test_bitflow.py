@@ -39,7 +39,7 @@ def test_fig3():
     dag = gen_fig3()
 
     bf = BitFlow(dag, {"z": 8.}, {'a': (-3., 2.), 'b': (4., 8.)}, lr=5e-4)
-    bf.train(epochs=5)
+    bf.train(epochs=150)
     return
 
 
@@ -84,7 +84,7 @@ def test_rgb_case_study():
     bf.train(epochs=5)
 
     # Sample Matrix Product
-    test = {"r": 2., "g": 4., "b": -3., "W": bf.W, "O": bf.O}
+    test = {"r": 2., "g": 4., "b": -3., "P": bf.P, "O": bf.O}
     print(bf.model(**test))
 
     return

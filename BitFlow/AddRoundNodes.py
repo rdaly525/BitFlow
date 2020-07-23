@@ -7,8 +7,8 @@ import torch
 
 class AddRoundNodes(Transformer):
 
-    def __init__(self, W, O):
-        self.W = W
+    def __init__(self, P, O):
+        self.P = P
         #self.X = X
         self.O = O
         self.round_count = 0
@@ -24,7 +24,7 @@ class AddRoundNodes(Transformer):
         self.allroots = list(dag.roots())
         self.run(dag)
 
-        new_inputs.append(self.W)
+        new_inputs.append(self.P)
         # new_inputs.append(self.X)
         new_inputs.append(self.O)
 
@@ -47,7 +47,7 @@ class AddRoundNodes(Transformer):
         if isinstance(node, Input):
             # current node + need to get prec_input
             returnNode = Round(node, Select(
-                self.W, self.round_count), name=node.name + "_round")
+                self.P, self.round_count), name=node.name + "_round")
             self.input_count += 1
             self.round_count += 1
 
@@ -60,7 +60,7 @@ class AddRoundNodes(Transformer):
                 self.output_count += 1
 
             else:
-                returnNode = Round(node, Select(self.W, self.round_count),
+                returnNode = Round(node, Select(self.P, self.round_count),
                                    name=node.name + "_round_W")
                 self.round_count += 1
         return returnNode
