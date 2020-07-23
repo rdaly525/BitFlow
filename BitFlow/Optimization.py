@@ -85,31 +85,33 @@ class BitFlowVisitor(Visitor):
 
 
 class BitFlowOptimizer():
-    def __init__(self, evaluator, output, output_precision):
+    def __init__(self, evaluator, outputs):
 
         node_values = evaluator.node_values
         visitor = BitFlowVisitor(node_values)
         visitor.run(evaluator.dag)
 
         self.visitor = visitor
-        self.error_fn = visitor.errors[output].getExecutableError()
-        self.ufb_fn = visitor.errors[output].getExecutableUFB()
+        self.error_fn = ""
+        self.ufb_fn = ""
+        for output in outputs:
+            self.error_fn += f"+2**(-{outputs[output]}-1) - (" + \
+                visitor.errors[output].getExecutableError() + ")"
+            self.ufb_fn += visitor.errors[output].getExecutableUFB()
         self.area_fn = visitor.area_fn[1:]
-        self.output_precision = output_precision
-        self.output = output
+        self.outputs = outputs
 
         vars = list(visitor.node_values)
         for (i, var) in enumerate(vars):
             vars[i] = var.name
         self.vars = vars
 
-        self.error_fn = f"2**(-{self.output_precision}-1) - (" + \
-            self.error_fn + ")"
-
     def calculateInitialValues(self):
         #print("CALCULATING INITIAL VALUES USING UFB METHOD...")
         # bnd = f"{-2**(-self.output_precision-1)} == 0"
-        bnd = f"{-2**(-self.output_precision-1)}"
+        bnd = ""
+        for output in self.outputs:
+            bnd += f"{-2**(-self.outputs[output]-1)}"
         self.ufb_fn += bnd
         #print(f"UFB EQ: {self.ufb_fn}")
         # print(f"-----------")
@@ -146,7 +148,7 @@ class BitFlowOptimizer():
 
         filtered_vars = []
         for var in self.vars:
-            if var != self.output:
+            if var not in self.outputs:
                 filtered_vars.append(var)
 
         exec(f'''def ErrorConstraintFn(x):

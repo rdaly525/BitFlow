@@ -15,6 +15,9 @@ class _IntRound(t.autograd.Function):
         x = ctx.saved_tensors[0]
         rx = t.round(x)
         delta = t.abs(x-rx)
+        pi = t.acos(t.zeros(1)).item() * 2
+
+        # return 1 - t.cos(2 * pi * x)
         return (K**(4*delta-1)) * dy
 
 
