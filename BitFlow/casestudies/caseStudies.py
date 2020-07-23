@@ -19,9 +19,12 @@ class caseStudy:
     def RGB_to_YCbCr():
         a = Input(name="a")
 
-        col_1 = Constant(.299) * a[0] + Constant(.587) * a[1] + Constant(.114) * a[2]
-        col_2 = Constant(-.16875) * a[0] + Constant(-.33126) * a[1] + Constant(.5) * a[2]
-        col_3 = Constant(.5) * a[0] + Constant(-.41869) * a[1] + Constant(-.08131) * a[2]
+        col_1 = Constant(.299) * a[0] + Constant(.587) * \
+            a[1] + Constant(.114) * a[2]
+        col_2 = Constant(-.16875) * \
+            a[0] + Constant(-.33126) * a[1] + Constant(.5) * a[2]
+        col_3 = Constant(.5) * a[0] + Constant(-.41869) * \
+            a[1] + Constant(-.08131) * a[2]
 
         casestudy_dag = Dag(outputs=[col_1, col_2, col_3], inputs=[a])
 
