@@ -9,19 +9,6 @@ class NodePrinter(Visitor):
     def __init__(self, node_values):
         self.node_values = node_values
 
-    # Visitor method for only 'Input' nodes
-
-    def visit_Input(self, node: Input):
-        # This method is only called on Input nodes
-        assert isinstance(node, Input)
-
-        # Inputs have no children, so no need to call Visitor.generic_visit
-        # (Although no harm in doing so)
-        assert len(list(node.children())) == 0
-
-        # I now have access to the node and anything I initialized this class with
-        print(f"Input Node {node} has a value of {self.node_values[node]}")
-
     def test_print(self):
         fig3 = gen_fig3()
         evaluator = NumEval(fig3)
