@@ -40,7 +40,7 @@ def test_fig3():
 
     bf = BitFlow(dag, {"z": 8.}, {'a': (-3., 2.),
                                   'b': (4., 8.)}, lr=5e-4, range_lr=1e-4, train_range=True)
-    bf.train(epochs=150)
+    bf.train(epochs=600)
     return
 
 
@@ -49,7 +49,7 @@ def test_ex1():
 
     bf = BitFlow(dag, {"z_1": 5., "z_2": 8.}, {
         'a': (-3., 2.), 'b': (4., 8.), 'c': (-1., 1.)}, train_range=True)
-    bf.train(epochs=150)
+    bf.train(epochs=600)
     return
 
 
