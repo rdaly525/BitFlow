@@ -269,7 +269,7 @@ class BitFlow:
         P = torch.Tensor(num_weights).fill_(initial_P)
         init_P = P.clone()
 
-        R = torch.Tensor(num_range).fill_(10)
+        R = torch.Tensor(num_range).fill_(initial_P - 2)
         init_R = R.clone()
 
         print(P)
@@ -341,8 +341,13 @@ class BitFlow:
 
             S = 1
             Q = 100
-            loss = (self.L *
-                    torch.exp(-1 * constraint_err) + S * area)/batch_size
+            if train_range:
+                loss = ((self.L * torch.exp(-1 * constraint_err) +
+                         S * area)/batch_size) + self.evaluator.saturation
+                self.evaluator.saturation = 0.
+            else:
+                loss = (self.L * torch.exp(-1 * constraint_err) +
+                        S * area)/batch_size
 
         else:
             ulp_error = torch.mean(torch.sum(
@@ -479,7 +484,8 @@ class BitFlow:
         print(P)
         P = self.custom_round(P, factor=0.2)
         R = self.custom_round(R, factor=0.2)
-        print(P)
+        print(f"PRECISION: {P}")
+        print(f"RANGE: {R}")
 
         self.calc_accuracy("TEST", test_gen, P, R,
                            O, model, False)

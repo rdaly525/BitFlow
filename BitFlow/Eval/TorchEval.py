@@ -1,10 +1,14 @@
 from .AbstractEval import AbstractEval
-from ..node import DagNode
+from ..node import DagNode, Dag
 from ..torch.functions import IntRound
 import torch as t
 
 
 class TorchEval(AbstractEval):
+    def __init__(self, dag: Dag):
+        super().__init__(dag)
+        self.saturation = t.Tensor([0.])
+
     def eval_Constant(self, node: DagNode):
         return t.Tensor([node.value])
 
@@ -29,6 +33,14 @@ class TorchEval(AbstractEval):
 
         min_val = -1 * (2 ** (rng - 1)) - max_prec
         max_val = 2 ** (rng - 1) - 1 + max_prec
+
+        if t.numel(precise[precise > max_val]) > 0:
+            self.saturation = self.saturation + t.sum(precise[precise > max_val] -
+                                                      max_val)/t.numel(precise[precise > max_val])
+
+        if t.numel(precise[precise < min_val]) > 0:
+            self.saturation = self.saturation + t.sum(t.abs(precise[precise < min_val] -
+                                                            min_val))/t.numel(precise[precise < min_val])
 
         precise[precise > max_val] = max_val
         precise[precise < min_val] = min_val
