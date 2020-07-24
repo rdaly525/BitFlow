@@ -246,17 +246,17 @@ class BitFlow:
              {','.join(filtered_vars)} = x
              return  {error_fn}''', globals())
 
-    def initializeData(self, model, training_size, testing_size, num_precision, num_range, output_size, data_range, range_bits, batch_size):
+    def initializeData(self, model, training_size, testing_size, num_precision, num_range, output_size, data_range, range_bits, batch_size, distribution):
         data_params = dict(
             batch_size=batch_size
         )
 
         # generate testing/training data
         training_set = self.gen_data(
-            model, training_size, num_precision, num_range, output_size, data_range, range_bits)
+            model, training_size, num_precision, num_range, output_size, data_range, range_bits, dist=distribution)
         train_gen = data.DataLoader(training_set, **data_params)
         test_set = self.gen_data(
-            model, testing_size, num_precision, num_range, output_size, data_range, range_bits)
+            model, testing_size, num_precision, num_range, output_size, data_range, range_bits, dist=distribution)
         test_gen = data.DataLoader(test_set, **data_params)
 
         return train_gen, test_gen
@@ -380,7 +380,7 @@ class BitFlow:
 
         return loss
 
-    def __init__(self, dag, outputs, data_range, training_size=2000, testing_size=200, batch_size=16, lr=1e-4, error_type=1, test_optimizer=True, test_ufb=False, train_range=False, range_lr=1e-4):
+    def __init__(self, dag, outputs, data_range, training_size=2000, testing_size=200, batch_size=16, lr=1e-4, error_type=1, test_optimizer=True, test_ufb=False, train_range=False, range_lr=1e-4, distribution=0):
 
         self.original_dag = copy.deepcopy(dag)
 
@@ -401,7 +401,7 @@ class BitFlow:
 
         # create the data according to specifications
         train_gen, test_gen = self.initializeData(model, training_size, testing_size,
-                                                  num_precision, num_range, num_outputs, data_range, range_bits, batch_size)
+                                                  num_precision, num_range, num_outputs, data_range, range_bits, batch_size, distribution)
 
         # initialize the weights and outputs with appropriate gradient toggle
         O, P, init_P, R, init_R = self.initializeWeights(
