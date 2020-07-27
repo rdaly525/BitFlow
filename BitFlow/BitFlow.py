@@ -12,6 +12,7 @@ from torch.utils import data
 import random
 import math
 import copy
+import matplotlib.pyplot as plt
 
 
 class BitFlow:
@@ -380,7 +381,7 @@ class BitFlow:
 
         return loss
 
-    def __init__(self, dag, outputs, data_range, training_size=2000, testing_size=200, batch_size=16, lr=1e-4, error_type=1, test_optimizer=True, test_ufb=False, train_range=False, range_lr=1e-4, distribution=0):
+    def __init__(self, dag, outputs, data_range, training_size=2000, testing_size=200, batch_size=16, lr=1e-4, error_type=1, test_optimizer=True, test_ufb=False, train_range=False, range_lr=1e-4, distribution=0, graph_loss=False):
 
         self.original_dag = copy.deepcopy(dag)
 
@@ -431,6 +432,7 @@ class BitFlow:
         self.train_range = train_range
         self.filtered_vars = filtered_vars
         self.range_lr = range_lr
+        self.graph_loss = True
 
     def train(self, epochs=10):
 
@@ -453,12 +455,14 @@ class BitFlow:
         train_range = self.train_range
         filtered_vars = self.filtered_vars
         range_lr = self.range_lr
+        graph_loss = self.graph_loss
 
         # Set up optimizer
         opt = torch.optim.Adam(
             [{"params": P}, {"params": R, "lr": range_lr}], lr=lr)
 
         # Run training process
+        loss_values = []
         print("\n##### TRAINING ######")
         iter = 0
         for e in range(epochs):
@@ -474,11 +478,16 @@ class BitFlow:
 
                 loss = self.compute_loss(target_y, y, P, R, iter, filtered_vars, batch_size, epochs, training_size,
                                          error_type=error_type, should_print=True, train_range=train_range)
+                loss_values.append(loss)
 
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
                 iter += 1
+
+        if graph_loss:
+            plt.plot(loss_values)
+            plt.show()
 
         # Show final results for weight and round them
         print(P)
