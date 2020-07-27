@@ -59,8 +59,6 @@ class BitFlow:
                 self.X = {k: [] for k in data_range}
                 self.Y = []
 
-                # TODO: create a mode to set constant precision for inputs
-
                 P = torch.Tensor(1, size_p).fill_(true_width)[0]
                 R = torch.Tensor(1, size_r).fill_(true_width)[0]
                 torch.manual_seed(42)
@@ -461,12 +459,20 @@ class BitFlow:
         opt = torch.optim.Adam(
             [{"params": P}, {"params": R, "lr": range_lr}], lr=lr)
 
+        device = torch.device(
+            "cuda:0" if torch.cuda.is_available() else "cpu")
+
         # Run training process
         loss_values = []
         print("\n##### TRAINING ######")
         iter = 0
         for e in range(epochs):
             for t, (inputs, target_y) in enumerate(train_gen):
+
+                # Move data to GPU
+                inputs = {k: inputs[k].to(device) for k in inputs}
+                target_y = target_y.to(device)
+
                 inputs["P"] = P
                 inputs["R"] = R
                 inputs["O"] = O
