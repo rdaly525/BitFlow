@@ -430,7 +430,7 @@ class BitFlow:
         self.train_range = train_range
         self.filtered_vars = filtered_vars
         self.range_lr = range_lr
-        self.graph_loss = True
+        self.graph_loss = graph_loss
 
     def train(self, epochs=10):
 
@@ -471,7 +471,6 @@ class BitFlow:
 
                 # Move data to GPU
                 inputs = {k: inputs[k].to(device) for k in inputs}
-                target_y = target_y.to(device)
 
                 inputs["P"] = P
                 inputs["R"] = R
@@ -480,7 +479,7 @@ class BitFlow:
 
                 if isinstance(y, list):
                     y = torch.stack(y)
-                    target_y = torch.stack(target_y).squeeze()
+                    target_y = torch.stack(target_y).squeeze().to(device)
 
                 loss = self.compute_loss(target_y, y, P, R, iter, filtered_vars, batch_size, epochs, training_size,
                                          error_type=error_type, should_print=True, train_range=train_range)
@@ -491,6 +490,7 @@ class BitFlow:
                 opt.step()
                 iter += 1
 
+        print(graph_loss)
         if graph_loss:
             plt.plot(loss_values)
             plt.show()
