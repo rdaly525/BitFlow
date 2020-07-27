@@ -16,7 +16,7 @@ class AbstractEval(Visitor):
                 raise ValueError(f"Missing {dag_input} in input values")
         super().run(self.dag)
         outputs = [self.node_values[root] for root in self.dag.roots()]
-        #print(outputs, len(outputs), outputs[0])
+
         if len(outputs) == 1:
             return outputs[0]
         return outputs
@@ -27,12 +27,16 @@ class AbstractEval(Visitor):
         eval_name = f"eval_{node.kind()[0]}"
         assert hasattr(self, eval_name)
         node_val = getattr(self, eval_name)(*child_values, node=node)
-
         assert node_val is not None
         self.node_values[node] = node_val
 
+
     def eval_Input(self, node: DagNode):
         return self.input_values[node.name]
+
+    @abstractmethod
+    def eval_Len(self, a, node: DagNode):
+        pass
 
     @abstractmethod
     def eval_Constant(self, node: DagNode):
@@ -61,3 +65,4 @@ class AbstractEval(Visitor):
     @abstractmethod
     def eval_Relu(self, a, node: DagNode):
         pass
+

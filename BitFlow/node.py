@@ -19,7 +19,7 @@ class DagNode(Visited):
         return self._children
 
     def __str__(self):
-        return self.name
+           return self.name
 
     def copy(self):
         return type(self)(*self.children(), name=self.name)
@@ -36,10 +36,15 @@ class DagNode(Visited):
         assert isinstance(rhs, DagNode)
         return Mul(self, rhs)
 
+    def __concat__(self, rhs):
+        return Concat(self, rhs)
+
     def __getitem__(self, rhs):
-        assert isinstance(rhs,int)
+        #assert isinstance(rhs,int)
         return Select(self, rhs)
 
+    def __len__(self):
+        return Len(self)
 
 class Input(DagNode):
     def __init__(self, name):
@@ -48,6 +53,12 @@ class Input(DagNode):
 class Output(DagNode):
     def __init__(self, name):
         super().__init__(name)
+
+class Len(DagNode):
+    def __init__(self, a: DagNode, name=None):
+        if name is None:
+            name = f"{a.name}_len"
+        super().__init__(name, a)
 
 class Constant(DagNode):
     def __init__(self, value, name=None):
@@ -77,10 +88,19 @@ class Mul(DagNode):
             name = f"{a.name}_mul_{b.name}"
         super().__init__(name, a, b)
 
+class Concat(DagNode):
+    def __init__(self, a: DagNode, b: DagNode, concat_dim, choice, name=None):
+        self.concat_dim = concat_dim
+        self.choice = choice
+        if name is None:
+            name = f"{a.name}_concat_{b.name}"
+        super().__init__(name, a, b)
+
 
 class Select(DagNode):
     def __init__(self, a: DagNode, index, name=None):
         self.index=index
+
         if name is None:
             name = f"{a.name}_getitem_{str(index)}"
         super().__init__(name, a)
@@ -108,6 +128,7 @@ class Relu(DagNode):
 
 class Tanh(DagNode):
       pass
+
 
 
 class Dag(AbstractDag):
