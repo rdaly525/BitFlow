@@ -33,9 +33,15 @@ class BitFlow:
         for (index, weight) in enumerate(P):
             f, _ = math.modf(weight)
             if f < factor:
-                P[index] = math.floor(weight)
+                if weight < 0:
+                    P[index] = math.ceil(weight)
+                else:
+                    P[index] = math.floor(weight)
             else:
-                P[index] = math.ceil(weight)
+                if weight < 0:
+                    P[index] = math.floor(weight)
+                else:
+                    P[index] = math.ceil(weight)
         return torch.tensor(P)
 
     def gen_data(self, model, dataset_size, size_p, size_r, size_output, data_range, range_bits, true_width=20., dist=0):
@@ -126,14 +132,16 @@ class BitFlow:
         return roundedDag, rounder.round_count, rounder.input_count, rounder.output_count, rounder.range_count
 
     def round_to_precision(self, num, precision):
-        if len(precision) > 1:
+        if isinstance(num, torch.LongTensor):
+            return num
+        elif len(precision) > 1:
             num = num.clone()
             scale = 2.0**precision
             for (ind, val) in enumerate(scale):
-                num[ind] *= val
+                num[ind] = num[ind] * val
             num = torch.round(num)
             for (ind, val) in enumerate(scale):
-                num[ind] /= val
+                num[ind] = num[ind] / val
             return num
         else:
             scale = 2.0**precision
@@ -379,7 +387,7 @@ class BitFlow:
 
         return loss
 
-    def __init__(self, dag, outputs, data_range, training_size=2000, testing_size=200, batch_size=16, lr=1e-4, error_type=1, test_optimizer=True, test_ufb=False, train_range=False, range_lr=1e-4, distribution=0, graph_loss=False):
+    def __init__(self, dag, outputs, data_range, training_size=2000, testing_size=200, batch_size=16, lr=1e-4, error_type=1, test_optimizer=True, test_ufb=False, train_range=False, range_lr=1e-4, distribution=0, graph_loss=False, custom_data=None):
 
         self.original_dag = copy.deepcopy(dag)
 
@@ -399,8 +407,14 @@ class BitFlow:
         model = self.gen_model(dag)
 
         # create the data according to specifications
-        train_gen, test_gen = self.initializeData(model, training_size, testing_size,
-                                                  num_precision, num_range, num_outputs, data_range, range_bits, batch_size, distribution)
+        train_gen = None
+        test_gen = None
+        if custom_data is None:
+            train_gen, test_gen = self.initializeData(model, training_size, testing_size,
+                                                      num_precision, num_range, num_outputs, data_range, range_bits, batch_size, distribution)
+        else:
+            train_gen = custom_data[0]
+            test_gen = custom_data[1]
 
         # initialize the weights and outputs with appropriate gradient toggle
         O, P, init_P, R, init_R = self.initializeWeights(
@@ -490,7 +504,6 @@ class BitFlow:
                 opt.step()
                 iter += 1
 
-        print(graph_loss)
         if graph_loss:
             plt.plot(loss_values)
             plt.show()
