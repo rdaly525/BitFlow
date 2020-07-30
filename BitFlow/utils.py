@@ -18,28 +18,21 @@ class Imgs2Dataset:
                 im = Image.open(fp)
 
                 r, g, b = im.split()
-                inputs["r"].append(np.array(r))
-                inputs["g"].append(np.array(g))
-                inputs["b"].append(np.array(b))
+                r, g, b = np.array(r).flatten(), np.array(
+                    g).flatten(), np.array(b).flatten()
 
-                im = im.convert('YCbCr')
+                inputs["r"].append(r)
+                inputs["g"].append(g)
+                inputs["b"].append(b)
 
-                y, cb, cr = im.split()
-                y = np.array(y).flatten().tolist()
-                cb = np.array(y).flatten().tolist()
-                cr = np.array(y).flatten().tolist()
-                for ind in range(len(y)):
-                    outputs.append([torch.tensor(y[ind]), torch.tensor(
-                        cb[ind]), torch.tensor(cr[ind])])
-
-            else:
-                continue
-
+                for i in range(len(r)):
+                    outputs.append([torch.tensor(0.299 * r[i] + 0.587 * g[i] + 0.144 * b[i]),
+                                    torch.tensor(-0.16875 *
+                                                 r[i] + -0.33126 * g[i] + 0.5 * b[i]),
+                                    torch.tensor(0.5 * r[i] + -0.41869 * g[i] + -0.08131 * b[i])])
         for key in inputs:
             inputs[key] = torch.flatten(torch.Tensor(inputs[key]))
-            print(inputs[key].shape)
 
-        print(outputs[0])
         return Dataset(inputs, outputs), len(inputs["r"])
 
 

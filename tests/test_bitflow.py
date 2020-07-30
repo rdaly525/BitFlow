@@ -86,8 +86,8 @@ def RGB_to_YCbCr():
 #     dag = RGB_to_YCbCr()
 
 #     params = dict(
-#         training_size=2000,
-#         testing_size=200,
+#         training_size=200,
+#         testing_size=20,
 #         batch_size=16,
 #         lr=1e-4,
 #         train_range=True,
@@ -96,7 +96,7 @@ def RGB_to_YCbCr():
 #     )
 
 #     bf = BitFlow(dag, {"col_1": 10., "col_2": 10., "col_3": 10.}, {
-#         'r': (-10., 10.), 'b': (-10., 10.), 'g': (-10., 10.)}, **params)
+#         'r': (0., 255.), 'b': (0., 255.), 'g': (0., 255.)}, **params)
 #     bf.train(epochs=10)
 
 #     # Sample Matrix Product
@@ -125,16 +125,17 @@ def test_rgb_case_study_custom_dataset():
         training_size=int(round(0.8 * size)),
         testing_size=int(round(0.2 * size)),
         batch_size=16,
-        lr=1e-4,
+        lr=5e-4,
         train_range=True,
         range_lr=1e-4,
         distribution=0,
-        custom_data=(train_gen, test_gen)
+        custom_data=(train_gen, test_gen),
+        test_optimizer=False
     )
 
-    bf = BitFlow(dag, {"col_1": 2., "col_2": 2., "col_3": 2.}, {
+    bf = BitFlow(dag, {"col_1": 0., "col_2": 0., "col_3": 0.}, {
         'r': (0., 255.), 'b': (0., 255.), 'g': (0., 255.)}, **params)
-    bf.train(epochs=1)
+    bf.train(epochs=10)
 
     # Sample Matrix Product
     test = {"r": 125., "g": 125., "b": 125., "P": bf.P, "R": bf.R, "O": bf.O}

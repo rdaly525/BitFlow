@@ -25,25 +25,24 @@ class TorchEval(AbstractEval):
         scale = 2.0**prec
         precise = IntRound(a * scale)/scale
 
-        if rng is None:
-            return precise
-
         # saturate value to range
-        max_prec = sum([2 ** -(p+1) for p in range(int(prec.item()))])
+        if prec != 0.:
+            max_prec = sum([2 ** -(p+1) for p in range(int(prec.item()))])
 
-        min_val = -1 * (2 ** (rng - 1)) - max_prec
-        max_val = 2 ** (rng - 1) - 1 + max_prec
+            min_val = -1 * (2 ** (rng - 1)) - max_prec
+            max_val = 2 ** (rng - 1) - 1 + max_prec
 
-        if t.numel(precise[precise > max_val]) > 0:
-            self.saturation = self.saturation + t.sum(precise[precise > max_val] -
-                                                      max_val)/t.numel(precise[precise > max_val])
+            if t.numel(precise[precise > max_val]) > 0:
+                self.saturation = self.saturation + t.sum(precise[precise > max_val] -
+                                                          max_val)/t.numel(precise[precise > max_val])
 
-        if t.numel(precise[precise < min_val]) > 0:
-            self.saturation = self.saturation + t.sum(t.abs(precise[precise < min_val] -
-                                                            min_val))/t.numel(precise[precise < min_val])
+            if t.numel(precise[precise < min_val]) > 0:
+                self.saturation = self.saturation + t.sum(t.abs(precise[precise < min_val] -
+                                                                min_val))/t.numel(precise[precise < min_val])
 
-        precise[precise > max_val] = max_val
-        precise[precise < min_val] = min_val
+            precise[precise > max_val] = max_val
+            precise[precise < min_val] = min_val
+
         return precise
 
     def eval_Select(self, a, node: DagNode):

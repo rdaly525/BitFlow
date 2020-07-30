@@ -132,9 +132,7 @@ class BitFlow:
         return roundedDag, rounder.round_count, rounder.input_count, rounder.output_count, rounder.range_count
 
     def round_to_precision(self, num, precision):
-        if isinstance(num, torch.LongTensor):
-            return num
-        elif len(precision) > 1:
+        if len(precision) > 1:
             num = num.clone()
             scale = 2.0**precision
             for (ind, val) in enumerate(scale):
@@ -180,7 +178,7 @@ class BitFlow:
             success += torch.sum(ulp)
             total += torch.numel(ulp)
 
-            if should_print and len(O) == 1:
+            if should_print:
                 indices = (ulp == 0).nonzero()[:, 0].tolist()
                 for index in indices:
                     print(
