@@ -1,3 +1,4 @@
 -e git://github.com/rdaly525/DagVisitor@3348f7c2760adabac5624bbfd751ae279879c76e#egg=DagVisitor
 scipy==1.5.0
 matplotlib==3.2.2
+pillow==7.1.2
