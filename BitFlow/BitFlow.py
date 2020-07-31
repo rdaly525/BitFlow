@@ -15,7 +15,65 @@ import copy
 import matplotlib.pyplot as plt
 
 
+class Dataset(data.Dataset):
+    def __init__(self, model, dataset_size, size_p, size_r, size_output, data_range, range_bits, true_width, dist):
+        self.X = {k: [] for k in data_range}
+        self.Y = []
+        self.data_range = data_range
+
+        P = torch.Tensor(1, size_p).fill_(true_width)[0]
+        R = torch.Tensor(1, size_r).fill_(true_width)[0]
+        torch.manual_seed(42)
+
+        for key in data_range:
+            # Create random tensor
+            input_range = data_range[key]
+
+            # calculate range bounds using range bits
+            ib = range_bits[key]
+            min_range = -1 * (2 ** (ib - 1))
+            max_range = 2 ** (ib - 1) - 1
+
+            val = 0
+            if dist == 1:
+                mean = (input_range[1]+input_range[0])/2
+                std = (mean - input_range[0])/3
+                val = torch.normal(
+                    mean=mean, std=std, size=(1, dataset_size)).squeeze()
+            elif dist == 2:
+                beta = torch.distributions.beta.Beta(
+                    torch.tensor([0.5]), torch.tensor([0.5]))
+                val = (input_range[1] - input_range[0]) * \
+                    beta.sample((dataset_size,)).squeeze() + \
+                    input_range[0]
+            else:
+                val = (input_range[1] - input_range[0]) * \
+                    torch.rand(dataset_size) + input_range[0]
+
+            val = torch.clamp(val, min_range, max_range)
+            self.X[key] = val
+
+        for i in range(dataset_size):
+            inputs = {k: self.X[k][i] for k in data_range}
+
+            inputs["P"] = P
+            inputs["R"] = R
+            inputs["O"] = torch.Tensor(
+                1, size_output).fill_(true_width)[0]
+            new_y = model(**inputs)
+            self.Y.append(new_y)
+
+    def __len__(self):
+        return len(self.X[list(self.data_range.keys())[0]])
+
+    def __getitem__(self, index):
+        return {k: self.X[k][index] for k in self.data_range}, self.Y[index]
+
+
 class BitFlow:
+
+    def make_model(self, **kwargs):
+        return self.evaluator.eval(**kwargs)
 
     def gen_model(self, dag):
         """ Sets up a given dag for torch evaluation.
@@ -23,10 +81,7 @@ class BitFlow:
         Returns: A trainable model
         """
         self.evaluator = TorchEval(dag)
-
-        def model(**kwargs):
-            return self.evaluator.eval(**kwargs)
-        return model
+        return self.make_model
 
     def custom_round(self, P, factor=0.5):
         P = P.tolist()
@@ -59,59 +114,6 @@ class BitFlow:
         Returns:
             (X, Y): generated data
         """
-
-        class Dataset(data.Dataset):
-            def __init__(self, model, dataset_size, size_p, size_r, size_output, data_range, range_bits, true_width, dist):
-                self.X = {k: [] for k in data_range}
-                self.Y = []
-
-                P = torch.Tensor(1, size_p).fill_(true_width)[0]
-                R = torch.Tensor(1, size_r).fill_(true_width)[0]
-                torch.manual_seed(42)
-
-                for key in data_range:
-                    # Create random tensor
-                    input_range = data_range[key]
-
-                    # calculate range bounds using range bits
-                    ib = range_bits[key]
-                    min_range = -1 * (2 ** (ib - 1))
-                    max_range = 2 ** (ib - 1) - 1
-
-                    val = 0
-                    if dist == 1:
-                        mean = (input_range[1]+input_range[0])/2
-                        std = (mean - input_range[0])/3
-                        val = torch.normal(
-                            mean=mean, std=std, size=(1, dataset_size)).squeeze()
-                    elif dist == 2:
-                        beta = torch.distributions.beta.Beta(
-                            torch.tensor([0.5]), torch.tensor([0.5]))
-                        val = (input_range[1] - input_range[0]) * \
-                            beta.sample((dataset_size,)).squeeze() + \
-                            input_range[0]
-                    else:
-                        val = (input_range[1] - input_range[0]) * \
-                            torch.rand(dataset_size) + input_range[0]
-
-                    val = torch.clamp(val, min_range, max_range)
-                    self.X[key] = val
-
-                for i in range(dataset_size):
-                    inputs = {k: self.X[k][i] for k in data_range}
-
-                    inputs["P"] = P
-                    inputs["R"] = R
-                    inputs["O"] = torch.Tensor(
-                        1, size_output).fill_(true_width)[0]
-                    new_y = model(**inputs)
-                    self.Y.append(new_y)
-
-            def __len__(self):
-                return len(self.X[list(data_range.keys())[0]])
-
-            def __getitem__(self, index):
-                return {k: self.X[k][index] for k in data_range}, self.Y[index]
 
         return Dataset(model, dataset_size, size_p, size_r, size_output, data_range, range_bits, true_width, dist)
 
@@ -547,3 +549,20 @@ class BitFlow:
         self.P = P
         self.R = R
         self.O = O
+
+    @staticmethod
+    def save(fileName, bitflow_object):
+        with open(f'{fileName}.pt', 'wb') as output:
+            torch.save(bitflow_object, output)
+
+    @staticmethod
+    def load(fileName):
+        with open(f'{fileName}.pt', 'rb') as input:
+            return torch.load(input)
+
+    def reset(self):
+        self.P = self.P.float()
+        self.R = self.R.float()
+
+        self.P.requires_grad = True
+        self.R.requires_grad = self.train_range

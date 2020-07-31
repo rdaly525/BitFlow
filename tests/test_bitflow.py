@@ -51,8 +51,18 @@ def test_fig3():
     dag = gen_fig3()
 
     bf = BitFlow(dag, {"z": 8.}, {'a': (-3., 2.),
-                                  'b': (4., 8.)}, lr=8e-4, range_lr=5e-4, train_range=True, training_size=10000, testing_size=2000, distribution=0)
-    bf.train(epochs=20)
+                                  'b': (4., 8.)}, lr=8e-4, range_lr=5e-4, train_range=True, training_size=1000, testing_size=200, distribution=0)
+    bf.train(epochs=1)
+
+    # check saving object works
+    BitFlow.save("./models/fig3", bf)
+    new_bf = BitFlow.load("./models/fig3")
+    new_bf.reset()
+
+    new_bf.train(epochs=5)
+
+    assert new_bf.range_lr == bf.range_lr
+
     return
 
 
@@ -135,7 +145,7 @@ def test_rgb_case_study_custom_dataset():
 
     bf = BitFlow(dag, {"col_1": 0., "col_2": 0., "col_3": 0.}, {
         'r': (0., 255.), 'b': (0., 255.), 'g': (0., 255.)}, **params)
-    bf.train(epochs=1)
+    bf.train(epochs=10)
 
     # Sample Matrix Product
     test = {"r": 125., "g": 125., "b": 125., "P": bf.P, "R": bf.R, "O": bf.O}
