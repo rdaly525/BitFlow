@@ -107,7 +107,7 @@ def test_rgb_case_study():
 
     bf = BitFlow(dag, {"col_1": 10., "col_2": 10., "col_3": 10.}, {
         'r': (0., 255.), 'b': (0., 255.), 'g': (0., 255.)}, **params)
-    bf.train(epochs=10)
+    bf.train(epochs=1)
 
     # Sample Matrix Product
     test = {"r": 2., "g": 4., "b": -3., "P": bf.P, "R": bf.R, "O": bf.O}
@@ -145,7 +145,7 @@ def test_rgb_case_study_custom_dataset():
 
     bf = BitFlow(dag, {"col_1": 0., "col_2": 0., "col_3": 0.}, {
         'r': (0., 255.), 'b': (0., 255.), 'g': (0., 255.)}, **params)
-    bf.train(epochs=10)
+    bf.train(epochs=1)
 
     # Sample Matrix Product
     test = {"r": 125., "g": 125., "b": 125., "P": bf.P, "R": bf.R, "O": bf.O}
