@@ -6,7 +6,7 @@ from BitFlow.Eval.TorchEval import TorchEval
 from BitFlow.AddRoundNodes import AddRoundNodes
 from BitFlow.casestudies.caseStudies import caseStudy
 from BitFlow.Eval import IAEval, NumEval
-from BitFlow.MNIST.MNIST_library import dot_product, matrix_multiply
+from BitFlow.MNIST.MNIST_library import dot_product, matrix_multiply, linear_layer
 
 def gen_display():
     a = Input(name="a")
@@ -22,6 +22,25 @@ def gen_multiply():
 
     fig = Dag(outputs=[z], inputs=[a,b])
     return fig
+
+def gen_add():
+    a = Input(name="a")
+    b = Input(name="b")
+    #c = Input(name="c")
+    z = Add(a,b,name="z")
+
+    fig = Dag(outputs=[z], inputs=[a,b])
+    return fig
+
+def gen_linearlayer(row,col):
+    X = Input(name="X")
+    W = Input(name="W")
+    bias = Input(name="bias")
+    y = linear_layer(X,W,bias,row,col)
+
+    fig = Dag(outputs=[y], inputs=[X,W,bias])
+    return fig
+
 
 def gen_length():
     a = Input(name="a")
@@ -91,6 +110,49 @@ def gen_reduce_z():
     fig = Dag(outputs=[b], inputs=[a])
     return fig
 
+def test_linearlayer():
+
+    # row = 10
+    # col = 1
+    # tmp = gen_linearlayer(row,col)
+    # evaluator = NumEval(tmp)
+    # X = torch.rand((10, 7))
+    # W = torch.rand((7,1))
+    #
+    # bias = torch.rand((1))
+    #
+    # res = evaluator.eval(X=X,W=W, bias = bias)
+    # print(res.shape)
+    # print(res)
+    #
+    # gold = X@W + bias
+    # print(gold.shape)
+    # print(gold)
+
+    #assert(torch.all(torch.eq(gold,res)))
+
+
+    row = 100
+    col = 1
+    tmp = gen_linearlayer(row,col)
+    evaluator = NumEval(tmp)
+    X = torch.rand((100, 784))
+    W = torch.rand((784,1))
+
+    bias = torch.rand((1))
+
+    res = evaluator.eval(X=X,W=W, bias = bias)
+    print(res.shape)
+    #print(res)
+
+    gold = X@W + bias
+    print(gold.shape)
+    #print(gold)
+
+    #assert(torch.all(torch.eq(res,gold)))
+
+    return
+
 
 def test_length():
     tmp = gen_length()
@@ -120,7 +182,7 @@ def test_length():
     gold = 3
     assert res == gold
 
-    a = torch.tensor([[1,3],[1,2],[1,2]])
+    a = tborch.tensor([[1,3],[1,2],[1,2]])
     a = a[0]
     res = evaluator.eval(a=a)
     gold = 2
@@ -139,8 +201,9 @@ def test_dotproduct():
     evaluator = NumEval(tmp)
     a = torch.tensor([1, 2])
     b = torch.tensor([3, 4])
-    res = evaluator.eval(a=a, b=b)
+    res = evaluator.eval(a=a, b=b, concat_dim=0)
     gold = torch.tensor([11])
+    print(res)
     assert torch.all(torch.eq(res, gold))
 
     a = torch.tensor([1, 2,3,0,-1])
@@ -167,7 +230,9 @@ def test_matrix_mult():
     b = torch.tensor([[5,6],[7,8]])
 
     res = evaluator.eval(a=a, b=b)
-    print(res)
+    #print(res)
+    gold = a@b
+    assert torch.all(torch.eq(res,gold))
     print()
 
     tmp = gen_matrix_mul(2, 2)
@@ -177,7 +242,9 @@ def test_matrix_mult():
     b = torch.tensor([[5, 6], [0, 8]])
 
     res = evaluator.eval(a=a, b=b)
-    print(res)
+    #print(res)
+    gold = a @ b
+    assert torch.all(torch.eq(res, gold))
     print()
 
     a = torch.tensor([[1, 2], [3, 4], [5,6]])
@@ -186,7 +253,9 @@ def test_matrix_mult():
     tmp = gen_matrix_mul(3,4)
     evaluator = NumEval(tmp)
     res = evaluator.eval(a=a,b=b)
-    print(res)
+    #print(res)
+    gold = a @ b
+    assert torch.all(torch.eq(res, gold))
     print()
 
     a = torch.tensor([[1,2,6,7], [3, 4, 5, 1], [5, 6, 1,2]])
@@ -194,16 +263,20 @@ def test_matrix_mult():
     tmp = gen_matrix_mul(3, 4)
     evaluator = NumEval(tmp)
     res = evaluator.eval(a=a, b=b)
-    print(res)
+    #print(res)
+    gold = a @ b
+    assert torch.all(torch.eq(res, gold))
     print()
 
 
     a = torch.tensor([[1, 2, 6, 7], [3, 4, 5, 1], [5, 6, 1, 2], [3, 4, 5, 1]])
-    b = torch.tensor([[1,2,4,7]])
+    b = torch.tensor([[1,2,4,7]]).T
     tmp = gen_matrix_mul(4, 1)
     evaluator = NumEval(tmp)
     res = evaluator.eval(a=a, b=b)
-    print(res)
+    #print(res)
+    gold = a @ b
+    assert torch.all(torch.eq(res, gold))
 
     return
 
@@ -307,9 +380,30 @@ def test_Reduce():
 
     return
 
+def test_add():
+    tmp = gen_add()
+    evaluator = NumEval(tmp)
+
+    a = torch.tensor([100])
+    b = torch.tensor([100])
+    #c = torch.tensor([100])
+    res = evaluator.eval(a=a, b=b)
+    #print(res)
+    gold = torch.tensor([200])
+    assert res == gold
+
+    a = torch.tensor([100,200,300])
+    b = torch.tensor([100,300,400])
+    res = evaluator.eval(a=a, b=b)
+    gold = torch.tensor([200,500,700])
+    assert torch.all(torch.eq(res, gold))
+    return
+
 test_Relu()
 test_Reduce()
 test_dotproduct()
 test_select()
 test_length()
 test_matrix_mult()
+test_linearlayer()
+test_add()

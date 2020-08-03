@@ -22,6 +22,9 @@ class NumEval(AbstractEval):
     def eval_Relu(self, a, node: DagNode):
         return t.relu(a)
 
+    def eval_Tanh(self, a, node: DagNode):
+        return t.tanh(a)
+
     def eval_Reduce(self, a, node: DagNode):
         sum = t.sum(a, dim=node.reduce_dim)
         return sum
@@ -29,11 +32,9 @@ class NumEval(AbstractEval):
     def eval_Len(self, a, node: DagNode):
         return len(a)
 
-    def eval_Concat(self, a, b, node: DagNode):
-        if node.choice == 0:
-            #return t.cat([a, b], dim= node.concat_dim)
-            return (np.append([a],[b]))
-
-        if node.choice == 1:
-            #return np.append([a],[b])
-            return np.row_stack((a,b))
+    def eval_Concat(self, *args, node: DagNode):
+        return t.stack(args, dim=node.concat_dim)
+        #
+        # if node.choice == 1:
+        #
+        #     return np.row_stack((a, b))

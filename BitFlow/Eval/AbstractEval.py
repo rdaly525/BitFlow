@@ -66,3 +66,7 @@ class AbstractEval(Visitor):
     def eval_Relu(self, a, node: DagNode):
         pass
 
+    @abstractmethod
+    def eval_Tanh(self, a, node: DagNode):
+        pass
+

@@ -36,6 +36,10 @@ class DagNode(Visited):
         assert isinstance(rhs, DagNode)
         return Mul(self, rhs)
 
+    # def __dotproduct__(self, rhs):
+    #     assert isinstance(rhs, DagNode)
+    #     return DotProduct(self, rhs)
+
     def __concat__(self, rhs):
         return Concat(self, rhs)
 
@@ -88,13 +92,19 @@ class Mul(DagNode):
             name = f"{a.name}_mul_{b.name}"
         super().__init__(name, a, b)
 
+# class DotProduct(DagNode):
+#     def __init__(self, a: DagNode, b: DagNode, concat_dim, name=None):
+#         self.concat_dim = concat_dim
+#         if name is None:
+#             name = f"{a.name}_dotproduct_{b.name}"
+#         super().__init__(name, a, b)
+
 class Concat(DagNode):
-    def __init__(self, a: DagNode, b: DagNode, concat_dim, choice, name=None):
+    def __init__(self, *args, concat_dim, name=None):
         self.concat_dim = concat_dim
-        self.choice = choice
         if name is None:
-            name = f"{a.name}_concat_{b.name}"
-        super().__init__(name, a, b)
+            name = f"_concat"
+        super().__init__(name, *args)
 
 
 class Select(DagNode):
@@ -127,7 +137,10 @@ class Relu(DagNode):
 
 
 class Tanh(DagNode):
-      pass
+    def __init__(self, a: DagNode, *, name=None):
+        if name is None:
+            name = f"{a.name}_tanh"
+        super().__init__(name, a)
 
 
 
