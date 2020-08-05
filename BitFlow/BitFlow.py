@@ -93,18 +93,77 @@ class BitFlow:
             scale = 2.0**precision
             return torch.round(num * scale) / scale
 
-    def is_within_ulp(self, num, truth, precision):
+    def is_within_ulp(self, num, truth, precision, should_print=False):
         r = torch.abs(num - self.round_to_precision(truth, precision))
-        ulp = 2**-(precision + 1)
+        ulp = 2**-(precision)
         if len(precision) > 1:
             sol = torch.ones(r.shape)
             for (y, row) in enumerate(r):
                 for (x, val) in enumerate(row):
                     if val > ulp[y]:
+                        if should_print:
+                            print(
+                                f"guess: {num[y][x]}, true: {truth[y][x]}, ulp: {ulp[y]}")
                         sol[y][x] = 0
             return sol
         else:
-            return(torch.where(r <= ulp, torch.ones(r.shape), torch.zeros(r.shape)))
+            sol = torch.ones(r.shape)
+            for (x, val) in enumerate(r):
+                if val > ulp[0]:
+                    if should_print:
+                        print(
+                            f"guess: {num[x]}, true: {truth[x]}, ulp: {ulp[0]}")
+                    sol[x] = 0
+            return sol
+
+            # return(torch.where(r <= ulp, torch.ones(r.shape), torch.zeros(r.shape)))
+
+    def ulp(self, num, truth, precision):
+        r = torch.abs(num - self.round_to_precision(truth, precision))
+        if len(precision) > 1:
+            for (ind, val) in enumerate(precision):
+                r[ind] = r[ind] * 2 ** val
+            return r
+        else:
+            r = r * 2 ** precision
+            return r
+
+    def calc_ulp(self, name, test_gen, P, R, O, model):
+        ulp_err = 0
+        total = 0
+
+        max_ulp = -math.inf
+
+        print(f"\n##### {name} ULP ERROR ######")
+        for t, (inputs, Y) in enumerate(test_gen):
+            inputs["P"] = P
+            inputs["R"] = R
+            inputs["O"] = O
+
+            res = model(**inputs)
+            if isinstance(res, list):
+                res = torch.stack(res)
+                Y = torch.stack(Y).squeeze()
+            else:
+                Y = Y.squeeze()
+
+            ulp = self.ulp(res, Y, O)
+
+            if torch.max(ulp) > max_ulp:
+                max_ulp = torch.max(ulp)
+
+            ulp_err += torch.sum(ulp)
+            total += torch.numel(ulp)
+
+            # if should_print:
+            #     indices = (ulp == 0).nonzero()[:, 0].tolist()
+            #     for index in indices:
+            #         print(
+            #             f"guess: {res[index]}, true: {self.round_to_precision(Y[index], O)} ")
+
+        avg_ulp = ulp_err/total
+        print(f"AVG ERR: {avg_ulp}")
+        print(f"MAX ERR: {max_ulp}")
 
     def calc_accuracy(self, name, test_gen, P, R, O, model, should_print):
         success = 0
@@ -122,15 +181,15 @@ class BitFlow:
             else:
                 Y = Y.squeeze()
 
-            ulp = self.is_within_ulp(res, Y, O)
+            ulp = self.is_within_ulp(res, Y, O, should_print)
             success += torch.sum(ulp)
             total += torch.numel(ulp)
 
-            if should_print:
-                indices = (ulp == 0).nonzero()[:, 0].tolist()
-                for index in indices:
-                    print(
-                        f"guess: {res[index]}, true: {self.round_to_precision(Y[index], O)} ")
+            # if should_print:
+            #     indices = (ulp == 0).nonzero()[:, 0].tolist()
+            #     for index in indices:
+            #         print(
+            #             f"guess: {res[index]}, true: {self.round_to_precision(Y[index], O)} ")
 
         acc = (success * 1.)/total
         print(f"accuracy: {acc}")
@@ -235,7 +294,7 @@ class BitFlow:
         return O, P, init_P, R, init_R
 
     # Loss function
-    def compute_loss(self, target, y, P, R, iter, filtered_vars, batch_size, epochs, training_size, error_type=1, should_print=True, shouldErrorCheck=False, train_range=False):
+    def compute_loss(self, target, y, P, R, O, iter, filtered_vars, batch_size, epochs, training_size, error_type=1, should_print=True, shouldErrorCheck=False, train_range=False):
         """
         Args:
             error_type:
@@ -256,10 +315,14 @@ class BitFlow:
             visitor = BitFlowVisitor(node_values, calculate_IB=False)
             visitor.run(evaluator.dag)
 
+            range_list = [val for val in list(
+                visitor.node_values) if val not in evaluator.dag.outputs]
+
             area_fn = visitor.area_fn
             exec(f"{','.join(filtered_vars)}=P", ldict)
-            ib_vars = [f"{f}_ib" for f in list(visitor.node_values)]
+            ib_vars = [f"{f}_ib" for f in range_list]
             exec(f"{','.join(ib_vars)}=R", ldict)
+
             exec(f"area = {area_fn}", ldict)
 
             area = ldict["area"]
@@ -275,6 +338,7 @@ class BitFlow:
 
             # Calculate erros
             constraint_err = ErrorConstraintFn(unpacked_P)
+            ulp_err = torch.sum(self.ulp(y, target, O))
 
             # Sanity error check
             if shouldErrorCheck:
@@ -284,23 +348,20 @@ class BitFlow:
 
             # If ulp error is reasonable, relax error constraints
             decay = 0.95
-            if constraint_err > 0:
+            if constraint_err > 0 and self.L > 1.:
                 self.prevL = self.L
                 self.L *= decay
             else:
                 self.L = self.initL
 
-            L2 = torch.sum((y-target.squeeze())**2)
-
             S = 1
             Q = 100
+            loss = (self.L * torch.exp(-1000 * constraint_err) +
+                    S * area + ulp_err)/batch_size
+
             if train_range:
-                loss = ((self.L * torch.exp(-1 * constraint_err) +
-                         S * area)/batch_size) + self.evaluator.saturation
+                loss = loss + self.evaluator.saturation
                 self.evaluator.saturation = 0.
-            else:
-                loss = (self.L * torch.exp(-1 * constraint_err) +
-                        S * area)/batch_size
 
         else:
             ulp_error = torch.mean(torch.sum(
@@ -333,8 +394,9 @@ class BitFlow:
 
         return loss
 
-    def __init__(self, dag, outputs, data_range, training_size=2000, testing_size=200, batch_size=16, lr=1e-4, error_type=1, test_optimizer=True, test_ufb=False, train_range=False, range_lr=1e-4, distribution=0, graph_loss=False, custom_data=None):
+    def __init__(self, dag, outputs, data_range, training_size=2000, testing_size=200, batch_size=16, lr=1e-4, error_type=1, test_optimizer=True, test_ufb=True, train_range=False, range_lr=1e-4, distribution=0, graph_loss=False, custom_data=None):
 
+        torch.manual_seed(42)
         self.original_dag = copy.deepcopy(dag)
 
         # Run a basic evaluator on the DAG to construct error and area functions
@@ -441,7 +503,7 @@ class BitFlow:
                     y = torch.stack(y)
                     target_y = torch.stack(target_y).squeeze().to(device)
 
-                loss = self.compute_loss(target_y, y, P, R, iter, filtered_vars, batch_size, epochs, training_size,
+                loss = self.compute_loss(target_y, y, P, R, O, iter, filtered_vars, batch_size, epochs, training_size,
                                          error_type=error_type, should_print=True, train_range=train_range)
                 loss_values.append(loss)
 
@@ -456,13 +518,19 @@ class BitFlow:
 
         # Show final results for weight and round them
         print(P)
-        P = self.custom_round(P, factor=0.2)
-        R = self.custom_round(R, factor=0.2)
+        # P = self.custom_round(P, factor=0.2)
+        # R = self.custom_round(R, factor=0.2)
+
+        P = torch.ceil(P)
+        R = torch.ceil(R)
         print(f"PRECISION: {P}")
         print(f"RANGE: {R}")
 
         self.calc_accuracy("TEST", test_gen, P, R,
-                           O, model, False)
+                           O, model, True)
+
+        self.calc_ulp("TEST", test_gen, P, R,
+                      O, model)
 
         if test_ufb:
             self.calc_accuracy("UFB TEST", test_gen, init_P, R,
@@ -490,25 +558,29 @@ class BitFlow:
             self.calc_accuracy("OPTIMIZER TEST", test_gen, torch.tensor(test), torch.tensor(rng),
                                O, model, False)
 
+            self.calc_ulp("OPTIMIZER TEST", test_gen, torch.tensor(test), torch.tensor(rng),
+                          O, model)
+
         # Save outputs to object
         self.model = model
         self.P = P
         self.R = R
         self.O = O
 
-    @staticmethod
+    @ staticmethod
     def save(fileName, bitflow_object):
         with open(f'{fileName}.pt', 'wb') as output:
             torch.save(bitflow_object, output)
 
-    @staticmethod
+    @ staticmethod
     def load(fileName):
         with open(f'{fileName}.pt', 'rb') as input:
-            return torch.load(input)
+            loaded = torch.load(input)
 
-    def reset(self):
-        self.P = self.P.float()
-        self.R = self.R.float()
+            loaded.P = loaded.P.float()
+            loaded.R = loaded.R.float()
 
-        self.P.requires_grad = True
-        self.R.requires_grad = self.train_range
+            loaded.P.requires_grad = True
+            loaded.R.requires_grad = loaded.train_range
+
+            return loaded

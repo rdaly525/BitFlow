@@ -20,6 +20,7 @@ class BitFlowVisitor(Visitor):
         if self.calculate_IB:
             ib = 0
             x = self.node_values[node]
+            # print(f"{node}: {x}")
             if isinstance(x, Interval):
                 alpha = 2 if (log2(abs(x.hi)).is_integer()) else 1
                 ib = ceil(log2(max(abs(x.lo), abs(x.hi)))) + alpha
@@ -70,9 +71,9 @@ class BitFlowVisitor(Visitor):
                 self.errors[rhs.name], node.name)
 
         if self.calculate_IB:
-            self.area_fn += f"+max({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
+            self.area_fn += f"+1 * max({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
         else:
-            self.area_fn += f"+max({lhs.name}_ib + {lhs.name}, {rhs.name}_ib + {rhs.name})"
+            self.area_fn += f"+1 * max({lhs.name}_ib + {lhs.name}, {rhs.name}_ib + {rhs.name})"
 
     def visit_Sub(self, node: Sub):
         Visitor.generic_visit(self, node)
@@ -85,9 +86,9 @@ class BitFlowVisitor(Visitor):
                 self.errors[rhs.name], node.name)
 
         if self.calculate_IB:
-            self.area_fn += f"+max({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
+            self.area_fn += f"+1 * max({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
         else:
-            self.area_fn += f"+max({lhs.name}_ib + {lhs.name}, {rhs.name}_ib + {rhs.name})"
+            self.area_fn += f"+1 * max({lhs.name}_ib + {lhs.name}, {rhs.name}_ib + {rhs.name})"
 
     def visit_Mul(self, node: Mul):
         Visitor.generic_visit(self, node)
