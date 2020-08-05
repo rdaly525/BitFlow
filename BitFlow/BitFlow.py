@@ -294,7 +294,7 @@ class BitFlow:
         return O, P, init_P, R, init_R
 
     # Loss function
-    def compute_loss(self, target, y, P, R, O, iter, filtered_vars, batch_size, epochs, training_size, error_type=1, should_print=True, shouldErrorCheck=False, train_range=False):
+    def compute_loss(self, target, y, P, R, O, iter, filtered_vars, batch_size, epochs, training_size, error_type=1, should_print=True, shouldErrorCheck=False, train_range=False, incorporate_ulp_loss=False):
         """
         Args:
             error_type:
@@ -347,17 +347,20 @@ class BitFlow:
                         f"ERR NEGATIVE: {constraint_err}, {P}, {area}")
 
             # If ulp error is reasonable, relax error constraints
+            S = 1
             decay = 0.95
-            if constraint_err > 0 and self.L > 1.:
+            if constraint_err > 0 and self.L > 1e-10:
                 self.prevL = self.L
                 self.L *= decay
             else:
                 self.L = self.initL
 
-            S = 1
             Q = 100
             loss = (self.L * torch.exp(-1000 * constraint_err) +
-                    S * area + ulp_err)/batch_size
+                    S * area + torch.sum(torch.exp(-1000 * R)) + torch.sum(torch.exp(-1000 * P)))/batch_size
+
+            if incorporate_ulp_loss:
+                loss = loss + ulp_err/batch_size
 
             if train_range:
                 loss = loss + self.evaluator.saturation
@@ -394,7 +397,7 @@ class BitFlow:
 
         return loss
 
-    def __init__(self, dag, outputs, data_range, training_size=2000, testing_size=200, batch_size=16, lr=1e-4, error_type=1, test_optimizer=True, test_ufb=True, train_range=False, range_lr=1e-4, distribution=0, graph_loss=False, custom_data=None):
+    def __init__(self, dag, outputs, data_range, training_size=2000, testing_size=200, batch_size=16, lr=1e-4, error_type=1, test_optimizer=True, test_ufb=True, train_range=False, range_lr=1e-4, distribution=0, graph_loss=False, custom_data=None, incorporate_ulp_loss=False):
 
         torch.manual_seed(42)
         self.original_dag = copy.deepcopy(dag)
@@ -453,6 +456,7 @@ class BitFlow:
         self.filtered_vars = filtered_vars
         self.range_lr = range_lr
         self.graph_loss = graph_loss
+        self.incorporate_ulp_loss = incorporate_ulp_loss
 
     def train(self, epochs=10):
 
@@ -476,9 +480,10 @@ class BitFlow:
         filtered_vars = self.filtered_vars
         range_lr = self.range_lr
         graph_loss = self.graph_loss
+        incorporate_ulp_loss = self.incorporate_ulp_loss
 
         # Set up optimizer
-        opt = torch.optim.Adam(
+        opt = torch.optim.AdamW(
             [{"params": P}, {"params": R, "lr": range_lr}], lr=lr)
 
         device = torch.device(
@@ -504,7 +509,7 @@ class BitFlow:
                     target_y = torch.stack(target_y).squeeze().to(device)
 
                 loss = self.compute_loss(target_y, y, P, R, O, iter, filtered_vars, batch_size, epochs, training_size,
-                                         error_type=error_type, should_print=True, train_range=train_range)
+                                         error_type=error_type, should_print=True, train_range=train_range, incorporate_ulp_loss=incorporate_ulp_loss)
                 loss_values.append(loss)
 
                 opt.zero_grad()
@@ -518,11 +523,11 @@ class BitFlow:
 
         # Show final results for weight and round them
         print(P)
-        # P = self.custom_round(P, factor=0.2)
-        # R = self.custom_round(R, factor=0.2)
+        P = self.custom_round(P, factor=0.2)
+        R = self.custom_round(R, factor=0.2)
 
-        P = torch.ceil(P)
-        R = torch.ceil(R)
+        # P = torch.ceil(P)
+        # R = torch.ceil(R)
         print(f"PRECISION: {P}")
         print(f"RANGE: {R}")
 
@@ -545,7 +550,29 @@ class BitFlow:
 
         print("\n##### MODEL DETAILS #####")
         print(f"ERROR: {ErrorConstraintFn(P.tolist())}")
-        print(f"AREA: {AreaOptimizerFn(P.tolist())}")
+        if train_range:
+            ldict = {"P": P, "R": R}
+            evaluator = NumEval(self.original_dag)
+            evaluator.eval(**self.eval_dict)
+
+            node_values = evaluator.node_values
+            visitor = BitFlowVisitor(node_values, calculate_IB=False)
+            visitor.run(evaluator.dag)
+
+            range_list = [val for val in list(
+                visitor.node_values) if val not in evaluator.dag.outputs]
+
+            area_fn = visitor.area_fn
+            exec(f"{','.join(filtered_vars)}=P", ldict)
+            ib_vars = [f"{f}_ib" for f in range_list]
+            exec(f"{','.join(ib_vars)}=R", ldict)
+
+            exec(f"area = {area_fn}", ldict)
+
+            area = ldict["area"]
+            print(f"AREA: {area}")
+        else:
+            print(f"AREA: {AreaOptimizerFn(P.tolist())}")
 
         if test_optimizer:
             print("\n##### FROM OPTIMIZER ######")

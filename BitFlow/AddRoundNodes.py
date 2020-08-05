@@ -66,7 +66,7 @@ class AddRoundNodes(Transformer):
 
             else:
                 returnNode = Round(node, Select(self.P, self.round_count), Select(self.R, self.range_count),
-                                   name=node.name + "_round_W")
+                                   name=node.name + "_round_P")
 
                 self.round_count += 1
                 self.range_count += 1

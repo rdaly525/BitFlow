@@ -25,6 +25,9 @@ class BitFlowVisitor(Visitor):
                 alpha = 2 if (log2(abs(x.hi)).is_integer()) else 1
                 ib = ceil(log2(max(abs(x.lo), abs(x.hi)))) + alpha
             else:
+                if (x == 0.):
+                    self.IBs[node.name] = 1
+                    return
                 alpha = 2 if (log2(abs(x)).is_integer()) else 1
                 ib = ceil(log2(abs(x))) + alpha
             self.IBs[node.name] = int(ib)
