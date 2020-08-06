@@ -33,6 +33,17 @@ def gen_ex1():
     dag = Dag(outputs=[z_1, z_2], inputs=[a, b, c])
     return dag
 
+def gen_MNIST():
+    # (a*b) + 4 - b
+    a = Input(name="a")
+    b = Input(name="b")
+    c = Constant(4.3, name="c")
+    d = Mul(a, b, name="d")
+    e = Add(d, c, name="e")
+    z = Sub(e, b, name="z")
+
+    fig3_dag = Dag(outputs=[z], inputs=[a, b])
+    return fig3_dag
 
 def test_fig3():
 
@@ -86,3 +97,5 @@ def test_rgb_case_study():
     print(bf.model(**test))
 
     return
+
+test_fig3()

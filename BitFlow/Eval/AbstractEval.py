@@ -25,7 +25,11 @@ class AbstractEval(Visitor):
         Visitor.generic_visit(self, node)
         child_values = [self.node_values[child] for child in node.children()]
         eval_name = f"eval_{node.kind()[0]}"
+        # print("eval1")
+        print(node)
+        print(eval_name)
         assert hasattr(self, eval_name)
+        # print(eval_name)
         node_val = getattr(self, eval_name)(*child_values, node=node)
         assert node_val is not None
         self.node_values[node] = node_val
@@ -65,8 +69,3 @@ class AbstractEval(Visitor):
     @abstractmethod
     def eval_Relu(self, a, node: DagNode):
         pass
-
-    @abstractmethod
-    def eval_Tanh(self, a, node: DagNode):
-        pass
-

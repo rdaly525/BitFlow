@@ -50,6 +50,9 @@ class DagNode(Visited):
     def __len__(self):
         return Len(self)
 
+    def __reduce__(self):
+        return Reduce(self)
+
 class Input(DagNode):
     def __init__(self, name):
         super().__init__(name)
@@ -122,10 +125,11 @@ class Round(DagNode):
         super().__init__(name, val, prec)
 
 class Reduce(DagNode):
-    def __init__(self, a: DagNode, reduce_dim, name=None):
+    def __init__(self, a: DagNode, reduce_dim, size,  name=None):
         self.reduce_dim = reduce_dim
+        self.size = size
         if name is None:
-            name = f"{a.name}_reduce"
+            name = f"{a.name}_reduce_{size.name}"
         super().__init__(name, a)
 
 

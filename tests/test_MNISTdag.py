@@ -3,6 +3,7 @@ import torch
 from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, Select, Output, Relu, Reduce, Len, Concat
 from BitFlow.IA import Interval
 from BitFlow.Eval.TorchEval import TorchEval
+from BitFlow.AddRoundNodes import NodePrinter
 from BitFlow.AddRoundNodes import AddRoundNodes
 from BitFlow.casestudies.caseStudies import caseStudy
 from BitFlow.Eval import IAEval, NumEval
@@ -82,6 +83,14 @@ def gen_relu():
     fig = Dag(outputs=[b], inputs=[a])
     return fig
 
+
+def gen_reduce_NEW():
+    a = Input(name="a")
+    b = Reduce(a, 0, 5, name="b")
+
+    fig = Dag(outputs=[b], inputs=[a])
+    return fig
+
 def gen_reduce_x():
     a = Input(name="a")
     b = Reduce(a, 0, name="b")
@@ -142,11 +151,11 @@ def test_linearlayer():
     bias = torch.rand((1))
 
     res = evaluator.eval(X=X,W=W, bias = bias)
-    print(res.shape)
+    #print(res.shape)
     #print(res)
 
     gold = X@W + bias
-    print(gold.shape)
+    #print(gold.shape)
     #print(gold)
 
     #assert(torch.all(torch.eq(res,gold)))
@@ -182,7 +191,7 @@ def test_length():
     gold = 3
     assert res == gold
 
-    a = tborch.tensor([[1,3],[1,2],[1,2]])
+    a = torch.tensor([[1,3],[1,2],[1,2]])
     a = a[0]
     res = evaluator.eval(a=a)
     gold = 2
@@ -203,7 +212,7 @@ def test_dotproduct():
     b = torch.tensor([3, 4])
     res = evaluator.eval(a=a, b=b, concat_dim=0)
     gold = torch.tensor([11])
-    print(res)
+    #print(res)
     assert torch.all(torch.eq(res, gold))
 
     a = torch.tensor([1, 2,3,0,-1])
@@ -330,6 +339,21 @@ def test_Relu():
 
         return
 
+def test_Reduce_NEW():
+    tmp = gen_reduce_NEW()
+    evaluator = NumEval(tmp)
+
+    m = NodePrinter(tmp)
+
+
+    a = torch.tensor([2, 4, 1, 3, 5])
+    res = evaluator.eval(a=a)
+    print(res)
+
+    gold = 15
+    assert res == gold
+    return
+
 
 def test_Reduce():
     tmp_x = gen_reduce_x()
@@ -400,7 +424,8 @@ def test_add():
     return
 
 test_Relu()
-test_Reduce()
+#test_Reduce()
+#test_Reduce_NEW()
 test_dotproduct()
 test_select()
 test_length()

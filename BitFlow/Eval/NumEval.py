@@ -2,6 +2,8 @@ from .AbstractEval import AbstractEval
 from ..node import DagNode
 import torch as t
 import numpy as np
+# from BitFlow.MNIST.MNIST_library import replace_Reduce_add
+
 
 class NumEval(AbstractEval):
     def eval_Constant(self, node: DagNode):
@@ -27,6 +29,7 @@ class NumEval(AbstractEval):
 
     def eval_Reduce(self, a, node: DagNode):
         sum = t.sum(a, dim=node.reduce_dim)
+        # pass in the size we are reducing over
         return sum
 
     def eval_Len(self, a, node: DagNode):
@@ -34,7 +37,3 @@ class NumEval(AbstractEval):
 
     def eval_Concat(self, *args, node: DagNode):
         return t.stack(args, dim=node.concat_dim)
-        #
-        # if node.choice == 1:
-        #
-        #     return np.row_stack((a, b))
