@@ -14,6 +14,7 @@ from BitFlow.MNIST.MNIST_library import dot_product, matrix_multiply, linear_lay
 import torch.nn as nn
 
 
+#to create MNIST dag
 def gen_linearlayer(row, col, size):
     X = Input(name="X")
     W = Input(name="W")
@@ -48,16 +49,17 @@ class MNIST_Dag(nn.Module):
         train_dataset = dsets.MNIST(root='./data', train=True, transform=transforms.ToTensor(), download=True)
         test_dataset = dsets.MNIST(root='./data', train=False, transform=transforms.ToTensor())
 
-        batch_size = 100
 
-        # W
-        self.W = torch.randn(self.hidden_dim, self.output_dim, requires_grad=True)
+        self.W = nn.Parameter(torch.ones(self.hidden_dim, self.output_dim, requires_grad=True))
+        self.bias = nn.Parameter(torch.ones(self.output_dim, requires_grad=True))
 
         self.batch_size = 100
         self.n_iters = 3000
         self.epochs = self.n_iters / (len(train_dataset) / self.batch_size)
 
-        self.register_parameter(name='bias', param=torch.nn.Parameter(self.W))
+        self.myparameters = nn.ParameterList([self.W, self.bias])
+
+        #self.register_parameter(name='W', param=torch.nn.Parameter(self.W))
 
     def gen_model(self, images, W, bias, input_dim, output_dim):
         """ Sets up a given dag for torch evaluation.
@@ -78,77 +80,86 @@ class MNIST_Dag(nn.Module):
 
     def forward(self, X):
         y1 = self.gen_model(X, self.W, self.bias, self.batch_size, self.output_dim)
+        #print("for")
+        #print(torch.sum(y1))
 
-        y2 = self.sigmoid(y1)
-        y2 = torch.sum(y2, dim=1)
+
+        #Commented to debug Loss function dimension issue
+        #y2 = self.sigmoid(y1)
+        #y2 = torch.sum(y2, dim=1)
 
 
-        return torch.softmax(y2, dim=0)
+        #return torch.softmax(y2, dim=0)
+        return y1
 
-    def backward(self, X, l, y2):
-        # Derivative of binary cross entropy cost w.r.t. final output y4
-        self.dC_dy2 = y2 - l
+    # def backward(self, X, l, y2):
+    #     # Derivative of binary cross entropy cost w.r.t. final output y4
+    #     self.dC_dy2 = y2 - l
+    #
+    #     self.dy2_dy1 = self.sigmoid_first_order_derivative(y2)
+    #
+    #     self.y2_delta = self.dC_dy2 * self.dy2_dy1
+    #
+    #     self.dC_dw1 = torch.matmul(torch.t(X), self.y2_delta)
+    #
+    #     w_array = [self.dC_dw1 for _ in range(output_dim)]
+    #     self.dC_dw1 = torch.stack(w_array, dim=1)
+    #
+    #     self.W -= self.lr_rate * self.dC_dw1 * torch.ones(1, 10)
 
-        self.dy2_dy1 = self.sigmoid_first_order_derivative(y2)
-
-        self.y2_delta = self.dC_dy2 * self.dy2_dy1
-
-        self.dC_dw1 = torch.matmul(torch.t(X), self.y2_delta)
-
-        w_array = [self.dC_dw1 for _ in range(output_dim)]
-        self.dC_dw1 = torch.stack(w_array, dim=1)
-
-        self.W -= self.lr_rate * self.dC_dw1 * torch.ones(1, 10)
-
-    def train(self, X, l):
-        # Forward propagation
-        y = self.forward(X)
-
-        # Backward propagation and gradient descent
-        self.backward(X, l, y)
+    # def train(self, X, l):
+    #     print('entered TRAIN')
+    #     # Forward propagation
+    #     y = self.forward(X)
+    #
+    #     # Backward propagation and gradient descent
+    #     self.backward(X, l, y)
+    #
+    #     print(self.parameters())
 
 
 model = MNIST_Dag()
+lr_rate = .001
+optimizer = torch.optim.SGD(model.parameters(),lr=lr_rate)
 
-train_dataset = dsets.MNIST(root='./data', train=True, transform=transforms.ToTensor(), download=True)
-test_dataset = dsets.MNIST(root='./data', train=False, transform=transforms.ToTensor())
 
 batch_size = 100
 input_dim = 100
 output_dim = 10
 hidden_dim = 784
 
-lr_rate = .001
+train_dataset = dsets.MNIST(root='./data', train=True, transform=transforms.ToTensor(), download=True)
+test_dataset = dsets.MNIST(root='./data', train=False, transform=transforms.ToTensor())
 
 train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = torch.utils.data.DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False)
 
-batch_size = 100
 n_iters = 3000
 epochs = n_iters / (len(train_dataset) / batch_size)
 
 criterion = torch.nn.CrossEntropyLoss()
 
-optimizer = torch.optim.SGD(model.parameters(),
-                            lr=0.01)
 
-print("here")
+print("STARTING TRAINING")
 iter = 0
 for epoch in range(int(epochs)):
     for i, (images, labels) in enumerate(train_loader):
 
         images = Variable(images.view(-1, 28 * 28))
         labels = Variable(labels)
-        # print(y)
 
         outputs = model(images)
+        #print(torch.sum(outputs))
         loss = criterion(outputs, labels)
+        #print(loss)
         optimizer.zero_grad()
+
         loss.backward()
         optimizer.step()
 
         iter += 1
-        if iter % 100 == 0:
+
+        if iter % 500 == 0:
             # calculate Accuracy
             correct = 0
             total = 0
@@ -156,6 +167,7 @@ for epoch in range(int(epochs)):
                 images = Variable(images.view(-1, 28 * 28))
                 # outputs = model(images)
                 outputs = model(images)
+
 
                 _, predicted = torch.max(outputs.data, 1)
                 total += labels.size(0)
