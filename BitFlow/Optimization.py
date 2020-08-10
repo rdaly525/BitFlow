@@ -1,4 +1,4 @@
-from .node import Input, Constant, Dag, Add, Sub, Mul, DagNode, Select
+from .node import Input, Constant, Dag, Add, Sub, Mul, DagNode, Select, LookupTable
 from DagVisitor import Visitor
 from .IA import Interval
 from .Eval.IAEval import IAEval
@@ -36,7 +36,8 @@ class BitFlowVisitor(Visitor):
         children = []
         for child_node in node.children():
             children.append(child_node)
-
+        if len(children) == 1:
+            return children[0]
         return (children[0], children[1])
 
     def visit_Input(self, node: Input):
@@ -107,6 +108,19 @@ class BitFlowVisitor(Visitor):
             self.area_fn += f"+1 * ({self.IBs[lhs.name]} + {lhs.name})*({self.IBs[rhs.name]} + {rhs.name})"
         else:
             self.area_fn += f"+1 * ({lhs.name}_ib + {lhs.name})*({rhs.name}_ib + {rhs.name})"
+
+    def visit_LookupTable(self, node: LookupTable):
+        Visitor.generic_visit(self, node)
+
+        self.handleIB(node)
+        input_signal = self.getChildren(node)
+        self.errors[node.name] = PrecisionNode(
+            self.node_values[node], node.name, [])
+
+        if self.calculate_IB:
+            self.area_fn += f"+1 * ({node.numel}) * ({node.name} + {self.IBs[node.name]})"
+        else:
+            self.area_fn += f"+1 * ({node.numel}) * ({node.name} + {node.name}_ib)"
 
 
 class BitFlowOptimizer():

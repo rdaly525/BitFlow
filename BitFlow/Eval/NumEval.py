@@ -1,5 +1,6 @@
 from .AbstractEval import AbstractEval
-from ..node import DagNode
+from ..node import DagNode, LookupTable
+
 
 class NumEval(AbstractEval):
     def eval_Constant(self, node: DagNode):
@@ -16,3 +17,6 @@ class NumEval(AbstractEval):
 
     def eval_Select(self, a, node: DagNode):
         return a[node.index]
+
+    def eval_LookupTable(self, a, node: LookupTable):
+        return node.lut[a]

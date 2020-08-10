@@ -1,4 +1,4 @@
-from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode
+from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, LookupTable
 from DagVisitor import Visitor
 from BitFlow.IA import Interval
 from BitFlow.Eval import IAEval, NumEval
@@ -9,6 +9,8 @@ from BitFlow.utils import Imgs2Dataset
 
 from torch.utils import data
 import time
+
+import numpy as np
 
 
 # def test_image2data():
@@ -54,8 +56,8 @@ def gen_ex1():
 #     dag = gen_fig3()
 
 #     bf = BitFlow(dag, {"z": 8.}, {'a': (-3., 2.),
-#                                   'b': (4., 8.)}, lr=1e-3, range_lr=8e-4, train_range=False, training_size=10000, testing_size=2000, distribution=0, incorporate_ulp_loss=False)
-#     bf.train(epochs=20)
+#                                   'b': (4., 8.)}, lr=1e-2, range_lr=1e-2, train_range=True, training_size=10000, testing_size=2000, distribution=0, incorporate_ulp_loss=False, batch_size=32)
+#     bf.train(epochs=10)
 
 #     # # check saving object works
 #     # BitFlow.save("./models/fig3", bf)
@@ -76,8 +78,8 @@ def gen_ex1():
 #     dag = gen_ex1()
 
 #     bf = BitFlow(dag, {"z_1": 5., "z_2": 8.}, {
-#         'a': (-3., 2.), 'b': (4., 8.), 'c': (-1., 1.)}, lr=1e-3, range_lr=8e-4, train_range=False, training_size=10000, testing_size=2000, incorporate_ulp_loss=False)
-#     bf.train(epochs=20)
+#         'a': (-3., 2.), 'b': (4., 8.), 'c': (-1., 1.)}, lr=1e-2, range_lr=1e-2, train_range=True, training_size=10000, testing_size=2000, incorporate_ulp_loss=True)
+#     bf.train(epochs=10)
 
 #     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
 #     return
@@ -109,15 +111,17 @@ def RGB_to_YCbCr():
 #         training_size=10000,
 #         testing_size=2000,
 #         batch_size=16,
-#         lr=1e-3,
+#         lr=1e-2,
 #         train_range=True,
-#         range_lr=8e-4,
-#         distribution=0
+#         range_lr=1e-2,
+#         distribution=0,
+#         test_optimizer=False,
+#         incorporate_ulp_loss=True
 #     )
 
 #     bf = BitFlow(dag, {"col_1": 8., "col_2": 8., "col_3": 8.}, {
 #         'r': (0., 255.), 'b': (0., 255.), 'g': (0., 255.)}, **params)
-#     bf.train(epochs=30)
+#     bf.train(epochs=10)
 
 #     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
 
@@ -147,9 +151,9 @@ def RGB_to_YCbCr():
 #         training_size=int(round(0.8 * size)),
 #         testing_size=int(round(0.2 * size)),
 #         batch_size=16,
-#         lr=1e-4,
+#         lr=1e-3,
 #         train_range=True,
-#         range_lr=5e-4,
+#         range_lr=1e-3,
 #         distribution=0,
 #         custom_data=(train_gen, test_gen),
 #         test_optimizer=False,
@@ -158,7 +162,7 @@ def RGB_to_YCbCr():
 
 #     bf = BitFlow(dag, {"col_1": 8., "col_2": 8., "col_3": 8.}, {
 #         'r': (0., 255.), 'b': (0., 255.), 'g': (0., 255.)}, **params)
-#     bf.train(epochs=5)
+#     bf.train(epochs=1)
 
 #     # Sample Matrix Product
 #     test = {"r": 252., "g": 59., "b": 32., "P": bf.P, "R": bf.R, "O": bf.O}
@@ -207,18 +211,18 @@ def matrix_multiply():
 #     params = dict(
 #         training_size=10000,
 #         testing_size=2000,
-#         batch_size=16,
-#         lr=5e-4,
+#         batch_size=8,
+#         lr=1e-3,
 #         train_range=True,
-#         range_lr=1e-4,
+#         range_lr=1e-3,
 #         distribution=0,
 #         test_optimizer=False,
 #         incorporate_ulp_loss=True
 #     )
 
 #     bf = BitFlow(dag, {"y00": 8., "y01": 8., "y10": 8., "y11": 8.}, {
-#         'a00': (-11., 10.), 'a01': (-10., 12.), 'a10': (-13., 10.), 'a11': (-14., 10.), 'b00': (-11., 10.), 'b01': (-10., 12.), 'b10': (-13., 10.), 'b11': (-14., 10.)}, **params)
-#     bf.train(epochs=20)
+#         'a00': (-10., 10.), 'a01': (-10., 10.), 'a10': (-10., 10.), 'a11': (-10., 10.), 'b00': (-10., 10.), 'b01': (-10., 10.), 'b10': (-10., 10.), 'b11': (-10., 10.)}, **params)
+#     bf.train(epochs=10)
 
 #     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
 
@@ -246,28 +250,75 @@ def generate_poly_approx(a, b, c, d, e):
     return approx_dag
 
 
-def test_poly_approx():
+# def test_poly_approx():
+#     t0 = time.time()
+
+#     dag = generate_poly_approx(-0.25, 1./3, -0.5, 1., 0.)
+
+#     params = dict(
+#         training_size=10000,
+#         testing_size=2000,
+#         batch_size=16,
+#         lr=4e-3,
+#         train_range=True,
+#         range_lr=4e-3,
+#         distribution=0,
+#         test_optimizer=False,
+#         incorporate_ulp_loss=True
+#     )
+
+#     bf = BitFlow(dag, {"res": 8.}, {"x": (0., 1.)}, **params)
+#     bf.train(epochs=5)
+
+#     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
+
+#     test = {"x": 0.3, "P": bf.P, "R": bf.R, "O": bf.O}
+#     print(bf.model(**test))
+
+#     return
+
+def myfunc(x):
+    x = np.clip(x, -np.pi, +np.pi)
+    return np.sin(x)
+
+
+def generate_basic_lut():
+    x = Input(name="x")
+    amplitude = Input(name="a")
+    shift = Input(name="b")
+
+    output = Add(Mul(amplitude, LookupTable(
+        myfunc, [-np.pi, np.pi], x)), shift, name="res")
+
+    sin_dag = Dag(outputs=[output], inputs=[x, amplitude, shift])
+
+    return sin_dag
+
+
+def test_basic_lut():
     t0 = time.time()
 
-    dag = generate_poly_approx(-0.25, 1./3, -0.5, 1., 0.)
+    dag = generate_basic_lut()
 
     params = dict(
         training_size=10000,
         testing_size=2000,
         batch_size=16,
-        lr=1e-3,
-        train_range=False,
-        range_lr=8e-4,
+        lr=1e-2,
+        train_range=True,
+        range_lr=1e-2,
         distribution=0,
-        test_optimizer=True,
+        test_optimizer=False,
+        incorporate_ulp_loss=False
     )
 
-    bf = BitFlow(dag, {"res": 8.}, {"x": (0., 1.)}, **params)
-    bf.train(epochs=20)
+    bf = BitFlow(dag, {"res": 5.}, {"x": (-2., 2.),
+                                    "a": (1., 5.), "b": (-3, 3)}, **params)
+    bf.train(epochs=5)
 
     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
 
-    test = {"x": 0.3, "P": bf.P, "R": bf.R, "O": bf.O}
+    test = {"x": 0.3, "a": 2., "b": 1., "P": bf.P, "R": bf.R, "O": bf.O}
     print(bf.model(**test))
 
     return

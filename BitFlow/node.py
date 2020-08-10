@@ -1,4 +1,5 @@
 from DagVisitor import Visited, AbstractDag
+from BitFlow.utils import LUTGenerator
 import abc
 import typing as tp
 
@@ -90,9 +91,20 @@ class Select(DagNode):
 
 class Round(DagNode):
     def __init__(self, val: DagNode, prec: DagNode, rng: DagNode, name=None):
+        self.prec = prec
+        self.rng = rng
         if name is None:
             name = f"{val.name}_round_{prec.name}_{rng}"
         super().__init__(name, val, prec, rng)
+
+
+class LookupTable(DagNode):
+    def __init__(self, func, domain, a: DagNode, name=None, numel=100):
+        self.numel = numel
+        self.lut = LUTGenerator(func, domain, numel=numel)
+        if name is None:
+            name = f"lookup_{a.name}_{numel}"
+        super().__init__(name, a)
 
 
 class Dag(AbstractDag):

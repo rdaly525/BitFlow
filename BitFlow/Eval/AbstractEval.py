@@ -1,6 +1,6 @@
 from DagVisitor import Visitor
 from abc import abstractmethod
-from ..node import Dag, DagNode, Input, Constant, Add, Mul, Select, Output, Round
+from ..node import Dag, DagNode, Input, Constant, Add, Mul, Select, Output, Round, LookupTable
 
 
 class AbstractEval(Visitor):
@@ -52,4 +52,8 @@ class AbstractEval(Visitor):
 
     @abstractmethod
     def eval_Select(self, a, node: DagNode):
+        pass
+
+    @abstractmethod
+    def eval_LookupTable(self, a, node: LookupTable):
         pass

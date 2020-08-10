@@ -88,7 +88,7 @@ class PrecisionNode:
             if isinstance(err, FPEpsilon):
                 if err.node == self.symbol:
                     return myfn
-                myfn += f"+{err.val}*2**(-{err.node}-1)" if err.val > 0 else f"{err.val}*2**(-{err.node}-1)"
+                myfn += f"+{err.val}*2**(-{err.node}-1)" if err.val >= 0 else f"{err.val}*2**(-{err.node}-1)"
             elif isinstance(err, FPEpsilonMultiplier):
                 myfn += f"+{err.val}*("
                 myfn += self.constructErrorFn(err.Ex)
@@ -101,7 +101,7 @@ class PrecisionNode:
         myfn = ""
         for err in errors:
             if isinstance(err, FPEpsilon):
-                myfn += f"+{err.val}*2**(-UFB-1)" if err.val > 0 else f"{err.val}*2**(-UFB-1)"
+                myfn += f"+{err.val}*2**(-UFB-1)" if err.val >= 0 else f"{err.val}*2**(-UFB-1)"
             elif isinstance(err, FPEpsilonMultiplier):
                 myfn += f"+{err.val}*("
                 myfn += self.constructUFBFn(err.Ex)

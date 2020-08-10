@@ -6,6 +6,41 @@ import torch
 from torch.utils import data
 
 
+class LUTGenerator:
+    def __init__(self, func, domain, numel=25):
+        lut = {}
+        delta = (domain[1] - domain[0])/(1. * numel - 1)
+        x = domain[0]
+        while x <= domain[1] + delta/2.:
+            lut[x] = func(x)
+            x = x + delta
+        self.lut = lut
+        self.domain = domain
+
+    def __getitem__(self, x):
+        if isinstance(x, torch.Tensor):
+            x = torch.clamp(x, self.domain[0], self.domain[1])
+            if torch.numel(x) == 1:
+                closest = min(self.lut.keys(), key=lambda true: abs(true-x))
+                return self.lut[closest]
+            for (ind, val) in enumerate(x):
+                closest = min(self.lut.keys(), key=lambda true: abs(true-val))
+                x[ind] = self.lut[closest]
+            return x
+
+        else:
+            x = np.clip(x, self.domain[0], self.domain[1])
+            closest = min(self.lut.keys(), key=lambda true: abs(true-x))
+            return self.lut[closest]
+
+    def __str__(self):
+        out = "{\n"
+        for key in self.lut:
+            out += f"\t{key} : {self.lut[key]},\n"
+        out += "}"
+        return out
+
+
 class Imgs2Dataset:
     def convert_rgb2ycbcr(self, dir):
         inputs = {"r": [], "g": [], "b": []}

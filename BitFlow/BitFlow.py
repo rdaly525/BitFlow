@@ -77,7 +77,7 @@ class BitFlow:
         rounder = AddRoundNodes(P, R, O)
         roundedDag = rounder.doit(dag)
 
-        return roundedDag, rounder.round_count, rounder.input_count, rounder.output_count, rounder.range_count
+        return roundedDag, rounder.round_count, rounder.input_count, rounder.output_count, rounder.range_count, rounder.order
 
     def round_to_precision(self, num, precision):
         if len(precision) > 1:
@@ -210,27 +210,25 @@ class BitFlow:
         vals = tensor < 0
         return vals.any()
 
-    def filterDAGFromOutputs(self, visitor, outputs):
-        # Remove output variables from DAG list (these will be our weights)
-        vars = list(visitor.node_values)
-        for (i, var) in enumerate(vars):
-            vars[i] = var.name
-        filtered_vars = []
-        for var in vars:
-            if var not in outputs:
-                filtered_vars.append(var)
+    # def filterDAGFromOutputs(self, visitor, outputs):
+    #     # Remove output variables from DAG list (these will be our weights)
+    #     vars = list(visitor.node_values)
+    #     for (i, var) in enumerate(vars):
+    #         vars[i] = var.name
+    #     filtered_vars = []
+    #     for var in vars:
+    #         if var not in outputs:
+    #             filtered_vars.append(var)
 
-        return filtered_vars
+    #     return filtered_vars
 
     def calculateRange(self, evaluator, outputs):
         node_values = evaluator.node_values
         visitor = BitFlowVisitor(node_values)
         visitor.run(evaluator.dag)
 
-        filtered_vars = self.filterDAGFromOutputs(visitor, outputs)
-
         range_bits = visitor.IBs
-        return range_bits, filtered_vars
+        return range_bits
 
     def constructOptimizationFunctions(self, dag, outputs, data_range):
         evaluator = NumEval(dag)
@@ -243,11 +241,11 @@ class BitFlow:
 
         evaluator.eval(**eval_dict)
 
-        range_bits, filtered_vars = self.calculateRange(evaluator, outputs)
+        range_bits = self.calculateRange(evaluator, outputs)
 
         bfo = BitFlowOptimizer(evaluator, outputs)
         bfo.calculateInitialValues()
-        return bfo, range_bits, filtered_vars
+        return bfo, range_bits
 
     def createExecutableConstraintFunctions(self, area_fn, error_fn, filtered_vars):
         exec(f'''def AreaOptimizerFn(P):
@@ -403,8 +401,18 @@ class BitFlow:
         self.original_dag = copy.deepcopy(dag)
 
         # Run a basic evaluator on the DAG to construct error and area functions
-        bfo, range_bits, filtered_vars = self.constructOptimizationFunctions(
+        bfo, range_bits = self.constructOptimizationFunctions(
             dag, outputs, data_range)
+
+        # Update the dag with round nodes and set up the model for torch training
+        dag, num_precision, num_inputs, num_outputs, num_range, ordered_list = self.update_dag(
+            dag)
+
+        filtered_vars = []
+        for el in ordered_list:
+            if el not in outputs:
+                filtered_vars.append(el)
+        print(filtered_vars)
 
         # Generate error and area functions from the visitor
         error_fn = bfo.error_fn
@@ -412,9 +420,6 @@ class BitFlow:
         self.createExecutableConstraintFunctions(
             area_fn, error_fn, filtered_vars)
 
-        # Update the dag with round nodes and set up the model for torch training
-        dag, num_precision, num_inputs, num_outputs, num_range = self.update_dag(
-            dag)
         model = self.gen_model(dag)
 
         # create the data according to specifications
@@ -486,6 +491,10 @@ class BitFlow:
         opt = torch.optim.AdamW(
             [{"params": P}, {"params": R, "lr": range_lr}], lr=lr)
 
+        lr_decay = 0.5
+        scheduler = torch.optim.lr_scheduler.StepLR(
+            optimizer=opt, step_size=5, gamma=lr_decay)
+
         device = torch.device(
             "cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -516,6 +525,7 @@ class BitFlow:
                 loss.backward()
                 opt.step()
                 iter += 1
+            scheduler.step()
 
         if graph_loss:
             plt.plot(loss_values)
@@ -523,13 +533,14 @@ class BitFlow:
 
         # Show final results for weight and round them
         print(P)
-        P = self.custom_round(P, factor=0.2)
-        R = self.custom_round(R, factor=0.2)
+        P = self.custom_round(P, factor=0.1)
+        R = self.custom_round(R, factor=0.1)
 
         # P = torch.ceil(P)
         # R = torch.ceil(R)
         print(f"PRECISION: {P}")
         print(f"RANGE: {R}")
+        print(f"ORDER: {filtered_vars}")
 
         self.calc_accuracy("TEST", test_gen, P, R,
                            O, model, True)
