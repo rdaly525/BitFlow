@@ -36,19 +36,12 @@ class DagNode(Visited):
         assert isinstance(rhs, DagNode)
         return Mul(self, rhs)
 
-    # def __dotproduct__(self, rhs):
-    #     assert isinstance(rhs, DagNode)
-    #     return DotProduct(self, rhs)
-
     def __concat__(self, rhs):
         return Concat(self, rhs)
 
     def __getitem__(self, rhs):
         #assert isinstance(rhs,int)
         return Select(self, rhs)
-
-    def __len__(self):
-        return Len(self)
 
     def __reduce__(self):
         return Reduce(self)
@@ -61,11 +54,12 @@ class Output(DagNode):
     def __init__(self, name):
         super().__init__(name)
 
-class Len(DagNode):
-    def __init__(self, a: DagNode, name=None):
-        if name is None:
-            name = f"{a.name}_len"
-        super().__init__(name, a)
+# class Len(DagNode):
+#     def __init__(self, a: DagNode, size, name=None):
+#         self.size = size
+#         if name is None:
+#             name = f"{a.name}_len"
+#         super().__init__(name, a)
 
 class Constant(DagNode):
     def __init__(self, value, name=None):
@@ -95,12 +89,6 @@ class Mul(DagNode):
             name = f"{a.name}_mul_{b.name}"
         super().__init__(name, a, b)
 
-# class DotProduct(DagNode):
-#     def __init__(self, a: DagNode, b: DagNode, concat_dim, name=None):
-#         self.concat_dim = concat_dim
-#         if name is None:
-#             name = f"{a.name}_dotproduct_{b.name}"
-#         super().__init__(name, a, b)
 
 class Concat(DagNode):
     def __init__(self, *args, concat_dim, name=None):
@@ -125,11 +113,10 @@ class Round(DagNode):
         super().__init__(name, val, prec)
 
 class Reduce(DagNode):
-    def __init__(self, a: DagNode, reduce_dim, size,  name=None):
+    def __init__(self, a: DagNode, reduce_dim,  name=None):
         self.reduce_dim = reduce_dim
-        self.size = size
         if name is None:
-            name = f"{a.name}_reduce_{size.name}"
+            name = f"{a.name}_reduce"
         super().__init__(name, a)
 
 

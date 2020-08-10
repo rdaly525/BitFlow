@@ -1,6 +1,6 @@
 import torch
 
-from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, Select, Output, Relu, Reduce, Len, Concat
+from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, Select, Output, Relu, Reduce, Concat
 from BitFlow.IA import Interval
 from BitFlow.Eval.TorchEval import TorchEval
 from BitFlow.AddRoundNodes import NodePrinter
@@ -8,6 +8,8 @@ from BitFlow.AddRoundNodes import AddRoundNodes
 from BitFlow.casestudies.caseStudies import caseStudy
 from BitFlow.Eval import IAEval, NumEval
 from BitFlow.MNIST.MNIST_library import dot_product, matrix_multiply, linear_layer
+import sys
+
 
 def gen_display():
     a = Input(name="a")
@@ -19,44 +21,48 @@ def gen_display():
 def gen_multiply():
     a = Input(name="a")
     b = Input(name="b")
-    z = Mul(a,b,name="z")
+    z = Mul(a, b, name="z")
 
-    fig = Dag(outputs=[z], inputs=[a,b])
+    fig = Dag(outputs=[z], inputs=[a, b])
     return fig
+
 
 def gen_add():
     a = Input(name="a")
     b = Input(name="b")
-    #c = Input(name="c")
-    z = Add(a,b,name="z")
+    # c = Input(name="c")
+    z = Add(a, b, name="z")
 
-    fig = Dag(outputs=[z], inputs=[a,b])
+    fig = Dag(outputs=[z], inputs=[a, b])
     return fig
 
-def gen_linearlayer(row,col):
+
+def gen_linearlayer(row, col, size):
     X = Input(name="X")
     W = Input(name="W")
     bias = Input(name="bias")
-    y = linear_layer(X,W,bias,row,col)
+    y = linear_layer(X, W, bias, row, col, size)
 
-    fig = Dag(outputs=[y], inputs=[X,W,bias])
+    fig = Dag(outputs=[y], inputs=[X, W, bias])
     return fig
 
 
-def gen_length():
-    a = Input(name="a")
-    z = Len(a)
+#
+# def gen_length():
+#     a = Input(name="a")
+#     z = Len(a)
+#
+#     fig = Dag(outputs=[z], inputs=[a])
+#     return fig
 
-    fig = Dag(outputs=[z], inputs=[a])
-    return fig
-
-def gen_dotproduct():
+def gen_dotproduct(size):
     a = Input(name="a")
     b = Input(name="b")
-    z = dot_product(a, b)
+    z = dot_product(a, b, size)
 
-    fig = Dag(outputs=[z], inputs=[a,b])
+    fig = Dag(outputs=[z], inputs=[a, b])
     return fig
+
 
 def gen_matrix_multiply():
     a = Input(name="a")
@@ -64,21 +70,23 @@ def gen_matrix_multiply():
 
     z = matrix_multiply(a, b)
 
-    fig = Dag(outputs=[z], inputs=[a,b])
+    fig = Dag(outputs=[z], inputs=[a, b])
     return fig
 
-def gen_matrix_mul(row,col):
+
+def gen_matrix_mul(row, col, size):
     a = Input(name="a")
     b = Input(name="b")
 
-    z = matrix_multiply(a, b,row,col)
+    z = matrix_multiply(a, b, row, col, size)
 
-    fig = Dag(outputs=[z], inputs=[a,b])
+    fig = Dag(outputs=[z], inputs=[a, b])
     return fig
+
 
 def gen_relu():
     a = Input(name="a")
-    b = Relu(a,name="b")
+    b = Relu(a, name="b")
 
     fig = Dag(outputs=[b], inputs=[a])
     return fig
@@ -91,12 +99,14 @@ def gen_reduce_NEW():
     fig = Dag(outputs=[b], inputs=[a])
     return fig
 
+
 def gen_reduce_x():
     a = Input(name="a")
     b = Reduce(a, 0, name="b")
 
     fig = Dag(outputs=[b], inputs=[a])
     return fig
+
 
 def gen_reduce_y():
     a = Input(name="a")
@@ -105,12 +115,14 @@ def gen_reduce_y():
     fig = Dag(outputs=[b], inputs=[a])
     return fig
 
+
 def gen_select():
     a = Input(name="a")
     b = a[0:3:2]
 
     fig = Dag(outputs=[b], inputs=[a])
     return fig
+
 
 def gen_reduce_z():
     a = Input(name="a")
@@ -119,108 +131,86 @@ def gen_reduce_z():
     fig = Dag(outputs=[b], inputs=[a])
     return fig
 
+
 def test_linearlayer():
-
-    # row = 10
-    # col = 1
-    # tmp = gen_linearlayer(row,col)
-    # evaluator = NumEval(tmp)
-    # X = torch.rand((10, 7))
-    # W = torch.rand((7,1))
-    #
-    # bias = torch.rand((1))
-    #
-    # res = evaluator.eval(X=X,W=W, bias = bias)
-    # print(res.shape)
-    # print(res)
-    #
-    # gold = X@W + bias
-    # print(gold.shape)
-    # print(gold)
-
-    #assert(torch.all(torch.eq(gold,res)))
-
-
     row = 100
-    col = 1
-    tmp = gen_linearlayer(row,col)
+    col = 10
+    tmp = gen_linearlayer(row, col, 784)
     evaluator = NumEval(tmp)
     X = torch.rand((100, 784))
-    W = torch.rand((784,1))
+    W = torch.rand((784, 10))
 
-    bias = torch.rand((1))
+    bias = torch.rand((10))
 
-    res = evaluator.eval(X=X,W=W, bias = bias)
-    #print(res.shape)
-    #print(res)
+    res = evaluator.eval(X=X, W=W, bias=bias)
 
-    gold = X@W + bias
-    #print(gold.shape)
-    #print(gold)
-
-    #assert(torch.all(torch.eq(res,gold)))
+    gold = X @ W + bias
 
     return
 
 
-def test_length():
-    tmp = gen_length()
-    evaluator = NumEval(tmp)
-    a = torch.tensor([1])
-    res = evaluator.eval(a=a)
-    gold = 1
-    assert res==gold
-
-    a = torch.tensor([1,2])
-    res = evaluator.eval(a=a)
-    gold = 2
-    assert res == gold
-
-    a = torch.tensor([1,3,4])
-    res = evaluator.eval(a=a)
-    gold = 3
-    assert res == gold
-
-    a = torch.tensor([[1,3,4],[1,2,3]])
-    res = evaluator.eval(a=a)
-    gold = 2
-    assert res == gold
-
-    a = torch.tensor([[1,3],[1,2],[1,2]])
-    res = evaluator.eval(a=a)
-    gold = 3
-    assert res == gold
-
-    a = torch.tensor([[1,3],[1,2],[1,2]])
-    a = a[0]
-    res = evaluator.eval(a=a)
-    gold = 2
-    assert res == gold
-
-    a = torch.tensor([[[2,2]]])
-    a = a[0][0]
-    res = evaluator.eval(a=a)
-    gold = 2
-    assert res == gold
-
-    return
+# def test_length():
+#     tmp = gen_length()
+#     evaluator = NumEval(tmp)
+#     a = torch.tensor([1])
+#     res = evaluator.eval(a=a)
+#     gold = 1
+#     assert res==gold
+#
+#     a = torch.tensor([1,2])
+#     res = evaluator.eval(a=a)
+#     gold = 2
+#     assert res == gold
+#
+#     a = torch.tensor([1,3,4])
+#     res = evaluator.eval(a=a)
+#     gold = 3
+#     assert res == gold
+#
+#     a = torch.tensor([[1,3,4],[1,2,3]])
+#     res = evaluator.eval(a=a)
+#     gold = 2
+#     assert res == gold
+#
+#     a = torch.tensor([[1,3],[1,2],[1,2]])
+#     res = evaluator.eval(a=a)
+#     gold = 3
+#     assert res == gold
+#
+#     a = torch.tensor([[1,3],[1,2],[1,2]])
+#     a = a[0]
+#     res = evaluator.eval(a=a)
+#     gold = 2
+#     assert res == gold
+#
+#     a = torch.tensor([[[2,2]]])
+#     a = a[0][0]
+#     res = evaluator.eval(a=a)
+#     gold = 2
+#     assert res == gold
+#
+#     return
 
 def test_dotproduct():
-    tmp = gen_dotproduct()
+    tmp = gen_dotproduct(2)
     evaluator = NumEval(tmp)
     a = torch.tensor([1, 2])
     b = torch.tensor([3, 4])
     res = evaluator.eval(a=a, b=b, concat_dim=0)
     gold = torch.tensor([11])
-    #print(res)
+    # print(res)
     assert torch.all(torch.eq(res, gold))
 
-    a = torch.tensor([1, 2,3,0,-1])
-    b = torch.tensor([3, 4,-1,2.2,-1])
+    tmp = gen_dotproduct(5)
+    evaluator = NumEval(tmp)
+    a = torch.tensor([1, 2, 3, 0, -1])
+    b = torch.tensor([3, 4, -1, 2.2, -1])
     res = evaluator.eval(a=a, b=b)
     gold = torch.tensor([9])
     assert torch.all(torch.eq(res, gold))
 
+    tmp = gen_dotproduct(1)
+    evaluator = NumEval(tmp)
     a = torch.tensor([1])
     b = torch.tensor([3])
     res = evaluator.eval(a=a, b=b)
@@ -231,120 +221,121 @@ def test_dotproduct():
 
 
 def test_matrix_mult():
-
-    tmp = gen_matrix_mul(2,2)
+    tmp = gen_matrix_mul(2, 2, 2)
     evaluator = NumEval(tmp)
 
-    a = torch.tensor([[1,2],[3,4]])
-    b = torch.tensor([[5,6],[7,8]])
+    a = torch.tensor([[1, 2], [3, 4]])
+    b = torch.tensor([[5, 6], [7, 8]])
 
     res = evaluator.eval(a=a, b=b)
-    #print(res)
-    gold = a@b
-    assert torch.all(torch.eq(res,gold))
+    # print(res)
+    gold = a @ b
+    # print(res)
+    # print(gold)
+    assert torch.all(torch.eq(res, gold))
     print()
 
-    tmp = gen_matrix_mul(2, 2)
+    tmp = gen_matrix_mul(2, 2, 2)
     evaluator = NumEval(tmp)
 
     a = torch.tensor([[1, 0], [3, 4]])
     b = torch.tensor([[5, 6], [0, 8]])
 
     res = evaluator.eval(a=a, b=b)
-    #print(res)
+    # print(res)
     gold = a @ b
     assert torch.all(torch.eq(res, gold))
     print()
 
-    a = torch.tensor([[1, 2], [3, 4], [5,6]])
-    b = torch.tensor([[1,2,3,4], [5,6,7,8]])
+    a = torch.tensor([[1, 2], [3, 4], [5, 6]])
+    b = torch.tensor([[1, 2, 3, 4], [5, 6, 7, 8]])
 
-    tmp = gen_matrix_mul(3,4)
-    evaluator = NumEval(tmp)
-    res = evaluator.eval(a=a,b=b)
-    #print(res)
-    gold = a @ b
-    assert torch.all(torch.eq(res, gold))
-    print()
-
-    a = torch.tensor([[1,2,6,7], [3, 4, 5, 1], [5, 6, 1,2]])
-    b = torch.tensor([[1, 2,6,7], [3, 4, 5, 1], [5, 6, 1,2], [3, 4, 5, 1]])
-    tmp = gen_matrix_mul(3, 4)
+    tmp = gen_matrix_mul(3, 4, 2)
     evaluator = NumEval(tmp)
     res = evaluator.eval(a=a, b=b)
-    #print(res)
+    # print(res)
     gold = a @ b
     assert torch.all(torch.eq(res, gold))
     print()
 
+    a = torch.tensor([[1, 2, 6, 7], [3, 4, 5, 1], [5, 6, 1, 2]])
+    b = torch.tensor([[1, 2, 6, 7], [3, 4, 5, 1], [5, 6, 1, 2], [3, 4, 5, 1]])
+    tmp = gen_matrix_mul(3, 4, 4)
+    evaluator = NumEval(tmp)
+    res = evaluator.eval(a=a, b=b)
+    # print(res)
+    gold = a @ b
+    assert torch.all(torch.eq(res, gold))
+    print()
 
     a = torch.tensor([[1, 2, 6, 7], [3, 4, 5, 1], [5, 6, 1, 2], [3, 4, 5, 1]])
-    b = torch.tensor([[1,2,4,7]]).T
-    tmp = gen_matrix_mul(4, 1)
+    b = torch.tensor([[1, 2, 4, 7]]).T
+    tmp = gen_matrix_mul(4, 1, 4)
     evaluator = NumEval(tmp)
     res = evaluator.eval(a=a, b=b)
-    #print(res)
+    # print(res)
     gold = a @ b
     assert torch.all(torch.eq(res, gold))
 
     return
+
 
 def test_select():
     tmp = gen_select()
     evaluator = NumEval(tmp)
-    a = torch.tensor([100,20000,20,400,22,11])
+    a = torch.tensor([100, 20000, 20, 400, 22, 11])
     res = evaluator.eval(a=a)
 
     return
 
+
 def test_Relu():
+    tmp = gen_relu()
+    evaluator = NumEval(tmp)
 
-        tmp = gen_relu()
-        evaluator = NumEval(tmp)
+    a = torch.tensor([100])
+    res = evaluator.eval(a=a)
+    gold = 100
+    assert res == gold
 
-        a = torch.tensor([100])
-        res = evaluator.eval(a=a)
-        gold = 100
-        assert res == gold
+    a = torch.tensor([-1000])
+    res = evaluator.eval(a=a)
+    gold = 0
+    assert res == gold
 
-        a = torch.tensor([-1000])
-        res = evaluator.eval(a=a)
-        gold = 0
-        assert res == gold
+    a = torch.tensor([100.2])
+    res = evaluator.eval(a=a)
+    gold = 100.2
+    assert res == gold
 
-        a = torch.tensor([100.2])
-        res = evaluator.eval(a=a)
-        gold = 100.2
-        assert res == gold
+    a = torch.tensor([3.14])
+    res = evaluator.eval(a=a)
+    gold = 3.14
+    assert res == gold
 
-        a = torch.tensor([3.14])
-        res = evaluator.eval(a=a)
-        gold = 3.14
-        assert res == gold
+    a = torch.tensor([3.14, 2.5, 3.2])
+    res = evaluator.eval(a=a)
+    gold = torch.tensor([3.14, 2.5, 3.2])
+    assert torch.all(torch.eq(res, gold))
 
-        a = torch.tensor([3.14,2.5,3.2])
-        res = evaluator.eval(a=a)
-        gold = torch.tensor([3.14,2.5,3.2])
-        assert torch.all(torch.eq(res, gold))
+    a = torch.tensor([-3.14, -2.5, -3.2])
+    res = evaluator.eval(a=a)
+    gold = torch.tensor([0, 0, 0])
+    assert torch.all(torch.eq(res, gold))
 
-        a = torch.tensor([-3.14, -2.5, -3.2])
-        res = evaluator.eval(a=a)
-        gold = torch.tensor([0, 0, 0])
-        assert torch.all(torch.eq(res, gold))
+    a = torch.tensor([-3.14, -2.5, 5.53, -3.2])
+    res = evaluator.eval(a=a)
+    gold = torch.tensor([0, 0, 5.53, 0])
+    assert torch.all(torch.eq(res, gold))
 
-        a = torch.tensor([-3.14, -2.5, 5.53, -3.2])
-        res = evaluator.eval(a=a)
-        gold = torch.tensor([0, 0, 5.53, 0])
-        assert torch.all(torch.eq(res, gold))
+    return
 
-        return
 
 def test_Reduce_NEW():
     tmp = gen_reduce_NEW()
     evaluator = NumEval(tmp)
 
     m = NodePrinter(tmp)
-
 
     a = torch.tensor([2, 4, 1, 3, 5])
     res = evaluator.eval(a=a)
@@ -362,18 +353,18 @@ def test_Reduce():
 
     evaluator = NumEval(tmp_x)
 
-    a = torch.tensor([2,4,1,3])
+    a = torch.tensor([2, 4, 1, 3])
     res = evaluator.eval(a=a)
 
     gold = 10
     assert res == gold
 
-    a = torch.tensor([1,2,3,9])
+    a = torch.tensor([1, 2, 3, 9])
     res = evaluator.eval(a=a)
     gold = 15
     assert res == gold
 
-    a = torch.tensor([1,2,3,9,-1,3.3,4.6, 12.3])
+    a = torch.tensor([1, 2, 3, 9, -1, 3.3, 4.6, 12.3])
     res = evaluator.eval(a=a)
     gold = 34.2
     assert res == gold
@@ -383,26 +374,27 @@ def test_Reduce():
     gold = 112.3
     assert res == gold
 
-    a = torch.tensor([[112,11],[1,10]])
+    a = torch.tensor([[112, 11], [1, 10]])
     res = evaluator.eval(a=a)
-    gold = torch.tensor([113,  21])
+    gold = torch.tensor([113, 21])
     assert torch.all(torch.eq(res, gold))
 
     evaluator_y = NumEval(tmp_y)
 
     a = torch.tensor([[112, 11], [1, 10]])
     res = evaluator_y.eval(a=a)
-    gold = torch.tensor([123,  11])
+    gold = torch.tensor([123, 11])
     assert torch.all(torch.eq(res, gold))
 
     evaluator_z = NumEval(tmp_z)
 
-    a = torch.tensor([[[11,112], [10,11]], [[1,2], [3,10]]])
+    a = torch.tensor([[[11, 112], [10, 11]], [[1, 2], [3, 10]]])
     res = evaluator_z.eval(a=a)
-    gold = torch.tensor([[123,21],[3,13]])
+    gold = torch.tensor([[123, 21], [3, 13]])
     assert torch.all(torch.eq(res, gold))
 
     return
+
 
 def test_add():
     tmp = gen_add()
@@ -410,25 +402,29 @@ def test_add():
 
     a = torch.tensor([100])
     b = torch.tensor([100])
-    #c = torch.tensor([100])
+    # c = torch.tensor([100])
     res = evaluator.eval(a=a, b=b)
-    #print(res)
+    # print(res)
     gold = torch.tensor([200])
     assert res == gold
 
-    a = torch.tensor([100,200,300])
-    b = torch.tensor([100,300,400])
+    a = torch.tensor([100, 200, 300])
+    b = torch.tensor([100, 300, 400])
     res = evaluator.eval(a=a, b=b)
-    gold = torch.tensor([200,500,700])
+    gold = torch.tensor([200, 500, 700])
     assert torch.all(torch.eq(res, gold))
     return
 
-test_Relu()
-#test_Reduce()
-#test_Reduce_NEW()
-test_dotproduct()
-test_select()
-test_length()
-test_matrix_mult()
-test_linearlayer()
-test_add()
+
+# test_Relu()
+test_Reduce()
+# test_Reduce_NEW()
+# test_dotproduct()
+# test_select()
+# test_length()
+# test_matrix_mult()
+# test_linearlayer()
+# test_add() 
+
+# Recursion limit hit with replacing Reduce with Add nodes
+# print(sys.getrecursionlimit())
