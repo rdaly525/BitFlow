@@ -8,13 +8,31 @@ import torch
 from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, Select, Output, Relu, Reduce, Concat
 from BitFlow.IA import Interval
 from BitFlow.Eval.TorchEval import TorchEval
-
+from BitFlow.AddRoundNodes import NodePrinter1
 from BitFlow.MNIST.MNIST_library import dot_product, matrix_multiply, linear_layer
+from BitFlow.AddRoundNodes import AddRoundNodes
 
 import torch.nn as nn
 
 
 # to create MNIST dag
+
+def update_dag(dag):
+    W = Input(name="W")
+    O = Input(name="O")
+
+    print("DAG before Round Nodes added:")
+    printer = NodePrinter1()
+    printer.run(dag)
+
+    addedRoundNode = AddRoundNodes(W, O)
+    newDag = addedRoundNode.doit(dag)
+
+    print("DAG after Round Nodes added:")
+    printer.run(newDag)
+
+    return newDag
+
 def gen_linearlayer(row, col, size):
     X = Input(name="X")
     W = Input(name="W")
@@ -28,9 +46,42 @@ def gen_linearlayer(row, col, size):
 def test_linearlayer():
     row = batch_size
     col = output_dim
-    size = hidden_dim
+    size = input_dim
+
     dag = gen_linearlayer(row, col, size)
-    return dag
+
+    X = torch.rand((batch_size, input_dim))
+    W = torch.rand((input_dim, output_dim))
+    O = torch.rand((output_dim))
+
+    print("EVAL Before Rounding")
+    evaluator = TorchEval(fig_casestudy)
+    res = evaluator.eval(X=X, W=W, bias=bias)
+    print("y value with full precision")
+    print(res)
+
+    newDag = update_dag(fig_casestudy)
+
+    X1 = torch.trunc(X)
+    W1 = torch.trunc(W)
+    O1 = torch.trunc(O)
+
+    print(W1)
+
+    bias = torch.rand((10))
+
+    print("EVAL After Rounding")
+    inputs1 = {"X": X1, "W": W1, "bias": bias, "O": O1}
+    # print(inputs1)
+
+    evaluator1 = TorchEval(newDag)
+
+    y_val = evaluator1.eval(**inputs1)
+
+    print("y value with rounded precision")
+    print(y_val)
+
+    return newDag
 
 
 class MNIST_Dag(nn.Module):
@@ -39,9 +90,9 @@ class MNIST_Dag(nn.Module):
         super().__init__()
 
         # Dimensions for input, hidden and output
+        self.input_dim = 100
         self.output_dim = 10
         self.hidden_dim = 784
-        self.batch_size = 100
 
         self.W = nn.Parameter(torch.ones(self.hidden_dim, self.output_dim, requires_grad=True))
         self.bias = nn.Parameter(torch.ones(self.output_dim, requires_grad=True))
