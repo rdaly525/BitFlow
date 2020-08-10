@@ -277,10 +277,6 @@ def generate_poly_approx(a, b, c, d, e):
 
 #     return
 
-def myfunc(x):
-    x = np.clip(x, -np.pi, +np.pi)
-    return np.sin(x)
-
 
 def generate_basic_lut():
     x = Input(name="x")
@@ -288,7 +284,7 @@ def generate_basic_lut():
     shift = Input(name="b")
 
     output = Add(Mul(amplitude, LookupTable(
-        myfunc, [-np.pi, np.pi], x)), shift, name="res")
+        np.sinh, [-np.pi, np.pi], x, numel=100)), shift, name="res")
 
     sin_dag = Dag(outputs=[output], inputs=[x, amplitude, shift])
 
@@ -304,15 +300,15 @@ def test_basic_lut():
         training_size=10000,
         testing_size=2000,
         batch_size=16,
-        lr=1e-2,
+        lr=1e-3,
         train_range=True,
-        range_lr=1e-2,
+        range_lr=1e-3,
         distribution=0,
         test_optimizer=False,
         incorporate_ulp_loss=False
     )
 
-    bf = BitFlow(dag, {"res": 5.}, {"x": (-2., 2.),
+    bf = BitFlow(dag, {"res": 4.}, {"x": (-2., 2.),
                                     "a": (1., 5.), "b": (-3, 3)}, **params)
     bf.train(epochs=5)
 
