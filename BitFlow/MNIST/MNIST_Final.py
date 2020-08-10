@@ -14,7 +14,7 @@ from BitFlow.MNIST.MNIST_library import dot_product, matrix_multiply, linear_lay
 import torch.nn as nn
 
 
-#to create MNIST dag
+# to create MNIST dag
 def gen_linearlayer(row, col, size):
     X = Input(name="X")
     W = Input(name="W")
@@ -44,22 +44,10 @@ class MNIST_Dag(nn.Module):
         self.output_dim = 10
         self.hidden_dim = 784
 
-        self.lr_rate = 1e-8
-
-        train_dataset = dsets.MNIST(root='./data', train=True, transform=transforms.ToTensor(), download=True)
-        test_dataset = dsets.MNIST(root='./data', train=False, transform=transforms.ToTensor())
-
-
         self.W = nn.Parameter(torch.ones(self.hidden_dim, self.output_dim, requires_grad=True))
         self.bias = nn.Parameter(torch.ones(self.output_dim, requires_grad=True))
 
-        self.batch_size = 100
-        self.n_iters = 3000
-        self.epochs = self.n_iters / (len(train_dataset) / self.batch_size)
-
         self.myparameters = nn.ParameterList([self.W, self.bias])
-
-        #self.register_parameter(name='W', param=torch.nn.Parameter(self.W))
 
     def gen_model(self, images, W, bias, input_dim, output_dim):
         """ Sets up a given dag for torch evaluation.
@@ -80,48 +68,12 @@ class MNIST_Dag(nn.Module):
 
     def forward(self, X):
         y1 = self.gen_model(X, self.W, self.bias, self.batch_size, self.output_dim)
-        #print("for")
-        #print(torch.sum(y1))
-
-
-        #Commented to debug Loss function dimension issue
-        #y2 = self.sigmoid(y1)
-        #y2 = torch.sum(y2, dim=1)
-
-
-        #return torch.softmax(y2, dim=0)
         return y1
-
-    # def backward(self, X, l, y2):
-    #     # Derivative of binary cross entropy cost w.r.t. final output y4
-    #     self.dC_dy2 = y2 - l
-    #
-    #     self.dy2_dy1 = self.sigmoid_first_order_derivative(y2)
-    #
-    #     self.y2_delta = self.dC_dy2 * self.dy2_dy1
-    #
-    #     self.dC_dw1 = torch.matmul(torch.t(X), self.y2_delta)
-    #
-    #     w_array = [self.dC_dw1 for _ in range(output_dim)]
-    #     self.dC_dw1 = torch.stack(w_array, dim=1)
-    #
-    #     self.W -= self.lr_rate * self.dC_dw1 * torch.ones(1, 10)
-
-    # def train(self, X, l):
-    #     print('entered TRAIN')
-    #     # Forward propagation
-    #     y = self.forward(X)
-    #
-    #     # Backward propagation and gradient descent
-    #     self.backward(X, l, y)
-    #
-    #     print(self.parameters())
 
 
 model = MNIST_Dag()
 lr_rate = .001
-optimizer = torch.optim.SGD(model.parameters(),lr=lr_rate)
-
+optimizer = torch.optim.SGD(model.parameters(), lr=lr_rate)
 
 batch_size = 100
 input_dim = 100
@@ -139,7 +91,6 @@ epochs = n_iters / (len(train_dataset) / batch_size)
 
 criterion = torch.nn.CrossEntropyLoss()
 
-
 print("STARTING TRAINING")
 iter = 0
 for epoch in range(int(epochs)):
@@ -149,9 +100,8 @@ for epoch in range(int(epochs)):
         labels = Variable(labels)
 
         outputs = model(images)
-        #print(torch.sum(outputs))
         loss = criterion(outputs, labels)
-        #print(loss)
+
         optimizer.zero_grad()
 
         loss.backward()
@@ -167,7 +117,6 @@ for epoch in range(int(epochs)):
                 images = Variable(images.view(-1, 28 * 28))
                 # outputs = model(images)
                 outputs = model(images)
-
 
                 _, predicted = torch.max(outputs.data, 1)
                 total += labels.size(0)
