@@ -104,7 +104,7 @@ class BitFlow:
 
             def __getitem__(self, index):
                 return {k: self.X[k][index] for k in data_range}, self.Y[index]
-
+m
         return Dataset(model, dataset_size, size_w, size_output, data_range, range_bits, true_width, dist)
 
     def update_dag(self, dag):

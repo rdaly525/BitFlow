@@ -44,8 +44,8 @@ def matrix_multiply(a: DagNode, b: DagNode, row, col, size):
     return Concat(*output_array, concat_dim=0)
 
 
-def linear_layer(X: DagNode, W: DagNode, bias: DagNode, batch_dim, output_dim, size):
-    y = matrix_multiply(X, W, batch_dim, output_dim, size)
+def linear_layer(X: DagNode, weight: DagNode, bias: DagNode, batch_dim, output_dim, size):
+    y = matrix_multiply(X, weight, batch_dim, output_dim, size)
 
     bias_array = [bias for _ in range(batch_dim)]
     with_bias = Concat(*bias_array, concat_dim=0)

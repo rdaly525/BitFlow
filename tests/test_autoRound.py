@@ -61,7 +61,7 @@ def gen_linearlayer(row, col, size):
 def gen_ex1():
     # (a * b) + (b * c)
     a = Input(name="a")
-    b = Input(name="b")
+    b = Input(name=b"b")
     c = Input(name="c")
     d = Mul(a, b, name="d")
     e = Mul(b, c, name="e")

@@ -17,96 +17,90 @@ import torch.nn as nn
 
 # to create MNIST dag
 
+
 def update_dag(dag):
+    """
+    Args:
+        dag: Input dag
+    Returns:
+        updated dag: A dag which BitFlow can be run on
+    """
     W = Input(name="W")
     O = Input(name="O")
 
-    print("DAG before Round Nodes added:")
-    printer = NodePrinter1()
-    printer.run(dag)
+    # print("DAG before Round Nodes added:")
+    # printer = NodePrinter1()
+    # printer.run(dag)
 
-    addedRoundNode = AddRoundNodes(W, O)
-    newDag = addedRoundNode.doit(dag)
+    rounder = AddRoundNodes(W, O)
+    roundedDag = rounder.doit(dag)
 
-    print("DAG after Round Nodes added:")
-    printer.run(newDag)
+    # print("DAG after Round Nodes added:")
+    # printer.run(roundedDag)
 
-    return newDag
+    return roundedDag
+
+    # return roundedDag, rounder.round_count, rounder.input_count, rounder.output_count
+
 
 def gen_linearlayer(row, col, size):
     X = Input(name="X")
-    W = Input(name="W")
+    weight = Input(name="weight")
     bias = Input(name="bias")
-    y = linear_layer(X, W, bias, row, col, size)
+    y = linear_layer(X, weight, bias, row, col, size)
 
-    fig = Dag(outputs=[y], inputs=[X, W, bias])
+    fig = Dag(outputs=[y], inputs=[X, weight, bias])
     return fig
 
 
 def test_linearlayer():
-    row = batch_size
-    col = output_dim
-    size = input_dim
-
+    row = 100
+    col = 10
+    size = 784
     dag = gen_linearlayer(row, col, size)
 
-    X = torch.rand((batch_size, input_dim))
-    W = torch.rand((input_dim, output_dim))
-    O = torch.rand((output_dim))
-
-    print("EVAL Before Rounding")
-    evaluator = TorchEval(fig_casestudy)
-    res = evaluator.eval(X=X, W=W, bias=bias)
-    print("y value with full precision")
-    print(res)
-
-    newDag = update_dag(fig_casestudy)
-
-    X1 = torch.trunc(X)
-    W1 = torch.trunc(W)
-    O1 = torch.trunc(O)
-
-    print(W1)
-
-    bias = torch.rand((10))
-
-    print("EVAL After Rounding")
-    inputs1 = {"X": X1, "W": W1, "bias": bias, "O": O1}
-    # print(inputs1)
-
-    evaluator1 = TorchEval(newDag)
-
-    y_val = evaluator1.eval(**inputs1)
-
-    print("y value with rounded precision")
-    print(y_val)
+    newDag = update_dag(dag)
+    print("ADD ROUNDED")
 
     return newDag
+    #return dag
+    #Return dag with round nodes instead
+    #return dag
+
+
+
+
 
 
 class MNIST_Dag(nn.Module):
 
-    def __init__(self, ):
+    def __init__(self,dag):
         super().__init__()
 
         # Dimensions for input, hidden and output
-        self.input_dim = 100
+
         self.output_dim = 10
         self.hidden_dim = 784
+        self.batch_size = 100
 
-        self.W = nn.Parameter(torch.ones(self.hidden_dim, self.output_dim, requires_grad=True))
+        self.weight = nn.Parameter(torch.ones(self.hidden_dim, self.output_dim, requires_grad=True))
         self.bias = nn.Parameter(torch.ones(self.output_dim, requires_grad=True))
 
-        self.myparameters = nn.ParameterList([self.W, self.bias])
+        self.W = nn.Parameter(torch.ones(self.hidden_dim, self.output_dim, requires_grad=True))
+        self.O = nn.Parameter(torch.ones(self.output_dim, requires_grad=True))
 
-    def gen_model(self, images, W, bias, input_dim, output_dim):
+        self.myparameters = nn.ParameterList([self.weight, self.bias])
+
+    def gen_model(self,**kwargs):
         """ Sets up a given dag for torch evaluation.
         Args: Input dag (should already have Round nodes)
         Returns: A trainable model
         """
-        self.evaluator = TorchEval(test_linearlayer())
+        evaluator = TorchEval(dag)
 
-        return self.evaluator.eval(X=images, W=W, bias=bias, row=input_dim, col=output_dim, size=input_dim)
+        #return self.evaluator.eval(X=images, weight=weight, bias=bias, row=input_dim, col=output_dim, size=input_dim)
+        #print(kwargs)
+        return evaluator.eval(**kwargs)
 
     def sigmoid(self, s):
         return 1 / (1 + torch.exp(-s))
@@ -117,11 +111,13 @@ class MNIST_Dag(nn.Module):
         # Forward propagation
 
     def forward(self, X):
-        y1 = self.gen_model(X, self.W, self.bias, self.batch_size, self.output_dim)
+        inputs= {"X": X, "weight":self.weight,"bias": self.bias, "row":self.batch_size, "col":self.output_dim, "size": hidden_dim, "W":self.W,"O": self.O}
+        #y1 = self.gen_model(X, self.weight, self.bias, self.batch_size, self.output_dim, self.W, self.O)
+        y1 = self.gen_model(**inputs)
         return y1
 
-
-model = MNIST_Dag()
+dag = test_linearlayer()
+model = MNIST_Dag(dag)
 lr_rate = .001
 optimizer = torch.optim.SGD(model.parameters(), lr=lr_rate)
 
@@ -149,8 +145,14 @@ for epoch in range(int(epochs)):
         images = Variable(images.view(-1, 28 * 28))
         labels = Variable(labels)
 
-        outputs = model(images)
+        # inputs["W"] = W
+        # inputs["O"] = O
+
+        inputs = {"X":images}
+        outputs = model(**inputs)
+        #outputs = model(X=images)
         loss = criterion(outputs, labels)
+        print(loss)
 
         optimizer.zero_grad()
 
