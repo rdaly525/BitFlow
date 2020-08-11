@@ -16,6 +16,17 @@ class LUTGenerator:
             x = x + delta
         self.lut = lut
         self.domain = domain
+        self.func = func
+
+    def regen(self, numel, domain):
+        lut = {}
+        delta = (domain[1] - domain[0])/(1. * numel - 1)
+        x = domain[0]
+        while x <= domain[1] + delta/2.:
+            lut[x] = self.func(x)
+            x = x + delta
+        self.lut = lut
+        self.domain = domain
 
     def __getitem__(self, x):
         if isinstance(x, torch.Tensor):

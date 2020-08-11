@@ -4,7 +4,7 @@ from .Eval.IAEval import IAEval
 from .Eval.NumEval import NumEval
 from .Eval.TorchEval import TorchEval
 from .Optimization import BitFlowVisitor, BitFlowOptimizer
-from .AddRoundNodes import AddRoundNodes
+from .AddRoundNodes import AddRoundNodes, LookupTableTransformer
 from .utils import GeneratedDataset
 
 import torch
@@ -26,6 +26,7 @@ class BitFlow:
         Args: Input dag (should already have Round nodes)
         Returns: A trainable model
         """
+        self.transformed_dag = dag
         self.evaluator = TorchEval(dag)
         return self.make_model
 
@@ -542,8 +543,11 @@ class BitFlow:
         print(f"RANGE: {R}")
         print(f"ORDER: {filtered_vars}")
 
+        LUTTransformer = LookupTableTransformer(P, R, filtered_vars)
+        model = self.gen_model(LUTTransformer.doit(self.transformed_dag))
+
         self.calc_accuracy("TEST", test_gen, P, R,
-                           O, model, True)
+                           O, model, False)
 
         self.calc_ulp("TEST", test_gen, P, R,
                       O, model)

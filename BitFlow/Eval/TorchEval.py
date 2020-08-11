@@ -60,7 +60,10 @@ class TorchEval(AbstractEval):
             return a[:, node.index]
 
     def eval_LookupTable(self, a, node: LookupTable):
-        return node.lut[a]
+        if hasattr(node, 'lut'):
+            return node.lut[a]
+        else:
+            return getattr(t, node.func.__name__)(a)
 
 
 # PRECISION: tensor([18, 12, 17, 17, 10, 17, 17, 20, 11, 20, 18, 17, 18, 17, 17, 17, 17, 17,

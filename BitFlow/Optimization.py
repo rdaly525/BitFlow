@@ -114,13 +114,19 @@ class BitFlowVisitor(Visitor):
 
         self.handleIB(node)
         input_signal = self.getChildren(node)
+        node.child = input_signal
         self.errors[node.name] = PrecisionNode(
             self.node_values[node], node.name, [])
 
         if self.calculate_IB:
-            self.area_fn += f"+1 * ({node.numel}) * ({node.name} + {self.IBs[node.name]})"
+            self.area_fn += f"+1 * (2 ** ({self.IBs[input_signal.name]} + {input_signal.name})) * ({node.name} + {self.IBs[node.name]})"
         else:
-            self.area_fn += f"+1 * ({node.numel}) * ({node.name} + {node.name}_ib)"
+            self.area_fn += f"+1 * (2 ** ({input_signal.name} + {input_signal.name}_ib)) * ({node.name} + {node.name}_ib)"
+
+        # if self.calculate_IB:
+        #     self.area_fn += f"+1 * ({node.numel}) * ({node.name} + {self.IBs[node.name]})"
+        # else:
+        #     self.area_fn += f"+1 * ({node.numel}) * ({node.name} + {node.name}_ib)"
 
 
 class BitFlowOptimizer():

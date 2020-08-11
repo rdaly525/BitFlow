@@ -99,11 +99,11 @@ class Round(DagNode):
 
 
 class LookupTable(DagNode):
-    def __init__(self, func, domain, a: DagNode, name=None, numel=100):
-        self.numel = numel
-        self.lut = LUTGenerator(func, domain, numel=numel)
+    def __init__(self, func, domain, a: DagNode, name=None):
+        self.func = func
+        self.domain = domain
         if name is None:
-            name = f"lookup_{a.name}_{numel}"
+            name = f"lookup_{a.name}_{func.__name__}"
         super().__init__(name, a)
 
 

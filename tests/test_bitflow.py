@@ -284,7 +284,8 @@ def generate_basic_lut():
     shift = Input(name="b")
 
     output = Add(Mul(amplitude, LookupTable(
-        np.sinh, [-np.pi, np.pi], x, numel=100)), shift, name="res")
+        np.sin, [-np.pi, np.pi], x)), shift, name="res")
+    # output = Add(Mul(amplitude, x), shift, name="res")
 
     sin_dag = Dag(outputs=[output], inputs=[x, amplitude, shift])
 
@@ -297,20 +298,20 @@ def test_basic_lut():
     dag = generate_basic_lut()
 
     params = dict(
-        training_size=10000,
+        training_size=20000,
         testing_size=2000,
-        batch_size=16,
-        lr=1e-3,
+        batch_size=32,
+        lr=1e-2,
         train_range=True,
-        range_lr=1e-3,
+        range_lr=1e-2,
         distribution=0,
         test_optimizer=False,
         incorporate_ulp_loss=False
     )
 
-    bf = BitFlow(dag, {"res": 4.}, {"x": (-2., 2.),
+    bf = BitFlow(dag, {"res": 8.}, {"x": (-2., 2.),
                                     "a": (1., 5.), "b": (-3, 3)}, **params)
-    bf.train(epochs=5)
+    bf.train(epochs=10)
 
     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
 

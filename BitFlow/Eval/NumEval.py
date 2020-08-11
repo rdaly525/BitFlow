@@ -19,4 +19,7 @@ class NumEval(AbstractEval):
         return a[node.index]
 
     def eval_LookupTable(self, a, node: LookupTable):
-        return node.lut[a]
+        if hasattr(node, 'lut'):
+            return node.lut[a]
+        else:
+            return node.func(a)

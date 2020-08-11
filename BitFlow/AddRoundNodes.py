@@ -2,7 +2,37 @@ from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, DagNode, Round, Ou
 from DagVisitor import Visitor, Transformer, AbstractDag
 from BitFlow.IA import Interval
 from BitFlow.Eval import IAEval, NumEval, AbstractEval
+from BitFlow.utils import LUTGenerator
 import torch
+
+
+class LookupTableTransformer(Transformer):
+    def __init__(self, P, R, order):
+        self.P = P
+        self.R = R
+        self.order = order
+
+    def doit(self, dag: Dag):
+        self.run(dag)
+        return Dag(outputs=dag.outputs, inputs=dag.inputs)
+
+    def generic_visit(self, node: DagNode):
+        Transformer.generic_visit(self, node)
+        if isinstance(node, LookupTable):
+
+            child = node.child
+            child_index = self.order.index(child.name)
+            child_bits = self.P[child_index] + self.R[child_index]
+
+            num_entries = 2 ** (child_bits)
+            print(f"NUM_ENTRIES: {num_entries}")
+            lut = LUTGenerator(node.func, node.domain, numel=num_entries)
+            node.lut = lut
+            return node
+
+            #  (2 ** ({input_signal.name} + {input_signal.name}_ib)) * ({node.name} + {node.name}_ib)
+        else:
+            return node
 
 
 class AddRoundNodes(Transformer):
@@ -52,6 +82,13 @@ class AddRoundNodes(Transformer):
             self.range_count += 1
 
             return returnNode
+
+        # elif isinstance(node, LookupTable):
+
+        #     self.round_count += 1
+        #     self.range_count += 1
+
+        #     return node
 
         elif (node in self.allroots):
 
