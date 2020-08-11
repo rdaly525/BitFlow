@@ -311,7 +311,7 @@ def test_basic_lut():
 
     bf = BitFlow(dag, {"res": 8.}, {"x": (-2., 2.),
                                     "a": (1., 5.), "b": (-3, 3)}, **params)
-    bf.train(epochs=10)
+    bf.train(epochs=1)
 
     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
 
