@@ -298,8 +298,8 @@ def test_basic_lut():
     dag = generate_basic_lut()
 
     params = dict(
-        training_size=20000,
-        testing_size=2000,
+        training_size=2000,
+        testing_size=200,
         batch_size=32,
         lr=1e-2,
         train_range=True,
@@ -311,7 +311,7 @@ def test_basic_lut():
 
     bf = BitFlow(dag, {"res": 8.}, {"x": (-2., 2.),
                                     "a": (1., 5.), "b": (-3, 3)}, **params)
-    bf.train(epochs=1)
+    bf.train(epochs=0)
 
     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
 
