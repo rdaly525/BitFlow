@@ -22,34 +22,34 @@ class TorchEval(AbstractEval):
         return a * b
 
     def eval_Round(self, a, prec, rng, node: DagNode):
-        scale = 2.0**prec
+        scale = 2.0**(prec)
         precise = IntRound(a * scale)/scale
         precise = precise.float()
 
         # saturate value to range
-        max_prec = sum([2 ** -(p+1) for p in range(int(prec.item()))]) * 1.
+        prec = prec.float()
+        rng = rng.float()
+        min_val = -1 * (2 ** (prec + rng - 1)) * \
+            2 ** -prec
+        max_val = (2 ** (prec + rng - 1) - 1) * 2 ** -prec
 
-        if rng > 0.:
-            min_val = -1 * (2 ** (rng - 1)) - max_prec
-            max_val = 2 ** (rng - 1) - 1 + max_prec
+        if t.numel(precise[precise > max_val]) > 0:
+            self.saturation = self.saturation + t.sum(precise[precise > max_val] -
+                                                      max_val)/t.numel(precise[precise > max_val])
 
-            if t.numel(precise[precise > max_val]) > 0:
-                self.saturation = self.saturation + t.sum(precise[precise > max_val] -
-                                                          max_val)/t.numel(precise[precise > max_val])
+        if t.numel(precise[precise < min_val]) > 0:
+            self.saturation = self.saturation + t.sum(t.abs(precise[precise < min_val] -
+                                                            min_val))/t.numel(precise[precise < min_val])
 
-            if t.numel(precise[precise < min_val]) > 0:
-                self.saturation = self.saturation + t.sum(t.abs(precise[precise < min_val] -
-                                                                min_val))/t.numel(precise[precise < min_val])
+        # if rng <= 0.01:
+        #     print(f"{rng}.{prec}")
+        #     print(f"=>  [{min_val, max_val}]")
+        #     print(a)
+        #     print(self.saturation)
+        #     assert 0
 
-            # if rng <= 0.01:
-            #     print(f"{rng}.{prec}")
-            #     print(f"=>  [{min_val, max_val}]")
-            #     print(a)
-            #     print(self.saturation)
-            #     assert 0
-
-            precise[precise > max_val] = max_val
-            precise[precise < min_val] = min_val
+        precise[precise > max_val] = max_val
+        precise[precise < min_val] = min_val
 
         return precise
 

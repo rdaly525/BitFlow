@@ -19,14 +19,21 @@ class LookupTableTransformer(Transformer):
     def generic_visit(self, node: DagNode):
         Transformer.generic_visit(self, node)
         if isinstance(node, LookupTable):
-
             child = node.child
             child_index = self.order.index(child.name)
-            child_bits = self.P[child_index] + self.R[child_index]
+            child_precision = int(self.P[child_index])
+            child_range = int(self.R[child_index])
 
-            num_entries = 2 ** (child_bits)
-            print(f"NUM_ENTRIES: {num_entries}")
-            lut = LUTGenerator(node.func, node.domain, numel=num_entries)
+            min_val = -1 * (2 ** (child_precision + child_range - 1)) * \
+                2 ** -child_precision
+            max_val = (2 ** (child_precision + child_range - 1) - 1) * \
+                2 ** -child_precision
+
+            num_entries = 2 ** (child_precision + child_range)
+            print(
+                f"LOOKUP TABLE: [{min_val}, {max_val}] with {num_entries} entries")
+            lut = LUTGenerator(
+                node.func, [min_val, max_val], numel=num_entries)
             node.lut = lut
             return node
 

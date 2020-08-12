@@ -2,6 +2,7 @@ from DagVisitor import Visited, AbstractDag
 from BitFlow.utils import LUTGenerator
 import abc
 import typing as tp
+import random
 
 
 # Passes will be run on this
@@ -56,7 +57,7 @@ class Constant(DagNode):
     def __init__(self, value, name=None):
         self.value = value
         if name is None:
-            name = str(value)
+            name = f"Constant_{random.randint(0, 100000)}"
         super().__init__(name)
 
 
@@ -99,9 +100,8 @@ class Round(DagNode):
 
 
 class LookupTable(DagNode):
-    def __init__(self, func, domain, a: DagNode, name=None):
+    def __init__(self, func, a: DagNode, name=None):
         self.func = func
-        self.domain = domain
         if name is None:
             name = f"lookup_{a.name}_{func.__name__}"
         super().__init__(name, a)

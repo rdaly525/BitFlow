@@ -6,6 +6,12 @@ import torch
 from torch.utils import data
 
 
+class TwosComplement:
+    def __init__(self, prec, rng):
+        max_val = (2 ** (prec + rng - 1) - 1) * 2 ** -prec
+        min_val = (2 ** (prec + rng - 1)) * 2 ** -prec
+
+
 class LUTGenerator:
     def __init__(self, func, domain, numel=25):
         lut = {}
@@ -29,19 +35,23 @@ class LUTGenerator:
         self.domain = domain
 
     def __getitem__(self, x):
+        # print(f"Looking for {torch.sin(x)}...")
         if isinstance(x, torch.Tensor):
             x = torch.clamp(x, self.domain[0], self.domain[1])
             if torch.numel(x) == 1:
                 closest = min(self.lut.keys(), key=lambda true: abs(true-x))
+                # print(f"Found {self.lut[closest]}...")
                 return self.lut[closest]
             for (ind, val) in enumerate(x):
                 closest = min(self.lut.keys(), key=lambda true: abs(true-val))
                 x[ind] = self.lut[closest]
+            # print(f"Found {x}...")
             return x
 
         else:
             x = np.clip(x, self.domain[0], self.domain[1])
             closest = min(self.lut.keys(), key=lambda true: abs(true-x))
+            # print(f"Found {self.lut[closest]}...")
             return self.lut[closest]
 
     def __str__(self):
