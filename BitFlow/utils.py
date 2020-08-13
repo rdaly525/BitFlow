@@ -105,7 +105,7 @@ class DatasetWrapper(data.Dataset):
 
 
 class GeneratedDataset(data.Dataset):
-    def __init__(self, model, dataset_size, size_p, size_r, size_output, data_range, range_bits, true_width, dist):
+    def __init__(self, model, dataset_size, size_p, size_r, size_output, data_range, true_width, dist):
         self.X = {k: [] for k in data_range}
         self.Y = []
         self.data_range = data_range
@@ -118,29 +118,27 @@ class GeneratedDataset(data.Dataset):
             # Create random tensor
             input_range = data_range[key]
 
-            # calculate range bounds using range bits
-            ib = range_bits[key]
-            min_range = -1 * (2 ** (ib - 1))
-            max_range = 2 ** (ib - 1) - 1
-
-            val = 0
-            if dist == 1:
-                mean = (input_range[1]+input_range[0])/2
-                std = (mean - input_range[0])/3
-                val = torch.normal(
-                    mean=mean, std=std, size=(1, dataset_size)).squeeze()
-            elif dist == 2:
-                beta = torch.distributions.beta.Beta(
-                    torch.tensor([0.5]), torch.tensor([0.5]))
-                val = (input_range[1] - input_range[0]) * \
-                    beta.sample((dataset_size,)).squeeze() + \
-                    input_range[0]
+            if isinstance(input_range, list):
+                self.X[key] = (input_range[1] - input_range[0]) * \
+                    torch.rand(dataset_size, input_range) + input_range[0]
             else:
-                val = (input_range[1] - input_range[0]) * \
-                    torch.rand(dataset_size) + input_range[0]
+                val = 0
+                if dist == 1:
+                    mean = (input_range[1]+input_range[0])/2
+                    std = (mean - input_range[0])/3
+                    val = torch.normal(
+                        mean=mean, std=std, size=(1, dataset_size)).squeeze()
+                elif dist == 2:
+                    beta = torch.distributions.beta.Beta(
+                        torch.tensor([0.5]), torch.tensor([0.5]))
+                    val = (input_range[1] - input_range[0]) * \
+                        beta.sample((dataset_size,)).squeeze() + \
+                        input_range[0]
+                else:
+                    val = (input_range[1] - input_range[0]) * \
+                        torch.rand(dataset_size) + input_range[0]
 
-            val = torch.clamp(val, min_range, max_range)
-            self.X[key] = val
+                self.X[key] = val
 
         for i in range(dataset_size):
             inputs = {k: self.X[k][i] for k in data_range}

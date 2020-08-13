@@ -28,8 +28,15 @@ class BitFlowVisitor(Visitor):
                 if (x == 0.):
                     self.IBs[node.name] = 1
                     return
-                alpha = 2 if (log2(abs(x)).is_integer()) else 1
-                ib = ceil(log2(abs(x))) + alpha
+                elif isinstance(x, list):
+                    for (ind, val) in enumerate(x):
+                        alpha = 2 if (log2(abs(val)).is_integer()) else 1
+                        ib = ceil(log2(abs(val))) + alpha
+                        self.IBs[f"{node.name}_getitem_{ind}"] = ib
+                    return
+                else:
+                    alpha = 2 if (log2(abs(x)).is_integer()) else 1
+                    ib = ceil(log2(abs(x))) + alpha
             self.IBs[node.name] = int(ib)
 
     def getChildren(self, node):
@@ -51,7 +58,12 @@ class BitFlowVisitor(Visitor):
             else:
                 val = self.node_values[node]
 
-            self.errors[node.name] = PrecisionNode(val, node.name, [])
+            if isinstance(val, list):
+                for (ind, selected) in enumerate(val):
+                    self.errors[f"{node.name}_getitem_{ind}"] = PrecisionNode(
+                        selected, f"{node.name}_{ind}", [])
+            else:
+                self.errors[node.name] = PrecisionNode(val, node.name, [])
 
     def visit_Select(self, node: Select):
         Visitor.generic_visit(self, node)
@@ -115,11 +127,11 @@ class BitFlowVisitor(Visitor):
         self.handleIB(node)
         input_signal = self.getChildren(node)
         node.child = input_signal
-        self.errors[node.name] = PrecisionNode(
-            self.node_values[node], node.name, [])
 
         if self.calculate_IB:
             self.area_fn += f"+1 * (2 ** ({self.IBs[input_signal.name]} + {input_signal.name})) * ({node.name} + {self.IBs[node.name]})"
+            self.errors[node.name] = PrecisionNode(
+                self.node_values[node], node.name, [])
         else:
             self.area_fn += f"+1 * (2 ** ({input_signal.name} + {input_signal.name}_ib)) * ({node.name} + {node.name}_ib)"
 
@@ -152,13 +164,13 @@ class BitFlowOptimizer():
         self.vars = vars
 
     def calculateInitialValues(self):
-        #print("CALCULATING INITIAL VALUES USING UFB METHOD...")
+        # print("CALCULATING INITIAL VALUES USING UFB METHOD...")
         # bnd = f"{-2**(-self.output_precision-1)} == 0"
         bnd = ""
         for output in self.outputs:
             bnd += f"{-2**(-self.outputs[output]-1)}"
         self.ufb_fn += bnd
-        #print(f"UFB EQ: {self.ufb_fn}")
+        # print(f"UFB EQ: {self.ufb_fn}")
         # print(f"-----------")
 
         exec(f'''def UFBOptimizerFn(UFB):

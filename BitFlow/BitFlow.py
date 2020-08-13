@@ -46,7 +46,7 @@ class BitFlow:
                     P[index] = math.ceil(weight)
         return torch.tensor(P)
 
-    def gen_data(self, model, dataset_size, size_p, size_r, size_output, data_range, range_bits, true_width=20., dist=0):
+    def gen_data(self, model, dataset_size, size_p, size_r, size_output, data_range, true_width=20., dist=0):
         """ Generates ground-truth data from user specifications and model.
         Args:
             model: A dag already set up for torch evaluatiion
@@ -62,7 +62,7 @@ class BitFlow:
             (X, Y): generated data
         """
 
-        return GeneratedDataset(model, dataset_size, size_p, size_r, size_output, data_range, range_bits, true_width, dist)
+        return GeneratedDataset(model, dataset_size, size_p, size_r, size_output, data_range, true_width, dist)
 
     def update_dag(self, dag):
         """
@@ -223,30 +223,36 @@ class BitFlow:
 
     #     return filtered_vars
 
-    def calculateRange(self, evaluator, outputs):
-        node_values = evaluator.node_values
-        visitor = BitFlowVisitor(node_values)
-        visitor.run(evaluator.dag)
+    # def calculateRange(self, evaluator, outputs):
+    #     node_values = evaluator.node_values
+    #     visitor = BitFlowVisitor(node_values)
+    #     visitor.run(evaluator.dag)
 
-        range_bits = visitor.IBs
-        return range_bits
+    #     range_bits = visitor.IBs
+    #     return range_bits
 
     def constructOptimizationFunctions(self, dag, outputs, data_range):
         evaluator = NumEval(dag)
 
         eval_dict = data_range.copy()
+
         for key in eval_dict:
-            eval_dict[key] = int(max(abs(eval_dict[key][0]),
-                                     abs(eval_dict[key][1])))
+            if isinstance(eval_dict[key], list):
+                for (ind, val) in enumerate(eval_dict[key]):
+                    eval_dict[key][ind] = int(max(abs(val[0]),
+                                                  abs(val[1])))
+            else:
+                eval_dict[key] = int(max(abs(eval_dict[key][0]),
+                                         abs(eval_dict[key][1])))
         self.eval_dict = eval_dict
 
         evaluator.eval(**eval_dict)
 
-        range_bits = self.calculateRange(evaluator, outputs)
+        #range_bits = self.calculateRange(evaluator, outputs)
 
         bfo = BitFlowOptimizer(evaluator, outputs)
         bfo.calculateInitialValues()
-        return bfo, range_bits
+        return bfo
 
     def createExecutableConstraintFunctions(self, area_fn, error_fn, filtered_vars):
         exec(f'''def AreaOptimizerFn(P):
@@ -257,17 +263,17 @@ class BitFlow:
              {','.join(filtered_vars)} = x
              return  {error_fn}''', globals())
 
-    def initializeData(self, model, training_size, testing_size, num_precision, num_range, output_size, data_range, range_bits, batch_size, distribution):
+    def initializeData(self, model, training_size, testing_size, num_precision, num_range, output_size, data_range, batch_size, distribution):
         data_params = dict(
             batch_size=batch_size
         )
 
         # generate testing/training data
         training_set = self.gen_data(
-            model, training_size, num_precision, num_range, output_size, data_range, range_bits, dist=distribution)
+            model, training_size, num_precision, num_range, output_size, data_range, dist=distribution)
         train_gen = data.DataLoader(training_set, **data_params)
         test_set = self.gen_data(
-            model, testing_size, num_precision, num_range, output_size, data_range, range_bits, dist=distribution)
+            model, testing_size, num_precision, num_range, output_size, data_range, dist=distribution)
         test_gen = data.DataLoader(test_set, **data_params)
 
         return train_gen, test_gen
@@ -335,6 +341,8 @@ class BitFlow:
         loss = 0
         if error_type == 1:
 
+            # If the error is met, turn off the error. If the error is not met, turn on the error.
+
             # Calculate erros
             constraint_err = ErrorConstraintFn(unpacked_P)
             ulp_err = torch.sum(self.ulp(y, target, O))
@@ -346,7 +354,7 @@ class BitFlow:
                         f"ERR NEGATIVE: {constraint_err}, {P}, {area}")
 
             # If ulp error is reasonable, relax error constraints
-            S = 1
+            S = 1./self.num_nodes
             decay = 0.95
             if constraint_err > 0 and self.L > 1e-10:
                 self.prevL = self.L
@@ -354,9 +362,8 @@ class BitFlow:
             else:
                 self.L = self.initL
 
-            Q = 100
             loss = (self.L * torch.exp(-1000 * constraint_err) +
-                    S * area + torch.sum(torch.exp(-1000 * R)) + torch.sum(torch.exp(-1000 * P)))/batch_size
+                    S * area + torch.sum(torch.exp(-1000 * R)) + torch.sum(torch.exp(-1000 * P)))/(batch_size)
 
             if incorporate_ulp_loss:
                 loss = loss + ulp_err/batch_size
@@ -402,12 +409,14 @@ class BitFlow:
         self.original_dag = copy.deepcopy(dag)
 
         # Run a basic evaluator on the DAG to construct error and area functions
-        bfo, range_bits = self.constructOptimizationFunctions(
+        bfo = self.constructOptimizationFunctions(
             dag, outputs, data_range)
 
         # Update the dag with round nodes and set up the model for torch training
         dag, num_precision, num_inputs, num_outputs, num_range, ordered_list = self.update_dag(
             dag)
+
+        self.num_nodes = len(ordered_list)
 
         filtered_vars = []
         for el in ordered_list:
@@ -428,7 +437,7 @@ class BitFlow:
         test_gen = None
         if custom_data is None:
             train_gen, test_gen = self.initializeData(model, training_size, testing_size,
-                                                      num_precision, num_range, num_outputs, data_range, range_bits, batch_size, distribution)
+                                                      num_precision, num_range, num_outputs, data_range, batch_size, distribution)
         else:
             train_gen = custom_data[0]
             test_gen = custom_data[1]
@@ -493,8 +502,7 @@ class BitFlow:
             [{"params": P}, {"params": R, "lr": range_lr}], lr=lr)
 
         lr_decay = 0.5
-        scheduler = torch.optim.lr_scheduler.StepLR(
-            optimizer=opt, step_size=5, gamma=lr_decay)
+        #scheduler = torch.optim.lr_scheduler.StepLR(optimizer=opt, step_size=5, gamma=lr_decay)
 
         device = torch.device(
             "cuda:0" if torch.cuda.is_available() else "cpu")
@@ -526,7 +534,7 @@ class BitFlow:
                 loss.backward()
                 opt.step()
                 iter += 1
-            scheduler.step()
+            # scheduler.step()
 
         if graph_loss:
             plt.plot(loss_values)

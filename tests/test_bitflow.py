@@ -1,4 +1,4 @@
-from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, LookupTable
+from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, LookupTable, Select
 from DagVisitor import Visitor
 from BitFlow.IA import Interval
 from BitFlow.Eval import IAEval, NumEval
@@ -49,27 +49,27 @@ def gen_ex1():
     return dag
 
 
-# def test_fig3():
+def test_fig3():
 
-#     t0 = time.time()
+    t0 = time.time()
 
-#     dag = gen_fig3()
+    dag = gen_fig3()
 
-#     bf = BitFlow(dag, {"z": 8.}, {'a': (-3., 2.),
-#                                   'b': (4., 8.)}, lr=1e-2, range_lr=1e-2, train_range=True, training_size=10000, testing_size=2000, distribution=0, incorporate_ulp_loss=False, batch_size=32)
-#     bf.train(epochs=10)
+    bf = BitFlow(dag, {"z": 8.}, {'a': (-3., 2.),
+                                  'b': (4., 8.)}, lr=1e-2, range_lr=1e-2, train_range=True, training_size=10000, testing_size=2000, distribution=0, incorporate_ulp_loss=False, batch_size=32)
+    bf.train(epochs=10)
 
-#     # # check saving object works
-#     # BitFlow.save("./models/fig3", bf)
-#     # new_bf = BitFlow.load("./models/fig3")
+    # # check saving object works
+    # BitFlow.save("./models/fig3", bf)
+    # new_bf = BitFlow.load("./models/fig3")
 
-#     # new_bf.train(epochs=5)
+    # new_bf.train(epochs=5)
 
-#     # assert new_bf.range_lr == bf.range_lr
+    # assert new_bf.range_lr == bf.range_lr
 
-#     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
+    print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
 
-#     return
+    return
 
 
 # def test_ex1():
@@ -300,18 +300,18 @@ def test_basic_lut():
     params = dict(
         training_size=10000,
         testing_size=2000,
-        batch_size=32,
-        lr=5e-4,
+        batch_size=16,
+        lr=1e-3,
         train_range=True,
-        range_lr=5e-4,
+        range_lr=1e-3,
         distribution=0,
         test_optimizer=False,
-        incorporate_ulp_loss=False
+        incorporate_ulp_loss=True
     )
 
     bf = BitFlow(dag, {"res": 4.}, {"x": (-2., 2.),
                                     "a": (1., 5.), "b": (-3, 3)}, **params)
-    bf.train(epochs=20)
+    bf.train(epochs=10)
 
     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
 
@@ -319,3 +319,33 @@ def test_basic_lut():
     print(bf.model(**test))
 
     return
+
+# def generate_vector_example():
+#     X = Input(name="X")
+
+#     out = Add(Select(X, 0), Select(X, 1), name="res")
+
+#     dag = Dag(outputs=[out], inputs=[X])
+
+#     return dag
+
+
+# def test_vector_ex():
+#     dag = generate_vector_example()
+
+#     params = dict(
+#         training_size=10000,
+#         testing_size=2000,
+#         batch_size=16,
+#         lr=1e-3,
+#         train_range=True,
+#         range_lr=1e-3,
+#         distribution=0,
+#         test_optimizer=False,
+#         incorporate_ulp_loss=True
+#     )
+
+#     bf = BitFlow(dag, {"res": 4.}, {"X": [(0., 1.), (0., 1.)]}, **params)
+#     bf.train(epochs=10)
+
+#     return

@@ -6,6 +6,11 @@ from BitFlow.utils import LUTGenerator
 import torch
 
 
+class VectorInputTransformer(Transformer):
+    def generic_visit(self, node: DagNode):
+        Transformer.generic_visit(self, node)
+
+
 class LookupTableTransformer(Transformer):
     def __init__(self, P, R, order):
         self.P = P

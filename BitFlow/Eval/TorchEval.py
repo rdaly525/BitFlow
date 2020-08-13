@@ -34,12 +34,12 @@ class TorchEval(AbstractEval):
         max_val = (2 ** (prec + rng - 1) - 1) * 2 ** -prec
 
         if t.numel(precise[precise > max_val]) > 0:
-            self.saturation = self.saturation + t.sum(precise[precise > max_val] -
-                                                      max_val)/t.numel(precise[precise > max_val])
+            self.saturation = self.saturation + (t.sum(precise[precise > max_val] -
+                                                       max_val)/t.numel(precise[precise > max_val])) * 2 ** prec
 
         if t.numel(precise[precise < min_val]) > 0:
-            self.saturation = self.saturation + t.sum(t.abs(precise[precise < min_val] -
-                                                            min_val))/t.numel(precise[precise < min_val])
+            self.saturation = self.saturation + (t.sum(t.abs(precise[precise < min_val] -
+                                                             min_val))/t.numel(precise[precise < min_val])) * 2 ** prec
 
         # if rng <= 0.01:
         #     print(f"{rng}.{prec}")
@@ -57,6 +57,7 @@ class TorchEval(AbstractEval):
         if len(a.shape) == 1:
             return a[node.index]
         else:
+            print(a)
             return a[:, node.index]
 
     def eval_LookupTable(self, a, node: LookupTable):
