@@ -63,7 +63,7 @@ class BitFlowVisitor(Visitor):
                 error_mat.append([])
                 for col in range(28):
                     error_mat[row].append(PrecisionNode(
-                        1., f"input_{row}_{col}", []))
+                        1., f"{node.name}_input_{row}_{col}", []))
             print(node.name)
             self.errors[node.name] = error_mat
             return
@@ -203,7 +203,6 @@ class BitFlowOptimizer():
         self.error_fn = ""
         self.ufb_fn = ""
         self.optim_error_fn = " >= "
-        print(visitor.area_fn)
         for output in outputs:
             self.error_fn += f"+2**(-{outputs[output]}-1) - (" + \
                 visitor.errors[output].getExecutableError() + ")"
@@ -213,6 +212,9 @@ class BitFlowOptimizer():
             self.ufb_fn += visitor.errors[output].getExecutableUFB()
         self.area_fn = visitor.area_fn[1:]
         self.outputs = outputs
+
+        print(f"ERROR EQ: {self.error_fn}")
+        print(f"AREA EQ: {self.area_fn}")
 
         vars = list(visitor.node_values)
         for (i, var) in enumerate(vars):
