@@ -78,7 +78,7 @@ class BitFlow:
         rounder = AddRoundNodes(P, R, O)
         roundedDag = rounder.doit(dag)
 
-        return roundedDag, rounder.round_count, rounder.input_count, rounder.output_count, rounder.range_count, rounder.order
+        return roundedDag, rounder.round_count, rounder.input_count, rounder.output_count, rounder.range_count, rounder.order, rounder.area_weight
 
     def round_to_precision(self, num, precision):
         if len(precision) > 1:
@@ -237,7 +237,13 @@ class BitFlow:
         eval_dict = data_range.copy()
 
         for key in eval_dict:
-            if isinstance(eval_dict[key], list):
+            if self.train_MNIST:
+                eval_dict = {"X": 1.}
+                # eval_dict = {}
+                # for row in range(28):
+                #     for col in range(28):
+                #         eval_dict[f"input_{row}_{col}"] = 1.
+            elif isinstance(eval_dict[key], list):
                 for (ind, val) in enumerate(eval_dict[key]):
                     eval_dict[key][ind] = int(max(abs(val[0]),
                                                   abs(val[1])))
@@ -246,7 +252,8 @@ class BitFlow:
                                          abs(eval_dict[key][1])))
         self.eval_dict = eval_dict
 
-        evaluator.eval(**eval_dict)
+        if not self.train_MNIST:
+            evaluator.eval(**eval_dict)
 
         #range_bits = self.calculateRange(evaluator, outputs)
 
@@ -354,7 +361,7 @@ class BitFlow:
                         f"ERR NEGATIVE: {constraint_err}, {P}, {area}")
 
             # If ulp error is reasonable, relax error constraints
-            S = 1./self.num_nodes
+            S = 1./self.area_weight
             decay = 0.95
             if constraint_err > 0 and self.L > 1e-10:
                 self.prevL = self.L
@@ -404,7 +411,7 @@ class BitFlow:
         return loss
 
     def __init__(self, dag, outputs, data_range, training_size=2000, testing_size=200, batch_size=16, lr=1e-4, error_type=1, test_optimizer=True, test_ufb=True, train_range=False, range_lr=1e-4, distribution=0, graph_loss=False, custom_data=None, incorporate_ulp_loss=False):
-
+        self.train_MNIST = True
         torch.manual_seed(42)
         self.original_dag = copy.deepcopy(dag)
 
@@ -413,10 +420,10 @@ class BitFlow:
             dag, outputs, data_range)
 
         # Update the dag with round nodes and set up the model for torch training
-        dag, num_precision, num_inputs, num_outputs, num_range, ordered_list = self.update_dag(
+        dag, num_precision, num_inputs, num_outputs, num_range, ordered_list, area_weight = self.update_dag(
             dag)
 
-        self.num_nodes = len(ordered_list)
+        self.area_weight = area_weight
 
         filtered_vars = []
         for el in ordered_list:
@@ -601,7 +608,9 @@ class BitFlow:
             print("\n##### FROM OPTIMIZER ######")
             bfo.solve()
             test = list(bfo.fb_sols.values())
+            print(test)
             rng = list(bfo.visitor.IBs.values())
+            print(rng)
             print(f"ERROR: {ErrorConstraintFn(test)}")
             print(f"AREA: {AreaOptimizerFn(test)}")
 

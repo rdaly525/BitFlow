@@ -1,14 +1,9 @@
-from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, DagNode, Round, Output, Select, LookupTable
+from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, DagNode, Round, Output, Select, LookupTable, BitShift
 from DagVisitor import Visitor, Transformer, AbstractDag
 from BitFlow.IA import Interval
 from BitFlow.Eval import IAEval, NumEval, AbstractEval
 from BitFlow.utils import LUTGenerator
 import torch
-
-
-class VectorInputTransformer(Transformer):
-    def generic_visit(self, node: DagNode):
-        Transformer.generic_visit(self, node)
 
 
 class LookupTableTransformer(Transformer):
@@ -24,6 +19,7 @@ class LookupTableTransformer(Transformer):
     def generic_visit(self, node: DagNode):
         Transformer.generic_visit(self, node)
         if isinstance(node, LookupTable):
+            return node
             child = node.child
             child_index = self.order.index(child.name)
             child_precision = int(self.P[child_index])
@@ -53,6 +49,7 @@ class AddRoundNodes(Transformer):
         self.P = P
         self.R = R
         self.O = O
+        self.area_weight = 0
         self.round_count = 0
         self.input_count = 0
         self.output_count = 0
@@ -79,7 +76,11 @@ class AddRoundNodes(Transformer):
         # make sure code run on all children nodes first
         Transformer.generic_visit(self, node)
 
+        self.area_weight += 1
         self.order.append(node.name)
+
+        if isinstance(node, LookupTable):
+            self.area_weight += 9
 
         # if isinstance(node, LookupTable):
         #     return None
@@ -94,6 +95,11 @@ class AddRoundNodes(Transformer):
             self.range_count += 1
 
             return returnNode
+
+        if isinstance(node, BitShift):
+            self.round_count += 1
+            self.range_count += 1
+            return Round(node, 0., 0., name=node.name + "_round")
 
         # elif isinstance(node, LookupTable):
 

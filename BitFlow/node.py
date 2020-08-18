@@ -82,11 +82,35 @@ class Mul(DagNode):
         super().__init__(name, a, b)
 
 
+class BitShift(DagNode):
+    def __init__(self, a: DagNode, b: DagNode, *, name=None):
+        if name is None:
+            name = f"{a.name}_shift_{b.name}"
+        super().__init__(name, a, b)
+
+
 class Select(DagNode):
     def __init__(self, a: DagNode, index, name=None):
         self.index = index
         if name is None:
             name = f"{a.name}_getitem_{str(index)}"
+        super().__init__(name, a)
+
+
+class Concat(DagNode):
+    def __init__(self, *args, concat_dim, name=None):
+        self.inputs = args
+        self.concat_dim = concat_dim
+        if name is None:
+            name = f"_concat"
+        super().__init__(name, *args)
+
+
+class Reduce(DagNode):
+    def __init__(self, a: DagNode, reduce_dim,  name=None):
+        self.reduce_dim = reduce_dim
+        if name is None:
+            name = f"{a.name}_reduce"
         super().__init__(name, a)
 
 

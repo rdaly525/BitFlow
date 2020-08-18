@@ -15,6 +15,9 @@ class NumEval(AbstractEval):
     def eval_Mul(self, a, b, node: DagNode):
         return a * b
 
+    def eval_BitShift(self, a, b, node: DagNode):
+        return a * b
+
     def eval_Select(self, a, node: DagNode):
         return a[node.index]
 

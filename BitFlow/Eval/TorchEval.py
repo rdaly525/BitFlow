@@ -2,6 +2,7 @@ from .AbstractEval import AbstractEval
 from ..node import DagNode, Dag, LookupTable
 from ..torch.functions import IntRound
 import torch as t
+import math
 
 
 class TorchEval(AbstractEval):
@@ -19,6 +20,9 @@ class TorchEval(AbstractEval):
         return a - b
 
     def eval_Mul(self, a, b, node: DagNode):
+        return a * b
+
+    def eval_BitShift(self, a, b, node: DagNode):
         return a * b
 
     def eval_Round(self, a, prec, rng, node: DagNode):
