@@ -6,12 +6,6 @@ import torch
 from torch.utils import data
 
 
-class TwosComplement:
-    def __init__(self, prec, rng):
-        max_val = (2 ** (prec + rng - 1) - 1) * 2 ** -prec
-        min_val = (2 ** (prec + rng - 1)) * 2 ** -prec
-
-
 class LUTGenerator:
     def __init__(self, func, domain, numel=25):
         lut = {}
@@ -106,6 +100,7 @@ class DatasetWrapper(data.Dataset):
 
 class GeneratedDataset(data.Dataset):
     def __init__(self, model, dataset_size, size_p, size_r, size_output, data_range, true_width, dist):
+        self.train_MNIST = True
         self.X = {k: [] for k in data_range}
         self.Y = []
         self.data_range = data_range

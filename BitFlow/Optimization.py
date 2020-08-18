@@ -159,7 +159,7 @@ class BitFlowVisitor(Visitor):
         if self.train_MNIST:
             precisions = []
             for i in inputs:
-                precisions.append(copy.deepcopy(self.errors[i]))
+                precisions.append(copy.deepcopy(self.errors[i.name]))
             self.errors[node.name] = precisions
 
     def visit_Reduce(self, node: Reduce):

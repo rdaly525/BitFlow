@@ -1,4 +1,4 @@
-from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, LookupTable, Select, BitShift
+from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, LookupTable, Select, BitShift, Concat, Reduce
 from DagVisitor import Visitor
 from BitFlow.IA import Interval
 from BitFlow.Eval import IAEval, NumEval
@@ -370,8 +370,8 @@ def generate_poly_approx(a, b, c, d, e):
 def generate_vector_example():
     X = Input(name="X")
 
-    out = Mul(Add(Select(Select(X, 0), 0), Select(
-        Select(X, 0), 1)), Select(Select(X, 0), 10), name="res")
+    out = Reduce(Concat(Select(Select(X, 0), 0), Select(
+        Select(X, 1), 0), concat_dim=0), reduce_dim=0, name="res")
 
     dag = Dag(outputs=[out], inputs=[X])
 
