@@ -20,7 +20,7 @@ import torchvision.datasets as dsets
 
 import torch
 
-from BitFlow.AddRoundNodes import NodePrinter1,BitFlowOptimizer,BitFlowVisitor, AllKeys
+from BitFlow.AddRoundNodes import NodePrinter1, BitFlowOptimizer, BitFlowVisitor, AllKeys
 from BitFlow.MNIST.MNIST_library import dot_product, matrix_multiply, linear_layer
 
 import torch.nn as nn
@@ -58,6 +58,7 @@ class BitFlow:
 
         def model(**kwargs):
             return self.evaluator.eval(**kwargs)
+
         return model
 
     def custom_round(self, W, factor=0.5):
@@ -107,19 +108,19 @@ class BitFlow:
 
                     val = 0
                     if dist == 1:
-                        mean = (input_range[1]+input_range[0])/2
-                        std = (mean - input_range[0])/3
+                        mean = (input_range[1] + input_range[0]) / 2
+                        std = (mean - input_range[0]) / 3
                         val = torch.normal(
                             mean=mean, std=std, size=(1, dataset_size)).squeeze()
                     elif dist == 2:
                         beta = torch.distributions.beta.Beta(
                             torch.tensor([0.5]), torch.tensor([0.5]))
                         val = (input_range[1] - input_range[0]) * \
-                            beta.sample((dataset_size,)).squeeze() + \
-                            input_range[0]
+                              beta.sample((dataset_size,)).squeeze() + \
+                              input_range[0]
                     else:
                         val = (input_range[1] - input_range[0]) * \
-                            torch.rand(dataset_size) + input_range[0]
+                              torch.rand(dataset_size) + input_range[0]
 
                     val = torch.clamp(val, min_range, max_range)
                     self.X[key] = val
@@ -159,7 +160,7 @@ class BitFlow:
     def round_to_precision(self, num, precision):
         if len(precision) > 1:
             num = num.clone()
-            scale = 2.0**precision
+            scale = 2.0 ** precision
             for (ind, val) in enumerate(scale):
                 num[ind] *= val
             num = torch.round(num)
@@ -167,12 +168,12 @@ class BitFlow:
                 num[ind] /= val
             return num
         else:
-            scale = 2.0**precision
+            scale = 2.0 ** precision
             return torch.round(num * scale) / scale
 
     def is_within_ulp(self, num, truth, precision):
         r = torch.abs(num - self.round_to_precision(truth, precision))
-        ulp = 2**-(precision + 1)
+        ulp = 2 ** -(precision + 1)
         if len(precision) > 1:
             sol = torch.ones(r.shape)
             for (y, row) in enumerate(r):
@@ -181,7 +182,7 @@ class BitFlow:
                         sol[y][x] = 0
             return sol
         else:
-            return(torch.where(r <= ulp, torch.ones(r.shape), torch.zeros(r.shape)))
+            return (torch.where(r <= ulp, torch.ones(r.shape), torch.zeros(r.shape)))
 
     def calc_accuracy(self, name, test_gen, W, O, precision, model, should_print):
         success = 0
@@ -208,7 +209,7 @@ class BitFlow:
                     print(
                         f"guess: {res[index]}, true: {self.round_to_precision(Y[index], precision)} ")
 
-        acc = (success * 1.)/total
+        acc = (success * 1.) / total
         print(f"accuracy: {acc}")
 
     def within_ulp_err(self, num, truth, precision):
@@ -257,33 +258,30 @@ class BitFlow:
         for key in eval_dict:
             print(key)
 
-            eval_dict[key] = 10
-
-        #print(eval_dict)
-        #eval_dict = {'X': torch.ones(100,784).fill_(10), 'weight': torch.ones(784,10).fill_(10), 'bias': torch.ones(10).fill_(10)}
-        # eval_dict = {'X': torch.ones(100, 784).fill_(10),'X_getitem_0':torch.ones(100,784),'weight': torch.ones(784, 10).fill_(10),
-        #              'bias': torch.ones(10).fill_(10)}
+            eval_dict[key] = 1
 
         getKeys = AllKeys()
         outputDict = getKeys.doit(dag)
 
         eval_dict = outputDict
-        eval_dict['X']=torch.ones(100,784).fill_(10)
-        eval_dict['weight'] = torch.ones(784,10).fill_(10)
+        eval_dict['X'] = torch.ones(100, 784).fill_(10)
+        eval_dict['weight'] = torch.ones(784, 10).fill_(10)
         eval_dict['bias'] = torch.ones(10).fill_(10)
 
-        print(eval_dict)
+        # print("eval_dict", eval_dict)
 
         evaluator.eval(**eval_dict)
 
         range_bits, filtered_vars = self.calculateRange(evaluator, outputs)
-        print("range_bits",range_bits)
-        print(filtered_vars)
+        # print("range_bits", range_bits)
+        # print(filtered_vars)
         bfo = BitFlowOptimizer(evaluator, outputs)
         bfo.calculateInitialValues()
+
         return bfo, range_bits, filtered_vars
 
     def createExecutableConstraintFunctions(self, area_fn, error_fn, filtered_vars):
+
         exec(f'''def AreaOptimizerFn(W):
              {','.join(filtered_vars)} = W
              return  {area_fn}''', globals())
@@ -292,7 +290,9 @@ class BitFlow:
              {','.join(filtered_vars)} = x
              return  {error_fn}''', globals())
 
-    def initializeData(self, model, training_size, testing_size, weight_size, output_size, data_range, range_bits, batch_size):
+
+    def initializeData(self, model, training_size, testing_size, weight_size, output_size, data_range, range_bits,
+                       batch_size):
         data_params = dict(
             batch_size=batch_size
         )
@@ -325,7 +325,8 @@ class BitFlow:
         return O, precision, W, init_W
 
     # Loss function
-    def compute_loss(self, target, y, W, iter, batch_size, precision, epochs, training_size, error_type=1, should_print=True, shouldErrorCheck=False):
+    def compute_loss(self, target, y, W, iter, batch_size, precision, epochs, training_size, error_type=1,
+                     should_print=True, shouldErrorCheck=False):
         """
         Args:
             error_type:
@@ -362,12 +363,12 @@ class BitFlow:
             else:
                 self.R = self.initR
 
-            L2 = torch.sum((y-target.squeeze())**2)
+            L2 = torch.sum((y - target.squeeze()) ** 2)
 
             S = 1
             Q = 100
             loss = (self.R *
-                    torch.exp(-1 * constraint_err) + S * area)/batch_size
+                    torch.exp(-1 * constraint_err) + S * area) / batch_size
 
         else:
             ulp_error = torch.mean(torch.sum(
@@ -383,9 +384,9 @@ class BitFlow:
                 self.R = self.initR
 
             constraint_W = 100 * \
-                torch.sum(torch.max(-(W) + 0.5, torch.zeros(len(W))))
+                           torch.sum(torch.max(-(W) + 0.5, torch.zeros(len(W))))
 
-            loss = (self.R * ulp_error)/batch_size
+            loss = (self.R * ulp_error) / batch_size
 
         # Catch negative values for area and weights
         if shouldErrorCheck:
@@ -398,7 +399,7 @@ class BitFlow:
         # Print out model details every so often
         if iter % 1000 == 0 and should_print == True:
             print(
-                f"iteration {iter} of {epochs * training_size/batch_size} ({(iter * 100.)/(epochs * training_size/batch_size)}%)")
+                f"iteration {iter} of {epochs * training_size / batch_size} ({(iter * 100.) / (epochs * training_size / batch_size)}%)")
             print(f"AREA: {area}")
             print(f"ERROR: {constraint_err}")
             print(f"WEIGHTS: {W}")
@@ -408,32 +409,27 @@ class BitFlow:
 
         return loss
 
-    def __init__(self, dag, outputs, data_range, training_size=2000, testing_size=200, epochs=10, batch_size=16, lr=1e-4, error_type=1, test_optimizer=True, test_ufb=False):
+    def __init__(self, dag, outputs, data_range, training_size=2000, testing_size=200, epochs=10, batch_size=16,
+                 lr=1e-4, error_type=1, test_optimizer=True, test_ufb=False):
 
-
-
-        # printer=NodePrinter1()
-        # printer.run(dag)
-
-        # getKeys=AllKeys()
-        # outputDict = getKeys.doit(dag)
-        # print(outputDict)
 
         # Run a basic evaluator on the DAG to construct error and area functions
         bfo, range_bits, filtered_vars = self.constructOptimizationFunctions(
             dag, outputs, data_range)
 
+        print("EXITED OPTIMIZATION")
+
         # Generate error and area functions from the visitor
         error_fn = bfo.error_fn
         area_fn = bfo.area_fn
+
+        print("EXITED Area, Error")
         self.createExecutableConstraintFunctions(
             area_fn, error_fn, filtered_vars)
 
         # Update the dag with round nodes and set up the model for torch training
         dag, weight_size, input_size, output_size = self.update_dag(dag)
         model = self.gen_model(dag)
-
-
 
         # create the data according to specifications
         train_gen, test_gen = self.initializeData(model, training_size, testing_size,

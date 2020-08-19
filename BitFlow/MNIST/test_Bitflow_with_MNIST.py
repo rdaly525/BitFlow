@@ -1,4 +1,4 @@
-from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, Select, Output, Relu, Reduce, Concat
+from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, Select, Output, Relu, Reduce, Concat, Softmax
 
 from BitFlow.MNIST.MNIST_library import linear_layer
 from BitFlow.MNIST.run_MNIST import MNIST_dag
@@ -20,9 +20,7 @@ def RGB_to_YCbCr():
     col_3 = Add(Add(Mul(Constant(.5, name="C7"), r), Mul(Constant(-.41869, name="C8"), g)),
                 Mul(Constant(-.08131, name="C9"), b), name="col_3")
 
-    print(col_1)
-    print(col_2)
-    print(col_3)
+
     casestudy_dag = Dag(outputs=[col_1, col_2, col_3], inputs=[r, g, b])
 
     return casestudy_dag
@@ -53,9 +51,11 @@ def gen_linearlayer(row, col, size):
     X = Input(name="X")
     weight = Input(name="weight")
     bias = Input(name="bias")
-    y = linear_layer(X, weight, bias, row, col, size)
+    _concat_add__concat_bias = linear_layer(X, weight, bias, row, col, size)
 
-    fig = Dag(outputs=[y], inputs=[X, weight, bias])
+    #z = Softmax(y,name="z")
+
+    fig = Dag(outputs=[_concat_add__concat_bias], inputs=[X, weight, bias])
     return fig
 
 
@@ -74,8 +74,12 @@ def test_linearlayer():
         lr=1e-4
     )
 
-    bf = BitFlow(dag, {"y": 10.}, {
+
+    bf = BitFlow(dag, {"_concat_add__concat_bias":10.}, {
         'X': (0., 10.), 'weight': (0., 10.), 'bias': (0., 10.)}, **params)
+
+    # bf = BitFlow(dag, {"y0": 10., "y1": 10., "y2": 10., "y3": 10., "y4": 10., "y5": 10., "y6": 10., "y7": 10., "y8": 10., "y9": 10.}, {
+    #     'X': (0., 10.), 'weight': (0., 10.), 'bias': (0., 10.)}, **params)
 
     # Sample Matrix Product
     test = {"X": 10., "weight": 10., "bias": 10., "W": bf.W, "O": bf.O}
