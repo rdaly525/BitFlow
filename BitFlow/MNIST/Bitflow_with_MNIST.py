@@ -280,7 +280,12 @@ class BitFlow:
 
         return bfo, range_bits, filtered_vars
 
+
+
     def createExecutableConstraintFunctions(self, area_fn, error_fn, filtered_vars):
+
+        print(area_fn)
+        print(error_fn)
 
         exec(f'''def AreaOptimizerFn(W):
              {','.join(filtered_vars)} = W
