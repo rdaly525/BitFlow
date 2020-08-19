@@ -1,5 +1,5 @@
 from .AbstractEval import AbstractEval
-from ..node import DagNode
+from ..node import DagNode, LookupTable
 from ..torch.functions import IntRound
 import torch as t
 import numpy as np
@@ -18,6 +18,7 @@ class NumEval(AbstractEval):
         return a - b
 
     def eval_Mul(self, a, b, node: DagNode):
+
         return a * b
 
     def eval_Select(self, a, node: DagNode):
@@ -34,19 +35,16 @@ class NumEval(AbstractEval):
         # pass in the size we are reducing over
         return sum
 
-        # def eval_Reduce(self, a, node: DagNode):
-        #         start = Constant(0,name = "start_")
-        #         for i in range(0,node.size):
-        #             start = Add(start,node[i], name = "start_"+str(i))
-        #             print(start)
-        #         node = start
-
-    def eval_Len(self, a, node: DagNode):
-        return len(a)
 
     def eval_Concat(self, *args, node: DagNode):
         return t.stack(args, dim=node.concat_dim)
 
-    def eval_Round(self, a, prec, node: DagNode):
-        scale = 2.0 ** prec
-        return IntRound(a * scale) / scale
+    # def eval_Round(self, a, prec, node: DagNode):
+    #     scale = 2.0 ** prec
+    #     return IntRound(a * scale) / scale
+
+    def eval_LookupTable(self, a, node: LookupTable):
+        if hasattr(node, 'lut'):
+            return node.lut[a]
+        else:
+            return node.func(a)

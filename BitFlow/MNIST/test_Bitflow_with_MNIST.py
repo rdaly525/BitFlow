@@ -1,4 +1,4 @@
-from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, Select, Output, Relu, Reduce, Concat, Softmax
+from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, Select, Output,  Reduce, Concat
 
 from BitFlow.MNIST.MNIST_library import linear_layer
 from BitFlow.MNIST.run_MNIST import MNIST_dag
@@ -51,11 +51,12 @@ def gen_linearlayer(row, col, size):
     X = Input(name="X")
     weight = Input(name="weight")
     bias = Input(name="bias")
-    _concat_add__concat_bias = linear_layer(X, weight, bias, row, col, size)
+    #_concat_add__concat_bias = linear_layer(X, weight, bias, row, col, size)
+    y = linear_layer(X, weight, bias, row, col, size)
 
     #z = Softmax(y,name="z")
 
-    fig = Dag(outputs=[_concat_add__concat_bias], inputs=[X, weight, bias])
+    fig = Dag(outputs=[y], inputs=[X, weight, bias])
     return fig
 
 
@@ -66,17 +67,18 @@ def test_linearlayer():
     dag = gen_linearlayer(row, col, size)
 
 
-    params = dict(
-        training_size=60000,
-        testing_size=2000,
-        epochs=5,
-        batch_size=100,
-        lr=1e-4
-    )
+    # params = dict(
+    #     training_size=60000,
+    #     testing_size=2000,
+    #     epochs=5,
+    #     batch_size=100,
+    #     lr=1e-4
+    # )
 
-
-    bf = BitFlow(dag, {"_concat_add__concat_bias":10.}, {
-        'X': (0., 10.), 'weight': (0., 10.), 'bias': (0., 10.)}, **params)
+    bf = BitFlow(dag, {"y":10.}, {
+        'X': (10.), 'weight': (10.), 'bias': (10.)})
+    # bf = BitFlow(dag, {"_concat_add__concat_bias":10.}, {
+    #     'X': (0., 10.), 'weight': (0., 10.), 'bias': (0., 10.)}, **params)
 
     # bf = BitFlow(dag, {"y0": 10., "y1": 10., "y2": 10., "y3": 10., "y4": 10., "y5": 10., "y6": 10., "y7": 10., "y8": 10., "y9": 10.}, {
     #     'X': (0., 10.), 'weight': (0., 10.), 'bias': (0., 10.)}, **params)

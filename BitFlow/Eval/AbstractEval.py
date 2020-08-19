@@ -1,34 +1,33 @@
 from DagVisitor import Visitor
 from abc import abstractmethod
-from ..node import Dag, DagNode, Input, Constant, Add, Mul, Select, Output, Round, Relu, Reduce
+from ..node import Dag, DagNode, Input, Constant, Add, Mul, Select, Output, Round, Reduce, LookupTable
 import torch
 
 class AbstractEval(Visitor):
     def __init__(self, dag: Dag):
         self.dag = dag
         self.node_values = {}
+        self.train_MNIST = True
 
     def eval(self, **input_values):
         self.input_values = input_values
         self.node_values = {}
         for dag_input in self.dag.inputs:
             if dag_input.name not in input_values:
-                raise ValueError(f"Missing {dag_input} in input values")
+                if not self.train_MNIST:
+                    raise ValueError(f"Missing {dag_input} in input values")
         super().run(self.dag)
         outputs = [self.node_values[root] for root in self.dag.roots()]
-
+        # print(outputs, len(outputs), outputs[0])
         if len(outputs) == 1:
             return outputs[0]
         return outputs
 
     def generic_visit(self, node: DagNode):
         Visitor.generic_visit(self, node)
-
         child_values = [self.node_values[child] for child in node.children()]
         eval_name = f"eval_{node.kind()[0]}"
         assert hasattr(self, eval_name)
-
-
         node_val = getattr(self, eval_name)(*child_values, node=node)
 
         assert node_val is not None
@@ -36,10 +35,6 @@ class AbstractEval(Visitor):
 
     def eval_Input(self, node: DagNode):
         return self.input_values[node.name]
-
-    @abstractmethod
-    def eval_Len(self, a, node: DagNode):
-        pass
 
     @abstractmethod
     def eval_Constant(self, node: DagNode):
@@ -66,9 +61,17 @@ class AbstractEval(Visitor):
         pass
 
     @abstractmethod
+    def eval_Softmax(self, a, node: DagNode):
+        pass
+
+    @abstractmethod
     def eval_Relu(self, a, node: DagNode):
         pass
 
     @abstractmethod
     def eval_Round(self, a, node: DagNode):
+        pass
+
+    @abstractmethod
+    def eval_LookupTable(self, a, node: LookupTable):
         pass
