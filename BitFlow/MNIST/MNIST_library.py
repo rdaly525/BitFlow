@@ -19,8 +19,8 @@ def reduce_m(a, size):
 
 
 def dot_product(a: DagNode, b: DagNode, size):
-    common = Mul(a, b, name= f"{a.name}_mul_{b.name}")
-    return Reduce(common, reduce_dim=0, name= f"{a.name}_reduce_{b.name}")
+    common = Mul(a, b)
+    return Reduce(common, reduce_dim=0)
     # return reduce_m(common, size)
     # return Reduce(common, 0, 0, name=f"{a.name}_dotproduct_{b.name}")
 
@@ -29,15 +29,28 @@ def matrix_multiply(a: DagNode, b: DagNode, row, col, size):
     output_array = []
 
     for i in range(0, row):
+
         ai = a[i]
         output_row_inputs = []
+
         for j in range(0, col):
-            bj = b[:, j]
+
+            bj = b[:,j]
+
+
+
+            # # #
+            # hello = []
+            # for m in range(size):
+            #     hello.append(a[m][j])
+            #
+            #
+            # bj = Concat(*hello, concat_dim=0)
 
             output_element = dot_product(ai, bj, size)
             output_row_inputs.append(output_element)
 
-        output_row = Concat(*output_row_inputs, concat_dim=0, name= f"_concat_{i}")
+        output_row = Concat(*output_row_inputs, concat_dim=0)
 
         output_array.append(output_row)
 
@@ -48,6 +61,6 @@ def linear_layer(X: DagNode, weight: DagNode, bias: DagNode, batch_dim, output_d
     y = matrix_multiply(X, weight, batch_dim, output_dim, size)
 
     bias_array = [bias for _ in range(batch_dim)]
-    with_bias = Concat(*bias_array, concat_dim=0, name="_concat_bias")
+    with_bias = Concat(*bias_array, concat_dim=0)
 
     return y + with_bias

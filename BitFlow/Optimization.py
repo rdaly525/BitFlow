@@ -7,8 +7,23 @@ from math import log2, ceil
 from .Precision import PrecisionNode
 from scipy.optimize import fsolve, minimize, basinhopping
 
+
 import torch
 import copy
+
+from .node import Input, Constant, Dag, Add, Sub, Mul, DagNode, Select, LookupTable, BitShift, Concat, Reduce
+from DagVisitor import Visitor
+from .IA import Interval
+from .Eval.IAEval import IAEval
+from .Eval.NumEval import NumEval
+from math import log2, ceil
+from .Precision import PrecisionNode
+from scipy.optimize import fsolve, minimize, basinhopping
+
+import torch
+import copy
+
+
 
 
 class BitFlowVisitor(Visitor):
@@ -20,6 +35,7 @@ class BitFlowVisitor(Visitor):
         self.train_MNIST = True
         if self.train_MNIST:
             self.calculate_IB = False
+
 
     # self.calculate_IB = calculate_IB
 
@@ -117,11 +133,23 @@ class BitFlowVisitor(Visitor):
         else:
             self.area_fn += f"+1 * max({lhs.name}_ib + {lhs.name}, {rhs.name}_ib + {rhs.name})"
 
+    # def visit_Mul(self, node: Mul):
+    #     Visitor.generic_visit(self, node)
+    #
+    #     self.handleIB(node)
+    #     lhs, rhs = self.getChildren(node)
+    #     print(node,node.name,self.errors[lhs.name],self.errors[rhs.name])
+    #     self.errors[node.name] = self.errors[lhs.name].mul(
+    #         self.errors[rhs.name], node.name)
+    #     self.area_fn += f"+1 * ({self.IBs[lhs.name]} + {lhs.name})*({self.IBs[rhs.name]} + {rhs.name})"
     def visit_Mul(self, node: Mul):
         Visitor.generic_visit(self, node)
 
         self.handleIB(node)
         lhs, rhs = self.getChildren(node)
+
+        print(node, node.name, self.errors[lhs.name], self.errors[rhs.name])
+
 
         if self.calculate_IB or self.train_MNIST:
             self.errors[node.name] = self.errors[lhs.name].mul(
@@ -143,12 +171,16 @@ class BitFlowVisitor(Visitor):
                 self.errors[rhs.name], node.name)
 
     def visit_Select(self, node: Select):
+        #print(node)
         Visitor.generic_visit(self, node)
 
         self.handleIB(node)
         input_signal = self.getChildren(node)
 
         if self.train_MNIST:
+            print("node index:",node,":",input_signal.name,":",node.index)
+
+            print(type(self.errors[input_signal.name]))
             self.errors[node.name] = self.errors[input_signal.name][node.index]
 
     def visit_Concat(self, node: Concat):
@@ -205,6 +237,8 @@ class BitFlowOptimizer():
         self.ufb_fn = ""
         self.optim_error_fn = " >= "
         for output in outputs:
+            print(output)
+
             self.error_fn += f"+2**(-{outputs[output]}-1) - (" + \
                              visitor.errors[output].getExecutableError() + ")"
             self.optim_error_fn = f"+ 2**(-{outputs[output]}-1)" + \

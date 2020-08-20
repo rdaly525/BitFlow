@@ -22,6 +22,8 @@ class NumEval(AbstractEval):
         return a * b
 
     def eval_Select(self, a, node: DagNode):
+
+        #print(node.index)
         return a[node.index]
 
     def eval_Relu(self, a, node: DagNode):
@@ -39,9 +41,6 @@ class NumEval(AbstractEval):
     def eval_Concat(self, *args, node: DagNode):
         return t.stack(args, dim=node.concat_dim)
 
-    # def eval_Round(self, a, prec, node: DagNode):
-    #     scale = 2.0 ** prec
-    #     return IntRound(a * scale) / scale
 
     def eval_LookupTable(self, a, node: LookupTable):
         if hasattr(node, 'lut'):

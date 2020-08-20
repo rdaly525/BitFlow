@@ -62,9 +62,9 @@ class FPEpsilonMultiplier:
 
 class PrecisionNode:
     def __init__(self, val, symbol, error, add_self_error=True):
-        assert isinstance(val, (int, float))
-        assert isinstance(symbol, str)
-        assert isinstance(error, list)
+        # assert isinstance(val, (int, float))
+        # assert isinstance(symbol, str)
+        # assert isinstance(error, list)
 
         self.val = val
         self.symbol = symbol
@@ -135,6 +135,7 @@ class PrecisionNode:
         return PrecisionNode(self.val - rhs.val, symbol, self.error + subtracted_error)
 
     def mul(self, rhs, symbol):
+        print("enter here")
         assert isinstance(rhs, PrecisionNode)
         assert isinstance(symbol, str)
 

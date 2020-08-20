@@ -3,50 +3,82 @@ from BitFlow.IA import Interval
 from BitFlow.Eval.IAEval import IAEval
 from BitFlow.Eval.NumEval import NumEval
 from BitFlow.Eval.TorchEval import TorchEval
-from BitFlow.Optimization import BitFlowVisitor, BitFlowOptimizer
-from BitFlow.AddRoundNodes import AddRoundNodes, LookupTableTransformer
-from BitFlow.utils import GeneratedDataset
+from BitFlow.AddRoundNodes import BitFlowVisitor, BitFlowOptimizer
+from BitFlow.AddRoundNodes import AddRoundNodes
 
 import torch
 from torch.utils import data
 
 import random
 import math
+
+import torch
+from torch.autograd import Variable
+import torchvision.transforms as transforms
+import torchvision.datasets as dsets
+# from DagVisitor import Visitor
+
+import torch
+
+from BitFlow.AddRoundNodes import NodePrinter1, BitFlowOptimizer, BitFlowVisitor, AllKeys
+from BitFlow.MNIST.MNIST_library import dot_product, matrix_multiply, linear_layer
+
+import torch.nn as nn
+import math
+
+from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, Select
+from BitFlow.IA import Interval
+from BitFlow.Eval.IAEval import IAEval
+from BitFlow.Eval.NumEval import NumEval
+from BitFlow.Eval.TorchEval import TorchEval
+
+from BitFlow.AddRoundNodes import AddRoundNodes
+
+import torch
+from torch.utils import data
+
+import random
+import math
+
+import torch
+from torch.utils import data
+
+import random
+import math
+import torch
+from torch.utils import data
+
+import random
+import math
 import copy
-#import matplotlib.pyplot as plt
 
 
 class BitFlow:
-
-    def make_model(self, **kwargs):
-        return self.evaluator.eval(**kwargs)
 
     def gen_model(self, dag):
         """ Sets up a given dag for torch evaluation.
         Args: Input dag (should already have Round nodes)
         Returns: A trainable model
         """
-        self.transformed_dag = dag
         self.evaluator = TorchEval(dag)
-        return self.make_model
 
-    def custom_round(self, P, factor=0.5):
-        P = P.tolist()
-        for (index, weight) in enumerate(P):
+        def model(**kwargs):
+            #reached to model!
+            return self.evaluator.eval(**kwargs)
+
+        return model
+
+    def custom_round(self, W, factor=0.5):
+        W = W.tolist()
+        for (index, weight) in enumerate(W):
             f, _ = math.modf(weight)
             if f < factor:
-                if weight < 0:
-                    P[index] = math.ceil(weight)
-                else:
-                    P[index] = math.floor(weight)
+                W[index] = math.floor(weight)
             else:
-                if weight < 0:
-                    P[index] = math.floor(weight)
-                else:
-                    P[index] = math.ceil(weight)
-        return torch.tensor(P)
+                W[index] = math.ceil(weight)
+        return torch.tensor(W)
 
-    def gen_data(self, model, dataset_size, size_p, size_r, size_output, data_range, true_width=20., dist=0):
+    def gen_data(self, model, dataset_size, size_w, size_output, data_range, range_bits, true_width=20., dist=0):
         """ Generates ground-truth data from user specifications and model.
         Args:
             model: A dag already set up for torch evaluatiion
@@ -62,7 +94,59 @@ class BitFlow:
             (X, Y): generated data
         """
 
-        return GeneratedDataset(model, dataset_size, size_p, size_r, size_output, data_range, true_width, dist)
+        class Dataset(data.Dataset):
+            def __init__(self, model, dataset_size, size_w, size_output, data_range, range_bits, true_width, dist):
+                self.X = {k: [] for k in data_range}
+                self.Y = []
+
+
+                W = torch.Tensor(1, size_w).fill_(true_width)[0]
+                torch.manual_seed(42)
+
+                for key in data_range:
+                    # Create random tensor
+                    input_range = data_range[key]
+
+                    # calculate range bounds using range bits
+                    ib = range_bits[key]
+                    min_range = -1 * (2 ** (ib - 1))
+                    max_range = 2 ** (ib - 1) - 1
+
+                    val = 0
+                    if dist == 1:
+                        mean = (input_range[1] + input_range[0]) / 2
+                        std = (mean - input_range[0]) / 3
+                        val = torch.normal(
+                            mean=mean, std=std, size=(1, dataset_size)).squeeze()
+                    elif dist == 2:
+                        beta = torch.distributions.beta.Beta(
+                            torch.tensor([0.5]), torch.tensor([0.5]))
+                        val = (input_range[1] - input_range[0]) * \
+                              beta.sample((dataset_size,)).squeeze() + \
+                              input_range[0]
+                    else:
+                        val = (input_range[1] - input_range[0]) * \
+                              torch.rand(dataset_size) + input_range[0]
+
+                    val = torch.clamp(val, min_range, max_range)
+                    self.X[key] = val
+
+                for i in range(dataset_size):
+                    inputs = {k: self.X[k][i] for k in data_range}
+
+                    inputs["W"] = W
+                    inputs["O"] = torch.Tensor(
+                        1, size_output).fill_(true_width)[0]
+                    new_y = model(**inputs)
+                    self.Y.append(new_y)
+
+            def __len__(self):
+                return len(self.X[list(data_range.keys())[0]])
+
+            def __getitem__(self, index):
+                return {k: self.X[k][index] for k in data_range}, self.Y[index]
+
+        return Dataset(model, dataset_size, size_w, size_output, data_range, range_bits, true_width, dist)
 
     def update_dag(self, dag):
         """
@@ -83,20 +167,20 @@ class BitFlow:
     def round_to_precision(self, num, precision):
         if len(precision) > 1:
             num = num.clone()
-            scale = 2.0**precision
+            scale = 2.0 ** precision
             for (ind, val) in enumerate(scale):
-                num[ind] = num[ind] * val
+                num[ind] *= val
             num = torch.round(num)
             for (ind, val) in enumerate(scale):
-                num[ind] = num[ind] / val
+                num[ind] /= val
             return num
         else:
-            scale = 2.0**precision
+            scale = 2.0 ** precision
             return torch.round(num * scale) / scale
 
     def is_within_ulp(self, num, truth, precision, should_print=False):
         r = torch.abs(num - self.round_to_precision(truth, precision))
-        ulp = 2**-(precision)
+        ulp = 2 ** -(precision)
         if len(precision) > 1:
             sol = torch.ones(r.shape)
             for (y, row) in enumerate(r):
@@ -117,7 +201,18 @@ class BitFlow:
                     sol[x] = 0
             return sol
 
-            # return(torch.where(r <= ulp, torch.ones(r.shape), torch.zeros(r.shape)))
+    # def is_within_ulp(self, num, truth, precision):
+    #     r = torch.abs(num - self.round_to_precision(truth, precision))
+    #     ulp = 2 ** -(precision + 1)
+    #     if len(precision) > 1:
+    #         sol = torch.ones(r.shape)
+    #         for (y, row) in enumerate(r):
+    #             for (x, val) in enumerate(row):
+    #                 if val > ulp[y]:
+    #                     sol[y][x] = 0
+    #         return sol
+    #     else:
+    #         return (torch.where(r <= ulp, torch.ones(r.shape), torch.zeros(r.shape)))
 
     def ulp(self, num, truth, precision):
         r = torch.abs(num - self.round_to_precision(truth, precision))
@@ -162,7 +257,7 @@ class BitFlow:
             #         print(
             #             f"guess: {res[index]}, true: {self.round_to_precision(Y[index], O)} ")
 
-        avg_ulp = ulp_err/total
+        avg_ulp = ulp_err / total
         print(f"AVG ERR: {avg_ulp}")
         print(f"MAX ERR: {max_ulp}")
 
@@ -192,7 +287,7 @@ class BitFlow:
             #         print(
             #             f"guess: {res[index]}, true: {self.round_to_precision(Y[index], O)} ")
 
-        acc = (success * 1.)/total
+        acc = (success * 1.) / total
         print(f"accuracy: {acc}")
 
     def within_ulp_err(self, num, truth, precision):
@@ -220,46 +315,49 @@ class BitFlow:
     #     for var in vars:
     #         if var not in outputs:
     #             filtered_vars.append(var)
-
+    #
     #     return filtered_vars
 
     # def calculateRange(self, evaluator, outputs):
     #     node_values = evaluator.node_values
     #     visitor = BitFlowVisitor(node_values)
     #     visitor.run(evaluator.dag)
-
+    #
+    #     filtered_vars = self.filterDAGFromOutputs(visitor, outputs)
+    #
     #     range_bits = visitor.IBs
-    #     return range_bits
+    #     return range_bits, filtered_vars
 
     def constructOptimizationFunctions(self, dag, outputs, data_range):
+
         evaluator = NumEval(dag)
 
         eval_dict = data_range.copy()
-
         for key in eval_dict:
-            if self.train_MNIST:
-                eval_dict = {"X": 1.}
-                # eval_dict = {}
-                # for row in range(28):
-                #     for col in range(28):
-                #         eval_dict[f"input_{row}_{col}"] = 1.
-            elif isinstance(eval_dict[key], list):
-                for (ind, val) in enumerate(eval_dict[key]):
-                    eval_dict[key][ind] = int(max(abs(val[0]),
-                                                  abs(val[1])))
-            else:
-                eval_dict[key] = int(max(abs(eval_dict[key][0]),
-                                         abs(eval_dict[key][1])))
-        self.eval_dict = eval_dict
+            print(key)
 
-        if not self.train_MNIST:
-            evaluator.eval(**eval_dict)
+            eval_dict[key] = 1
 
-        #range_bits = self.calculateRange(evaluator, outputs)
+        getKeys = AllKeys()
+        outputDict = getKeys.doit(dag)
 
+        eval_dict = outputDict
+        eval_dict['X'] = torch.ones(100, 784).fill_(10)
+        eval_dict['weight'] = torch.ones(784, 10).fill_(10)
+        eval_dict['bias'] = torch.ones(10).fill_(10)
+
+        # print("eval_dict", eval_dict)
+
+        evaluator.eval(**eval_dict)
+
+        #range_bits, filtered_vars = self.calculateRange(evaluator, outputs)
+        # print("range_bits", range_bits)
+        # print(filtered_vars)
         bfo = BitFlowOptimizer(evaluator, outputs)
         bfo.calculateInitialValues()
+
         return bfo
+
 
     def createExecutableConstraintFunctions(self, area_fn, error_fn, filtered_vars):
         exec(f'''def AreaOptimizerFn(P):
@@ -270,18 +368,25 @@ class BitFlow:
              {','.join(filtered_vars)} = x
              return  {error_fn}''', globals())
 
-    def initializeData(self, model, training_size, testing_size, num_precision, num_range, output_size, data_range, batch_size, distribution):
+    def initializeData(self, model, training_size, testing_size, num_precision, num_range, output_size, data_range,
+                       batch_size, distribution):
         data_params = dict(
             batch_size=batch_size
         )
 
         # generate testing/training data
-        training_set = self.gen_data(
-            model, training_size, num_precision, num_range, output_size, data_range, dist=distribution)
-        train_gen = data.DataLoader(training_set, **data_params)
-        test_set = self.gen_data(
-            model, testing_size, num_precision, num_range, output_size, data_range, dist=distribution)
-        test_gen = data.DataLoader(test_set, **data_params)
+        # training_set = self.gen_data(
+        #     model, training_size, num_precision, num_range, output_size, data_range, dist=distribution)
+        # train_gen = data.DataLoader(training_set, **data_params)
+        # test_set = self.gen_data(
+        #     model, testing_size, num_precision, num_range, output_size, data_range, dist=distribution)
+        # test_gen = data.DataLoader(test_set, **data_params)
+
+        train_dataset = dsets.MNIST(root='./data', train=True, transform=transforms.ToTensor(), download=True)
+        test_dataset = dsets.MNIST(root='./data', train=False, transform=transforms.ToTensor())
+
+        train_gen = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
+        test_gen = torch.utils.data.DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False)
 
         return train_gen, test_gen
 
@@ -306,7 +411,8 @@ class BitFlow:
         return O, P, init_P, R, init_R
 
     # Loss function
-    def compute_loss(self, target, y, P, R, O, iter, filtered_vars, batch_size, epochs, training_size, error_type=1, should_print=True, shouldErrorCheck=False, train_range=False, incorporate_ulp_loss=False):
+    def compute_loss(self, target, y, P, R, O, iter, filtered_vars, batch_size, epochs, training_size, error_type=1,
+                     should_print=True, shouldErrorCheck=False, train_range=False, incorporate_ulp_loss=False):
         """
         Args:
             error_type:
@@ -361,7 +467,7 @@ class BitFlow:
                         f"ERR NEGATIVE: {constraint_err}, {P}, {area}")
 
             # If ulp error is reasonable, relax error constraints
-            S = 1./self.area_weight
+            S = 1. / self.area_weight
             decay = 0.95
             if constraint_err > 0 and self.L > 1e-10:
                 self.prevL = self.L
@@ -370,10 +476,10 @@ class BitFlow:
                 self.L = self.initL
 
             loss = (self.L * torch.exp(-1000 * constraint_err) +
-                    S * area + torch.sum(torch.exp(-1000 * R)) + torch.sum(torch.exp(-1000 * P)))/(batch_size)
+                    S * area + torch.sum(torch.exp(-1000 * R)) + torch.sum(torch.exp(-1000 * P))) / (batch_size)
 
             if incorporate_ulp_loss:
-                loss = loss + ulp_err/batch_size
+                loss = loss + ulp_err / batch_size
 
             if train_range:
                 loss = loss + self.evaluator.saturation
@@ -385,9 +491,9 @@ class BitFlow:
             constraint_err = torch.max(ulp_error.float(), torch.zeros(1))
 
             constraint_W = 100 * \
-                torch.sum(torch.max(-(P) + 0.5, torch.zeros(len(P))))
+                           torch.sum(torch.max(-(P) + 0.5, torch.zeros(len(P))))
 
-            loss = (self.R * ulp_error)/batch_size
+            loss = (self.R * ulp_error) / batch_size
 
         # Catch negative values for area and weights
         if shouldErrorCheck:
@@ -400,7 +506,7 @@ class BitFlow:
         # Print out model details every so often
         if iter % 1000 == 0 and should_print == True:
             print(
-                f"iteration {iter} of {epochs * training_size/batch_size} ({(iter * 100.)/(epochs * training_size/batch_size)}%)")
+                f"iteration {iter} of {epochs * training_size / batch_size} ({(iter * 100.) / (epochs * training_size / batch_size)}%)")
             print(f"AREA: {area}")
             print(f"ERROR: {constraint_err}")
             print(f"WEIGHTS: {P},\n         {R}")
@@ -434,17 +540,19 @@ class BitFlow:
         # Generate error and area functions from the visitor
         error_fn = bfo.error_fn
         area_fn = bfo.area_fn
-        self.createExecutableConstraintFunctions(
-            area_fn, error_fn, filtered_vars)
+        # self.createExecutableConstraintFunctions(
+        #     area_fn, error_fn, filtered_vars)
 
         model = self.gen_model(dag)
+
 
         # create the data according to specifications
         train_gen = None
         test_gen = None
         if custom_data is None:
             train_gen, test_gen = self.initializeData(model, training_size, testing_size,
-                                                      num_precision, num_range, num_outputs, data_range, batch_size, distribution)
+                                                      num_precision, num_range, num_outputs, data_range, batch_size,
+                                                      distribution)
         else:
             train_gen = custom_data[0]
             test_gen = custom_data[1]
@@ -509,7 +617,7 @@ class BitFlow:
             [{"params": P}, {"params": R, "lr": range_lr}], lr=lr)
 
         lr_decay = 0.5
-        #scheduler = torch.optim.lr_scheduler.StepLR(optimizer=opt, step_size=5, gamma=lr_decay)
+        # scheduler = torch.optim.lr_scheduler.StepLR(optimizer=opt, step_size=5, gamma=lr_decay)
 
         device = torch.device(
             "cuda:0" if torch.cuda.is_available() else "cpu")
@@ -534,7 +642,8 @@ class BitFlow:
                     target_y = torch.stack(target_y).squeeze().to(device)
 
                 loss = self.compute_loss(target_y, y, P, R, O, iter, filtered_vars, batch_size, epochs, training_size,
-                                         error_type=error_type, should_print=True, train_range=train_range, incorporate_ulp_loss=incorporate_ulp_loss)
+                                         error_type=error_type, should_print=True, train_range=train_range,
+                                         incorporate_ulp_loss=incorporate_ulp_loss)
                 loss_values.append(loss)
 
                 opt.zero_grad()
@@ -626,12 +735,12 @@ class BitFlow:
         self.R = R
         self.O = O
 
-    @ staticmethod
+    @staticmethod
     def save(fileName, bitflow_object):
         with open(f'{fileName}.pt', 'wb') as output:
             torch.save(bitflow_object, output)
 
-    @ staticmethod
+    @staticmethod
     def load(fileName):
         with open(f'{fileName}.pt', 'rb') as input:
             loaded = torch.load(input)

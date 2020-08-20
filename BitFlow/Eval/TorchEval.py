@@ -37,7 +37,7 @@ class TorchEval(AbstractEval):
 
     def eval_Round(self, a, prec, rng, node: DagNode):
         scale = 2.0 ** (prec)
-        precise = IntRound(an * scale) / scale
+        precise = IntRound(a * scale) / scale
         precise = precise.float()
 
         # saturate value to range
@@ -69,11 +69,8 @@ class TorchEval(AbstractEval):
         return precise
 
     def eval_Select(self, a, node: DagNode):
-        if len(a.shape) == 1:
-            return a[node.index]
-        else:
-            print(a)
-            return a[:, node.index]
+        print(a)
+        return a[node.index]
 
     # def eval_Select(self, a, node: DagNode):
     #     return a[node.index]
@@ -99,5 +96,6 @@ class TorchEval(AbstractEval):
         return len(a)
 
     def eval_Concat(self, *args, node: DagNode):
+        print(args)
         return t.stack(args, dim=node.concat_dim)
 

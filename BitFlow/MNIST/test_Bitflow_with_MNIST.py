@@ -53,10 +53,11 @@ def gen_linearlayer(row, col, size):
     bias = Input(name="bias")
     #_concat_add__concat_bias = linear_layer(X, weight, bias, row, col, size)
     y = linear_layer(X, weight, bias, row, col, size)
+    z=Reduce(y,0,name="z")
 
     #z = Softmax(y,name="z")
 
-    fig = Dag(outputs=[y], inputs=[X, weight, bias])
+    fig = Dag(outputs=[z], inputs=[X, weight, bias])
     return fig
 
 
@@ -75,16 +76,13 @@ def test_linearlayer():
     #     lr=1e-4
     # )
 
-    bf = BitFlow(dag, {"y":10.}, {
+    bf = BitFlow(dag, {"z":10.}, {
         'X': (10.), 'weight': (10.), 'bias': (10.)})
     # bf = BitFlow(dag, {"_concat_add__concat_bias":10.}, {
     #     'X': (0., 10.), 'weight': (0., 10.), 'bias': (0., 10.)}, **params)
 
-    # bf = BitFlow(dag, {"y0": 10., "y1": 10., "y2": 10., "y3": 10., "y4": 10., "y5": 10., "y6": 10., "y7": 10., "y8": 10., "y9": 10.}, {
-    #     'X': (0., 10.), 'weight': (0., 10.), 'bias': (0., 10.)}, **params)
-
     # Sample Matrix Product
-    test = {"X": 10., "weight": 10., "bias": 10., "W": bf.W, "O": bf.O}
+    test = {"X": 10., "weight": 10., "bias": 10.,"P": bf.P, "R": bf.R, "O": bf.O}
     print(bf.model(**test))
 
     return
@@ -93,7 +91,6 @@ def test_linearlayer():
     #         'X': torch.ones(100,784), 'weight': torch.ones(784,10), 'bias': torch.ones(10)}, **params)
     #
 
-    return
 
 
 

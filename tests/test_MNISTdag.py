@@ -1,9 +1,9 @@
 import torch
 
-from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, Select, Output, Relu, Reduce, Concat
+from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, Select, Output, Reduce, Concat
 from BitFlow.IA import Interval
 from BitFlow.Eval.TorchEval import TorchEval
-from BitFlow.AddRoundNodes import NodePrinter
+#from BitFlow.AddRoundNodes import NodePrinter
 from BitFlow.AddRoundNodes import AddRoundNodes
 from BitFlow.casestudies.caseStudies import caseStudy
 from BitFlow.Eval import IAEval, NumEval
@@ -118,11 +118,23 @@ def gen_reduce_y():
 
 def gen_select():
     a = Input(name="a")
-    b = a[0:3:2]
+    b = a[:,2]
 
     fig = Dag(outputs=[b], inputs=[a])
     return fig
 
+def gen_concat():
+    a = Input(name="a")
+
+    hello = []
+    for i in range(3):
+        hello.append(a[i,2])
+
+    b = Concat(*hello,concat_dim=0)
+
+
+    fig = Dag(outputs=[b], inputs=[a])
+    return fig
 
 def gen_reduce_z():
     a = Input(name="a")
@@ -230,8 +242,8 @@ def test_matrix_mult():
     res = evaluator.eval(a=a, b=b)
     # print(res)
     gold = a @ b
-    # print(res)
-    # print(gold)
+    print(res)
+    print(gold)
     assert torch.all(torch.eq(res, gold))
     print()
 
@@ -279,12 +291,26 @@ def test_matrix_mult():
 
     return
 
+def test_concat():
+    tmp = gen_concat()
+    evaluator = NumEval(tmp)
+    #a = torch.tensor([[1,2],[4,5],[5,6]])
+    a = torch.tensor([[100, 20000, 20, 400, 22, 11], [100, 20000, 20, 400, 22, 11], [100, 20000, 20, 400, 22, 11]])
+    print(a)
+    res = evaluator.eval(a=a)
+    print(res)
+
+    print("v")
+
+    return
 
 def test_select():
     tmp = gen_select()
     evaluator = NumEval(tmp)
-    a = torch.tensor([100, 20000, 20, 400, 22, 11])
+    a = torch.tensor([[100, 20000, 20, 400, 22, 11],[100, 20000, 20, 400, 22, 11],[100, 20000, 20, 400, 22, 11]])
     res = evaluator.eval(a=a)
+
+    print(res)
 
     return
 
@@ -416,15 +442,17 @@ def test_add():
     return
 
 
+#test_concat()
 # test_Relu()
-test_Reduce()
+#test_Reduce()
 # test_Reduce_NEW()
 # test_dotproduct()
-# test_select()
+#test_select()
 # test_length()
-# test_matrix_mult()
+#test_matrix_mult()
 # test_linearlayer()
 # test_add() 
 
-# Recursion limit hit with replacing Reduce with Add nodes
-# print(sys.getrecursionlimit())
+
+#test_select()
+test_matrix_mult()

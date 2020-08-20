@@ -1,11 +1,11 @@
-from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, Select
-from BitFlow.IA import Interval
-from BitFlow.Eval.IAEval import IAEval
-from BitFlow.Eval.NumEval import NumEval
-from BitFlow.Eval.TorchEval import TorchEval
-from BitFlow.Optimization import BitFlowVisitor, BitFlowOptimizer
-from BitFlow.AddRoundNodes import AddRoundNodes, LookupTableTransformer
-from BitFlow.utils import GeneratedDataset
+from .node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, Select
+from .IA import Interval
+from .Eval.IAEval import IAEval
+from .Eval.NumEval import NumEval
+from .Eval.TorchEval import TorchEval
+from .Optimization import BitFlowVisitor, BitFlowOptimizer
+from .AddRoundNodes import AddRoundNodes, LookupTableTransformer, AllKeys
+from .utils import GeneratedDataset
 
 import torch
 from torch.utils import data
@@ -13,7 +13,8 @@ from torch.utils import data
 import random
 import math
 import copy
-#import matplotlib.pyplot as plt
+
+
 
 class BitFlow:
 
@@ -231,34 +232,79 @@ class BitFlow:
     #     return range_bits
 
     def constructOptimizationFunctions(self, dag, outputs, data_range):
+
         evaluator = NumEval(dag)
 
         eval_dict = data_range.copy()
-
         for key in eval_dict:
-            if self.train_MNIST:
-                eval_dict = {"X": 1.}
-                # eval_dict = {}
-                # for row in range(28):
-                #     for col in range(28):
-                #         eval_dict[f"input_{row}_{col}"] = 1.
-            elif isinstance(eval_dict[key], list):
-                for (ind, val) in enumerate(eval_dict[key]):
-                    eval_dict[key][ind] = int(max(abs(val[0]),
-                                                  abs(val[1])))
-            else:
-                eval_dict[key] = int(max(abs(eval_dict[key][0]),
-                                         abs(eval_dict[key][1])))
-        self.eval_dict = eval_dict
+            print(key)
 
-        if not self.train_MNIST:
-            evaluator.eval(**eval_dict)
+            eval_dict[key] = 1
+
+        getKeys = AllKeys()
+        outputDict = getKeys.doit(dag)
+
+        eval_dict = outputDict
+        eval_dict['X'] = torch.ones(100, 784).fill_(10)
+        eval_dict['weight'] = torch.ones(784, 10).fill_(10)
+        eval_dict['bias'] = torch.ones(10).fill_(10)
+
+        # print("eval_dict", eval_dict)
+
+        evaluator.eval(**eval_dict)
+
+        #range_bits, filtered_vars = self.calculateRange(evaluator, outputs)
+        # print("range_bits", range_bits)
+        # print(filtered_vars)
+        bfo = BitFlowOptimizer(evaluator, outputs)
+        bfo.calculateInitialValues()
+
+        return bfo
+
+        #print("eval_dict", eval_dict)
+
+        #evaluator.eval(**eval_dict)
+        # evaluator = NumEval(dag)
+        #
+        # eval_dict = data_range.copy()
+        #
+        # for key in eval_dict:
+        #     if self.train_MNIST:
+        #
+        #         eval_dict = {"X": 1.}
+        #         # eval_dict = {}
+        #         # for row in range(28):
+        #         #     for col in range(28):
+        #         #         eval_dict[f"input_{row}_{col}"] = 1.
+        #     elif isinstance(eval_dict[key], list):
+        #         for (ind, val) in enumerate(eval_dict[key]):
+        #             eval_dict[key][ind] = int(max(abs(val[0]),
+        #                                           abs(val[1])))
+        #     else:
+        #         eval_dict[key] = int(max(abs(eval_dict[key][0]),
+        #                                  abs(eval_dict[key][1])))
+        #
+        # keyDict= AllKeys()
+        # eval_dict=keyDict.doit(dag)
+        #
+        #
+        # self.eval_dict = eval_dict
+        #
+        # eval_dict['X']=torch.ones(100,784).fill_(1.)
+        # eval_dict['weight']=torch.ones(784,10).fill_(1.)
+        # eval_dict['bias']=torch.ones(10).fill_(1.)
+        #
+        #
+
+        #print("here",eval_dict)
+
+
 
         #range_bits = self.calculateRange(evaluator, outputs)
 
-        bfo = BitFlowOptimizer(evaluator, outputs)
-        bfo.calculateInitialValues()
-        return bfo
+        # bfo = BitFlowOptimizer(evaluator, outputs)
+        # bfo.calculateInitialValues()
+        # return bfo
 
     def createExecutableConstraintFunctions(self, area_fn, error_fn, filtered_vars):
         exec(f'''def AreaOptimizerFn(P):
