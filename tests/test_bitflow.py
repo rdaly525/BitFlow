@@ -467,9 +467,9 @@ def gen_linearlayer(row, col, size):
     weight = Input(name="weight")
     bias = Input(name="bias")
     # _concat_add__concat_bias = linear_layer(X, weight, bias, row, col, size)
-    y = linear_layer(X, weight, bias, row, col, size)
+    _concat_add_final_bias = linear_layer(X, weight, bias, row, col, size)
 
-    fig = Dag(outputs=[y], inputs=[X, weight, bias])
+    fig = Dag(outputs=[_concat_add_final_bias], inputs=[X, weight, bias])
     return fig
 
 
@@ -495,7 +495,7 @@ def test_linearlayer():
     #                                                          "weight": [[(0., 1.) for i in range(row)] for j in range(size)],
     #                                                          "bias": [(0., 1.) for i in range(col)]}, **params)
 
-    bf = BitFlow(dag, {"y": torch.ones(10).fill_(1)}, {"X": torch.ones(row, size).fill_(1),
+    bf = BitFlow(dag, {"_concat_add_final_bias": torch.ones(10).fill_(1)}, {"X": torch.ones(row, size).fill_(1),
                                                        "weight": torch.ones(size, col).fill_(1),
                                                        "bias": torch.ones(col).fill_(1)}, **params)
     bf.train(epochs=5)

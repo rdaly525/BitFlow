@@ -118,11 +118,14 @@ class PrecisionNode:
         return self.constructUFBFn(self.error)
 
     def add(self, rhs, symbol):
-        assert isinstance(rhs, PrecisionNode)
+        print("here")
+        print(rhs[0].val)
+        print(self,rhs)
+        assert isinstance(rhs[0], PrecisionNode)
         assert isinstance(symbol, str)
 
 
-        return PrecisionNode(self.val + rhs.val, symbol, self.error + rhs.error)
+        return PrecisionNode(self.val + rhs[0].val, symbol, self.error + rhs[0].error)
 
     def sub(self, rhs, symbol):
         assert isinstance(rhs, PrecisionNode)

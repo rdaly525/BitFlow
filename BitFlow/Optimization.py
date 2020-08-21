@@ -135,29 +135,41 @@ class BitFlowVisitor(Visitor):
 
 
         lhs, rhs = self.getChildren(node)
-        print("here add")
-        print(lhs.name, rhs.name)
-        print(len(self.errors[lhs.name]))
-        print(len(self.errors[rhs.name]))
+
 
         if self.calculate_IB or self.train_MNIST:
 
             res_list = []
             print(lhs.name,rhs.name)
+            print(len(self.errors[lhs.name][0]))
+            print(len(self.errors[rhs.name][0]))
+            res_list = []
+            print("Addhere")
+            print(lhs.name, rhs.name)
             print(len(self.errors[lhs.name]))
             print(len(self.errors[rhs.name]))
-            for i in range(0, len(self.errors[lhs.name])):
-                res_list.append(self.errors[lhs.name][i].add(self.errors[rhs.name][i],node.name))
-
-            self.errors[node.name] = res_list
+            #self.errors[node.name] = self.errors[lhs.name].add(self.errors[rhs.name], node.name)
+            # for i in range(0, len(self.errors[lhs.name])):
+            #     res_list.append(self.errors[lhs.name][i].add(self.errors[rhs.name][i], node.name))
+            #
+            # self.errors[node.name] = res_list
             # error_vector_add = []
             # for i in range(len(self.errors[lhs.name])):
-            #     print("range")
-            #     print(self.errors[lhs.name],self.errors[rhs.name])
-            #     error_vector_add.append(self.errors[lhs.name][i].add(
-            #         self.errors[rhs.name][i], node.name))
-            # self.errors[node.name]=error_vector_add
+            #     error_vector_add.append([])
+            #     for j in range(len(self.errors[lhs.name][0])):
+            #         error_vector_add[i].append(self.errors[lhs.name][i][j].add(
+            #             self.errors[rhs.name][i][j], node.name))
+            # self.errors[node.name] = error_vector_add
 
+            error_mat = []
+            for row in range(100):
+                error_mat.append([])
+                for col in range(10):
+                    error_mat[row].append(self.errors[lhs.name][row][col].add(
+                        self.errors[rhs.name][row][col], node.name))
+            print(node.name)
+            self.errors[node.name] = error_mat
+            print(type(error_mat))
 
 
             # self.errors[node.name] = self.errors[lhs.name].add(
