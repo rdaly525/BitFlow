@@ -13,6 +13,14 @@ from math import log2, ceil
 from .Precision import PrecisionNode
 from scipy.optimize import fsolve, minimize, basinhopping
 
+from math import log2, ceil
+from .Precision import PrecisionNode
+from scipy.optimize import fsolve, minimize, basinhopping
+
+import torch
+import copy
+
+
 
 class NodePrinter(Visitor):
     def __init__(self, node_values):
@@ -281,6 +289,7 @@ class BitFlowVisitor(Visitor):
 
         lhs, rhs = self.getChildren(node)
         print("hello:",lhs,rhs)
+        print(type(self.errors[lhs.name]))
         print(self.errors[rhs.name])
         self.errors[node.name] = self.errors[lhs.name].add(
             self.errors[rhs.name], node.name)

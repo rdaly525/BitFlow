@@ -456,3 +456,5 @@ def test_add():
 
 #test_select()
 test_matrix_mult()
+test_select()
+test_linearlayer()

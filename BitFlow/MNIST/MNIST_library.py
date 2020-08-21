@@ -8,6 +8,7 @@ from ..node import DagNode
 from ..torch.functions import IntRound
 import torch as t
 import typing as tp
+import numpy as np
 
 
 def reduce_m(a, size):
@@ -35,7 +36,12 @@ def matrix_multiply(a: DagNode, b: DagNode, row, col, size):
 
         for j in range(0, col):
 
+
+            #bj = b[:,j]
+            #bj = b
+
             bj = b[:,j]
+
 
 
 
@@ -61,6 +67,6 @@ def linear_layer(X: DagNode, weight: DagNode, bias: DagNode, batch_dim, output_d
     y = matrix_multiply(X, weight, batch_dim, output_dim, size)
 
     bias_array = [bias for _ in range(batch_dim)]
-    with_bias = Concat(*bias_array, concat_dim=0)
+    with_bias = Concat(*bias_array, concat_dim=0,name="final_bias")
 
     return y + with_bias

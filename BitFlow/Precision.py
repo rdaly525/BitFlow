@@ -121,6 +121,7 @@ class PrecisionNode:
         assert isinstance(rhs, PrecisionNode)
         assert isinstance(symbol, str)
 
+
         return PrecisionNode(self.val + rhs.val, symbol, self.error + rhs.error)
 
     def sub(self, rhs, symbol):
@@ -135,7 +136,6 @@ class PrecisionNode:
         return PrecisionNode(self.val - rhs.val, symbol, self.error + subtracted_error)
 
     def mul(self, rhs, symbol):
-        print("enter here")
         assert isinstance(rhs, PrecisionNode)
         assert isinstance(symbol, str)
 

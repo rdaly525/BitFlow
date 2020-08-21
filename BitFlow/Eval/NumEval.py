@@ -22,7 +22,10 @@ class NumEval(AbstractEval):
         return a * b
 
     def eval_Select(self, a, node: DagNode):
+        if(isinstance(node.index,tuple)):
 
+            #return a[0,a.shape[0]][node.index[1]]
+            return a[:,node.index[1]]
         #print(node.index)
         return a[node.index]
 

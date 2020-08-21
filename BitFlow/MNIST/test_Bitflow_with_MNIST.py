@@ -52,12 +52,12 @@ def gen_linearlayer(row, col, size):
     weight = Input(name="weight")
     bias = Input(name="bias")
     #_concat_add__concat_bias = linear_layer(X, weight, bias, row, col, size)
-    y = linear_layer(X, weight, bias, row, col, size)
-    z=Reduce(y,0,name="z")
+    _concat_add_final_bias = linear_layer(X, weight, bias, row, col, size)
+
 
     #z = Softmax(y,name="z")
 
-    fig = Dag(outputs=[z], inputs=[X, weight, bias])
+    fig = Dag(outputs=[_concat_add_final_bias], inputs=[X, weight, bias])
     return fig
 
 
@@ -76,7 +76,7 @@ def test_linearlayer():
     #     lr=1e-4
     # )
 
-    bf = BitFlow(dag, {"z":10.}, {
+    bf = BitFlow(dag, {"_concat_add_final_bias":10.}, {
         'X': (10.), 'weight': (10.), 'bias': (10.)})
     # bf = BitFlow(dag, {"_concat_add__concat_bias":10.}, {
     #     'X': (0., 10.), 'weight': (0., 10.), 'bias': (0., 10.)}, **params)

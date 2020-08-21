@@ -346,9 +346,21 @@ class BitFlow:
         eval_dict['weight'] = torch.ones(784, 10).fill_(10)
         eval_dict['bias'] = torch.ones(10).fill_(10)
 
-        # print("eval_dict", eval_dict)
+        # eval_dict['X'] = [[1. for i in range(100)] for j in range(784)]
+        # eval_dict['weight'] =  [[1. for i in range(784)] for j in range(10)]
+        # eval_dict['bias'] = [1. for i in range(10)]
+
+        outputs['_concat_add_final_bias']=torch.ones(10).fill_(10)
+        #outputs['_concat_add_final_bias']=[1. for i in range(10)]
+
+        for i in outputs:
+            print(i)
+
+
+        print("eval_dict", eval_dict)
 
         evaluator.eval(**eval_dict)
+
 
         #range_bits, filtered_vars = self.calculateRange(evaluator, outputs)
         # print("range_bits", range_bits)
@@ -360,13 +372,13 @@ class BitFlow:
 
 
     def createExecutableConstraintFunctions(self, area_fn, error_fn, filtered_vars):
-        exec(f'''def AreaOptimizerFn(P):
-             {','.join(filtered_vars)} = P
-             return  {area_fn}''', globals())
-
         exec(f'''def ErrorConstraintFn(x):
-             {','.join(filtered_vars)} = x
-             return  {error_fn}''', globals())
+                    {','.join(filtered_vars)} = x
+                    return  {error_fn}''', globals())
+
+        exec(f'''def AreaOptimizerFn(x):
+                    {','.join(filtered_vars)} = x
+                    return  {area_fn}''', globals())
 
     def initializeData(self, model, training_size, testing_size, num_precision, num_range, output_size, data_range,
                        batch_size, distribution):
