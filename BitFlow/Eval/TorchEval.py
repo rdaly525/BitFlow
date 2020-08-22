@@ -6,9 +6,10 @@ import math
 
 
 class TorchEval(AbstractEval):
-    def __init__(self, dag: Dag):
+    def __init__(self, dag: Dag, intervals):
         super().__init__(dag)
         self.saturation = t.Tensor([0.])
+        self.intervals = intervals
 
     def eval_Constant(self, node: DagNode):
         return t.Tensor([node.value])
@@ -33,15 +34,36 @@ class TorchEval(AbstractEval):
         # saturate value to range
         prec = prec.float()
         rng = rng.float()
-        min_val = -1 * (2 ** (prec + rng - 1)) * \
-            2 ** -prec
-        max_val = (2 ** (prec + rng - 1) - 1) * 2 ** -prec
+
+        # mid = (self.intervals[node.name].hi + self.intervals[node.name].lo)/2
+
+        # min_val = -1 * (2 ** (rng - 1) - 1) * \
+        #     2 ** -prec
+        # max_val = (2 ** (prec + rng - 1) - 1) * 2 ** -prec
+
+        # -1 * (2 ** (prec + rng - 1)) * 2 ** -prec
+
+        min_val = (-1 * (2 ** (prec + rng - 1)) * 2 ** -prec)
+        max_val = ((2 ** (prec + rng - 1) - 1) *
+                   2 ** -prec)
+
+        # if max_val < 100.:
+        #     print(f"P: {prec} | R: {rng} | [{min_val}, {max_val}]")
+
+        # if rng < 1:
+        #     print(
+        #         f"{node.name}: {a}, {prec}, {rng}, [{min_val}, {max_val}], {self.intervals[node.name]}")
 
         if t.numel(precise[precise > max_val]) > 0:
+            print(
+                f"P: {prec} | R: {rng} | [{min_val}, {max_val}] | {precise[precise > max_val]} | {node.name} > {self.intervals[node.name]}")
+            assert 0
             self.saturation = self.saturation + (t.sum(precise[precise > max_val] -
                                                        max_val)/t.numel(precise[precise > max_val])) * 2 ** prec
 
         if t.numel(precise[precise < min_val]) > 0:
+            print(f"P: {prec} | R: {rng} | [{min_val}, {max_val}]")
+            assert 0
             self.saturation = self.saturation + (t.sum(t.abs(precise[precise < min_val] -
                                                              min_val))/t.numel(precise[precise < min_val])) * 2 ** prec
 

@@ -50,6 +50,7 @@ class AddRoundNodes(Transformer):
         self.R = R
         self.O = O
         self.area_weight = 0
+        self.num_nodes = 0
         self.round_count = 0
         self.input_count = 0
         self.output_count = 0
@@ -58,7 +59,8 @@ class AddRoundNodes(Transformer):
         self.allroots = []
         self.order = []
 
-    def doit(self, dag: Dag):  # takes a Dag and returns new Dag with round nodes added in
+    # takes a Dag and returns new Dag with round nodes added in
+    def doit(self, dag: Dag):
 
         new_inputs = dag.inputs
 
@@ -75,9 +77,9 @@ class AddRoundNodes(Transformer):
     def generic_visit(self, node: DagNode):
         # make sure code run on all children nodes first
         Transformer.generic_visit(self, node)
+        self.num_nodes += 1
 
         self.area_weight += 1
-        self.order.append(node.name)
 
         if isinstance(node, LookupTable):
             self.area_weight += 9
@@ -93,6 +95,7 @@ class AddRoundNodes(Transformer):
             self.input_count += 1
             self.round_count += 1
             self.range_count += 1
+            self.order.append(node.name)
 
             return returnNode
 
@@ -114,8 +117,9 @@ class AddRoundNodes(Transformer):
             return Select(self.O, self.output_count)
 
         else:
-            returnNode = Round(node, Select(self.P, self.round_count), Select(self.R, self.range_count),
-                               name=node.name + "_round_P")
+            returnNode = Round(node, Select(self.P, self.round_count), Select(
+                self.R, self.range_count), name=node.name + "_round")
             self.round_count += 1
             self.range_count += 1
+            self.order.append(node.name)
             return returnNode

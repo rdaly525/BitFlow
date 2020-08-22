@@ -1,5 +1,6 @@
 from .node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, Select
 from .IA import Interval
+from .AA import AInterval
 from .Eval.IAEval import IAEval
 from .Eval.NumEval import NumEval
 from .Eval.TorchEval import TorchEval
@@ -21,13 +22,13 @@ class BitFlow:
     def make_model(self, **kwargs):
         return self.evaluator.eval(**kwargs)
 
-    def gen_model(self, dag):
+    def gen_model(self, dag, intervals):
         """ Sets up a given dag for torch evaluation.
         Args: Input dag (should already have Round nodes)
         Returns: A trainable model
         """
         self.transformed_dag = dag
-        self.evaluator = TorchEval(dag)
+        self.evaluator = TorchEval(dag, intervals)
         return self.make_model
 
     def custom_round(self, P, factor=0.5):
@@ -77,6 +78,8 @@ class BitFlow:
 
         rounder = AddRoundNodes(P, R, O)
         roundedDag = rounder.doit(dag)
+
+        print(f"NUMBER NODES: {rounder.num_nodes}")
 
         return roundedDag, rounder.round_count, rounder.input_count, rounder.output_count, rounder.range_count, rounder.order, rounder.area_weight
 
@@ -152,6 +155,12 @@ class BitFlow:
 
             if torch.max(ulp) > max_ulp:
                 max_ulp = torch.max(ulp)
+
+            # if torch.max(ulp) > 1.:
+            #     print(torch.max(ulp))
+            #     print(inputs)
+            #     print(res)
+            #     print("~~~~~~~~~")
 
             ulp_err += torch.sum(ulp)
             total += torch.numel(ulp)
@@ -232,9 +241,10 @@ class BitFlow:
     #     return range_bits
 
     def constructOptimizationFunctions(self, dag, outputs, data_range):
-        evaluator = NumEval(dag)
+        evaluator = IAEval(dag)
 
         eval_dict = data_range.copy()
+        eps_idx = 1
 
         for key in eval_dict:
             if self.train_MNIST:
@@ -248,8 +258,14 @@ class BitFlow:
                     eval_dict[key][ind] = int(max(abs(val[0]),
                                                   abs(val[1])))
             else:
-                eval_dict[key] = int(max(abs(eval_dict[key][0]),
-                                         abs(eval_dict[key][1])))
+                # eval_dict[key] = int(max(abs(eval_dict[key][0]),
+                #                          abs(eval_dict[key][1])))
+
+                eval_dict[key] = AInterval(
+                    eval_dict[key][0], eval_dict[key][1], eps_idx=eps_idx)
+                # print(eval_dict[key])
+                eps_idx += 1
+
         self.eval_dict = eval_dict
 
         if not self.train_MNIST:
@@ -320,7 +336,7 @@ class BitFlow:
         area = 0
         if train_range:
             ldict = {"P": P, "R": R}
-            evaluator = NumEval(self.original_dag)
+            evaluator = IAEval(self.original_dag)
             evaluator.eval(**self.eval_dict)
 
             node_values = evaluator.node_values
@@ -411,7 +427,7 @@ class BitFlow:
         return loss
 
     def __init__(self, dag, outputs, data_range, training_size=2000, testing_size=200, batch_size=16, lr=1e-4, error_type=1, test_optimizer=True, test_ufb=True, train_range=False, range_lr=1e-4, distribution=0, graph_loss=False, custom_data=None, incorporate_ulp_loss=False):
-        self.train_MNIST = True
+        self.train_MNIST = False
         torch.manual_seed(42)
         self.original_dag = copy.deepcopy(dag)
 
@@ -419,11 +435,47 @@ class BitFlow:
         bfo = self.constructOptimizationFunctions(
             dag, outputs, data_range)
 
+        intervals = bfo.intervals
+
         # Update the dag with round nodes and set up the model for torch training
         dag, num_precision, num_inputs, num_outputs, num_range, ordered_list, area_weight = self.update_dag(
             dag)
 
         self.area_weight = area_weight
+
+        model = self.gen_model(dag, intervals)
+
+        # create the data according to specifications
+        train_gen = None
+        test_gen = None
+        if custom_data is None:
+            train_gen, test_gen = self.initializeData(model, training_size, testing_size,
+                                                      num_precision, num_range, num_outputs, data_range, batch_size, distribution)
+        else:
+            train_gen = custom_data[0]
+            test_gen = custom_data[1]
+
+        bfo.solve()
+
+        test = list(bfo.fb_sols.values())
+        print(test)
+        ibs = bfo.visitor.IBs
+        for out in outputs:
+            ibs.pop(out, None)
+        rng = list(ibs.values())
+        print(rng)
+        print(ordered_list)
+
+        print()
+
+        # initialize the weights and outputs with appropriate gradient toggle
+        O, P, init_P, R, init_R = self.initializeWeights(
+            outputs, num_precision, num_range, bfo.initial, train_range=train_range)
+
+        self.calc_accuracy("OPTIMIZER TEST", test_gen, torch.tensor(test), torch.tensor(rng),
+                           O, model, False)
+
+        assert 0
 
         filtered_vars = []
         for el in ordered_list:
@@ -437,24 +489,8 @@ class BitFlow:
         self.createExecutableConstraintFunctions(
             area_fn, error_fn, filtered_vars)
 
-        model = self.gen_model(dag)
-
-        # create the data according to specifications
-        train_gen = None
-        test_gen = None
-        if custom_data is None:
-            train_gen, test_gen = self.initializeData(model, training_size, testing_size,
-                                                      num_precision, num_range, num_outputs, data_range, batch_size, distribution)
-        else:
-            train_gen = custom_data[0]
-            test_gen = custom_data[1]
-
-        # initialize the weights and outputs with appropriate gradient toggle
-        O, P, init_P, R, init_R = self.initializeWeights(
-            outputs, num_precision, num_range, bfo.initial, train_range=train_range)
-
         if error_type == 1:
-            self.L = 1e5
+            self.L = 1e8
             self.initL = self.L
             self.prevL = self.L
 
@@ -544,7 +580,10 @@ class BitFlow:
             # scheduler.step()
 
         if graph_loss:
-            plt.plot(loss_values)
+            plt.plot(loss_values, '#40739e')
+            plt.title('4TH DEGREE POLY APPROX')
+            plt.xlabel('Number of Iterations')
+            plt.ylabel('Loss')
             plt.show()
 
         # Show final results for weight and round them
@@ -601,8 +640,10 @@ class BitFlow:
 
             area = ldict["area"]
             print(f"AREA: {area}")
+            print(f"UFB AREA: {AreaOptimizerFn(init_P)}")
         else:
             print(f"AREA: {AreaOptimizerFn(P.tolist())}")
+            print(f"UFB AREA: {AreaOptimizerFn(init_P)}")
 
         if test_optimizer:
             print("\n##### FROM OPTIMIZER ######")
@@ -615,6 +656,12 @@ class BitFlow:
             print(f"AREA: {AreaOptimizerFn(test)}")
 
             self.calc_accuracy("OPTIMIZER TEST", test_gen, torch.tensor(test), torch.tensor(rng),
+                               O, model, False)
+
+            self.calc_accuracy("UFB TEST (BITFLOW PRECISION):", test_gen, P, torch.tensor(rng),
+                               O, model, False)
+
+            self.calc_accuracy("UFB TEST (BITFLOW RANGE):", test_gen, torch.tensor(test), R,
                                O, model, False)
 
             self.calc_ulp("OPTIMIZER TEST", test_gen, torch.tensor(test), torch.tensor(rng),

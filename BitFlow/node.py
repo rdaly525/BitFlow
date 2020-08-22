@@ -1,5 +1,6 @@
 from DagVisitor import Visited, AbstractDag
 from BitFlow.utils import LUTGenerator
+from BitFlow.IA import Interval
 import abc
 import typing as tp
 import random
@@ -115,17 +116,20 @@ class Reduce(DagNode):
 
 
 class Round(DagNode):
-    def __init__(self, val: DagNode, prec: DagNode, rng: DagNode, name=None):
+    def __init__(self, val: DagNode, prec: DagNode, rng: DagNode, mid=0., name=None):
         self.prec = prec
         self.rng = rng
+        self.mid = mid
         if name is None:
             name = f"{val.name}_round_{prec.name}_{rng}"
         super().__init__(name, val, prec, rng)
 
 
 class LookupTable(DagNode):
-    def __init__(self, func, a: DagNode, name=None):
+    def __init__(self, func, a: DagNode, name=None, precision=-1.):
         self.func = func
+        self.precision = precision
+        self.ib = 0
         if name is None:
             name = f"lookup_{a.name}_{func.__name__}"
         super().__init__(name, a)

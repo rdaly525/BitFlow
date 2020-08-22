@@ -1,4 +1,6 @@
 from .IA import Interval
+from copy import deepcopy
+
 
 class AInterval:
     def __init__(self, arg0, arg1, *, eps_idx=None):
@@ -15,11 +17,12 @@ class AInterval:
             self.noise = arg1
 
     def __str__(self):
-        noise_str = " + ".join(( f"{v}*eps{k}" for k,v in sorted(self.noise.items())))
+        noise_str = " + ".join((f"{v}*eps{k}" for k,
+                                v in sorted(self.noise.items())))
         return f"{self.base} + {noise_str}"
 
     def __eq__(self, rhs):
-        return rhs.base == rhs.base and rhs.noise==rhs.noise
+        return rhs.base == rhs.base and rhs.noise == rhs.noise
 
     def to_interval(self):
         lo, hi = self.base, self.base
@@ -66,20 +69,45 @@ class AInterval:
             es1 = self.noise.copy()
             for key in es1:
                 x_sum += abs(es1[key])
-                es1[key] *=  rhs.base
+                es1[key] *= rhs.base
 
             es2 = rhs.noise.copy()
             for key in es2:
                 y_sum += abs(es2[key])
-                es2[key] *=  self.base
+                es2[key] *= self.base
 
             new_noise = self.merge_dicts(es1, es2)
             new_noise[max(set(new_noise.keys())) + 1] = x_sum * y_sum
             return AInterval(self.base * rhs.base, new_noise)
         else:
-            for key in self.noise:
-                self.noise[key] *=  rhs
-            return AInterval(self.base * rhs, self.noise)
+            this = deepcopy(self)
+            for key in this.noise:
+                this.noise[key] *= rhs
+            return AInterval(self.base * rhs, this.noise)
+
+    def __rmul__(self, rhs):
+        if isinstance(rhs, AInterval):
+            x_sum = 0
+            y_sum = 0
+
+            es1 = self.noise.copy()
+            for key in es1:
+                x_sum += abs(es1[key])
+                es1[key] *= rhs.base
+
+            es2 = rhs.noise.copy()
+            for key in es2:
+                y_sum += abs(es2[key])
+                es2[key] *= self.base
+
+            new_noise = self.merge_dicts(es1, es2)
+            new_noise[max(set(new_noise.keys())) + 1] = x_sum * y_sum
+            return AInterval(self.base * rhs.base, new_noise)
+        else:
+            this = deepcopy(self)
+            for key in this.noise:
+                this.noise[key] *= rhs
+            return AInterval(self.base * rhs, this.noise)
 
     def merge_dicts(self, dict1, dict2):
         new_dict = dict1

@@ -23,7 +23,9 @@ import numpy as np
 
 
 def gen_fig3():
+
     # (a*b) + 4 - b
+
     a = Input(name="a")
     b = Input(name="b")
     c = Constant(4.3, name="c")
@@ -36,7 +38,9 @@ def gen_fig3():
 
 
 def gen_ex1():
+
     # (a * b) + (b * c)
+
     a = Input(name="a")
     b = Input(name="b")
     c = Input(name="c")
@@ -46,6 +50,34 @@ def gen_ex1():
     z_2 = Add(a, d, name="z_2")
 
     dag = Dag(outputs=[z_1, z_2], inputs=[a, b, c])
+    return dag
+
+
+def gen_ex2():
+
+    # sqrt((a * a) + (b * b) + (c * c))
+
+    a = Input(name="a")
+    b = Input(name="b")
+    c = Input(name="c")
+
+    out = LookupTable(np.sqrt, Add(
+        Add(Mul(a, a), Mul(b, b)), Mul(c, c)), name="res", precision=8.)
+
+    dag = Dag(outputs=[out], inputs=[a, b, c])
+    return dag
+
+
+def gen_ex3():
+
+    a = Input(name="a")
+    b = Input(name="b")
+    c = Input(name="c")
+    d = Input(name="d")
+
+    out = Add(Mul(a, Mul(b, Mul(c, d))), Mul(a, b), name="res")
+
+    dag = Dag(outputs=[out], inputs=[a, b, c, d])
     return dag
 
 
@@ -85,6 +117,32 @@ def gen_ex1():
 #     return
 
 
+# def test_ex2():
+#     t0 = time.time()
+
+#     dag = gen_ex2()
+
+#     bf = BitFlow(dag, {"res": 8.}, {
+#         'a': (-3., 2.), 'b': (4., 8.), 'c': (-1., 1.)}, lr=1e-2, range_lr=1e-2, train_range=True, training_size=10000, testing_size=2000, incorporate_ulp_loss=False, test_optimizer=True)
+#     bf.train(epochs=15)
+
+#     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
+#     return
+
+
+# def test_ex3():
+#     t0 = time.time()
+
+#     dag = gen_ex3()
+
+#     bf = BitFlow(dag, {"res": 8.}, {
+#         'a': (-5, 5), 'b': (-5, 5), 'c': (-5, 5), 'd': (-5, 5)}, lr=1e-2, range_lr=1e-2, train_range=True, training_size=10000, testing_size=4000, incorporate_ulp_loss=False, test_optimizer=True, distribution=2)
+#     bf.train(epochs=15)
+
+#     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
+#     return
+
+
 def RGB_to_YCbCr():
     r = Input(name="r")
     g = Input(name="g")
@@ -109,15 +167,15 @@ def RGB_to_YCbCr():
 #     dag = RGB_to_YCbCr()
 
 #     params = dict(
-#         training_size=1000,
-#         testing_size=200,
+#         training_size=10000,
+#         testing_size=2000,
 #         batch_size=16,
-#         lr=4e-3,
+#         lr=1e-2,
 #         train_range=True,
-#         range_lr=4e-3,
-#         distribution=0,
+#         range_lr=1e-2,
+#         distribution=2,
 #         test_optimizer=True,
-#         incorporate_ulp_loss=True
+#         incorporate_ulp_loss=False
 #     )
 
 #     bf = BitFlow(dag, {"col_1": 8., "col_2": 8., "col_3": 8.}, {
@@ -183,20 +241,18 @@ def matrix_multiply():
     b10 = Input(name="b10")
     b11 = Input(name="b11")
 
-    C = Constant(-1., name="C")
+    p0 = Mul(Add(a00, a11), Add(b00, b11), name="p0")
+    p1 = Mul(Add(a10, a11), b00, name="p1")
+    p2 = Mul(a00, Add(b01, Mul(Constant(-1.), b11)), name="p2")
+    p3 = Mul(a11, Add(b10, Mul(Constant(-1.), b00)), name="p3")
+    p4 = Mul(b11, Add(a00, a01), name="p4")
+    p5 = Mul(Add(b00, b01), Add(a10, Mul(Constant(-1.), a00)), name="p5")
+    p6 = Mul(Add(b10, b11), Add(a01, Mul(Constant(-1.), a11)), name="p6")
 
-    p0 = Mul(Add(a00, a11), Add(b00, b11))
-    p1 = Mul(Add(a10, a11), b00)
-    p2 = Mul(a00, Add(b01, Mul(C, b11)))
-    p3 = Mul(a11, Add(b10, Mul(C, b00)))
-    p4 = Mul(b11, Add(a00, a01))
-    p5 = Mul(Add(b00, b01), Add(a10, Mul(C, a00)))
-    p6 = Mul(Add(b10, b11), Add(a01, Mul(C, a11)))
-
-    y00 = Add(Add(Add(p0, p3), Mul(C, p4)), p6, name="y00")
+    y00 = Add(Add(Add(p0, p3), Mul(Constant(-1.), p4)), p6, name="y00")
     y01 = Add(p2, p4, name="y01")
     y10 = Add(p1, p3, name="y10")
-    y11 = Add(Add(Add(p0, p2), Mul(C, p1)), p5, name="y11")
+    y11 = Add(Add(Add(p0, p2), Mul(Constant(-1.), p1)), p5, name="y11")
 
     matrix_dag = Dag(outputs=[y00, y01, y10, y11], inputs=[
         a00, a01, a10, a11, b00, b01, b10, b11])
@@ -213,18 +269,19 @@ def matrix_multiply():
 #     params = dict(
 #         training_size=10000,
 #         testing_size=2000,
-#         batch_size=8,
+#         batch_size=16,
 #         lr=4e-3,
 #         train_range=True,
 #         range_lr=4e-3,
 #         distribution=0,
-#         test_optimizer=True,
-#         incorporate_ulp_loss=True
+#         test_optimizer=False,
+#         incorporate_ulp_loss=True,
+#         graph_loss=False
 #     )
 
 #     bf = BitFlow(dag, {"y00": 8., "y01": 8., "y10": 8., "y11": 8.}, {
-#         'a00': (-10., 10.), 'a01': (-10., 10.), 'a10': (-10., 10.), 'a11': (-10., 10.), 'b00': (-10., 10.), 'b01': (-10., 10.), 'b10': (-10., 10.), 'b11': (-10., 10.)}, **params)
-#     bf.train(epochs=0)
+#         'a00': (-5., 5.), 'a01': (-5., 5.), 'a10': (-5., 5.), 'a11': (-5., 5.), 'b00': (-5., 5.), 'b01': (-5., 5.), 'b10': (-5., 5.), 'b11': (-5., 5.)}, **params)
+#     bf.train(epochs=5)
 
 #     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
 
@@ -236,63 +293,63 @@ def matrix_multiply():
 #     return
 
 
-def generate_poly_approx(a, b, c, d, e):
+def generate_poly_approx(a, b, c, d):
     x = Input(name="x")
     a = Constant(a, name="a")
     b = Constant(b, name="b")
     c = Constant(c, name="c")
     d = Constant(d, name="d")
-    e = Constant(e, name="e")
 
-    output = Add(
-        Mul(Add(Mul(Add(Mul(Add(Mul(a, x), b), x), c), x), d), x), e, name="res")
+    output = Mul(
+        Add(Mul(Add(Mul(Add(Mul(a, x), b), x), c), x), d), x, name="res")
 
     approx_dag = Dag(outputs=[output], inputs=[x])
 
     return approx_dag
 
 
-# def test_poly_approx():
-#     print("\n=== POLY APPROX ===")
-#     t0 = time.time()
+def test_poly_approx():
+    print("\n=== POLY APPROX ===")
+    t0 = time.time()
 
-#     dag = generate_poly_approx(-0.25, 1./3, -0.5, 1., 0.)
+    dag = generate_poly_approx(-0.25, 0.333, -0.5, 1.)
 
-#     params = dict(
-#         training_size=10000,
-#         testing_size=2000,
-#         batch_size=16,
-#         lr=4e-3,
-#         train_range=True,
-#         range_lr=4e-3,
-#         distribution=0,
-#         test_optimizer=True,
-#         incorporate_ulp_loss=True
-#     )
+    params = dict(
+        training_size=10000,
+        testing_size=2000,
+        batch_size=16,
+        lr=4e-3,
+        train_range=True,
+        range_lr=4e-3,
+        distribution=0,
+        test_optimizer=True,
+        incorporate_ulp_loss=True,
+        graph_loss=True
+    )
 
-#     bf = BitFlow(dag, {"res": 8.}, {"x": (0., 1.)}, **params)
-#     bf.train(epochs=5)
+    bf = BitFlow(dag, {"res": 8.}, {"x": (0., 1.5)}, **params)
+    bf.train(epochs=5)
 
-#     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
+    print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
 
-#     test = {"x": 0.3, "P": bf.P, "R": bf.R, "O": bf.O}
-#     print(bf.model(**test))
+    test = {"x": 0.3, "P": bf.P, "R": bf.R, "O": bf.O}
+    print(bf.model(**test))
 
-#     return
+    return
 
 
-# def generate_basic_lut():
-#     x = Input(name="x")
-#     amplitude = Input(name="a")
-#     shift = Input(name="b")
+def generate_basic_lut():
+    x = Input(name="x")
+    amplitude = Input(name="a")
+    shift = Input(name="b")
 
-#     output = Add(Mul(amplitude, LookupTable(
-#         np.sin, x)), shift, name="res")
-#     # output = Add(Mul(amplitude, x), shift, name="res")
+    output = Add(Mul(amplitude, LookupTable(
+        np.sin, x)), shift, name="res")
+    # output = Add(Mul(amplitude, x), shift, name="res")
 
-#     sin_dag = Dag(outputs=[output], inputs=[x, amplitude, shift])
+    sin_dag = Dag(outputs=[output], inputs=[x, amplitude, shift])
 
-#     return sin_dag
+    return sin_dag
 
 
 # def test_basic_lut():
@@ -324,19 +381,19 @@ def generate_poly_approx(a, b, c, d, e):
 #     return
 
 
-# def generate_square_wave():
-#     x = Input(name="x")
+def generate_square_wave():
+    x = Input(name="x")
 
-#     a = LookupTable(np.sin, x)
-#     b = Add(Mul(Constant(1/3.), LookupTable(np.sin, Mul(Constant(3.), x))), a)
-#     c = Add(Mul(Constant(1/5.), LookupTable(np.sin, Mul(Constant(5.), x))), b)
-#     d = Add(Mul(Constant(1/7.), LookupTable(np.sin, Mul(Constant(7.), x))), c)
-#     e = Add(Mul(Constant(1/9.), LookupTable(np.sin,
-#                                             Mul(Constant(9.), x))), d, name="res")
+    a = LookupTable(np.sin, x)
+    b = Add(Mul(Constant(1/3.), LookupTable(np.sin, Mul(Constant(3.), x))), a)
+    c = Add(Mul(Constant(1/5.), LookupTable(np.sin, Mul(Constant(5.), x))), b)
+    d = Add(Mul(Constant(1/7.), LookupTable(np.sin, Mul(Constant(7.), x))), c)
+    e = Add(Mul(Constant(1/9.), LookupTable(np.sin,
+                                            Mul(Constant(9.), x))), d, name="res")
 
-#     dag = Dag(outputs=[e], inputs=[x])
+    dag = Dag(outputs=[e], inputs=[x])
 
-#     return dag
+    return dag
 
 
 # def test_square_wave():
@@ -358,7 +415,7 @@ def generate_poly_approx(a, b, c, d, e):
 #     )
 
 #     bf = BitFlow(dag, {"res": 8.}, {"x": (-3., 3.)}, **params)
-#     bf.train(epochs=10)
+#     bf.train(epochs=5)
 
 #     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
 
@@ -367,33 +424,33 @@ def generate_poly_approx(a, b, c, d, e):
 
 #     return
 
-def generate_vector_example():
-    X = Input(name="X")
+# def generate_vector_example():
+#     X = Input(name="X")
 
-    out = Reduce(Concat(Select(Select(X, 0), 0), Select(
-        Select(X, 1), 0), concat_dim=0), reduce_dim=0, name="res")
+#     out = Reduce(Concat(Select(Select(X, 0), 0), Select(
+#         Select(X, 1), 0), concat_dim=0), reduce_dim=0, name="res")
 
-    dag = Dag(outputs=[out], inputs=[X])
+#     dag = Dag(outputs=[out], inputs=[X])
 
-    return dag
+#     return dag
 
 
-def test_vector_ex():
-    dag = generate_vector_example()
+# def test_vector_ex():
+#     dag = generate_vector_example()
 
-    params = dict(
-        training_size=10000,
-        testing_size=2000,
-        batch_size=16,
-        lr=1e-3,
-        train_range=True,
-        range_lr=1e-3,
-        distribution=0,
-        test_optimizer=False,
-        incorporate_ulp_loss=True
-    )
+#     params = dict(
+#         training_size=10000,
+#         testing_size=2000,
+#         batch_size=16,
+#         lr=1e-3,
+#         train_range=True,
+#         range_lr=1e-3,
+#         distribution=0,
+#         test_optimizer=False,
+#         incorporate_ulp_loss=True
+#     )
 
-    bf = BitFlow(dag, {"res": 4.}, {"X": [(0., 1.), (0., 1.)]}, **params)
-    bf.train(epochs=10)
+#     bf = BitFlow(dag, {"res": 4.}, {"X": [(0., 1.), (0., 1.)]}, **params)
+#     bf.train(epochs=10)
 
-    return
+#     return

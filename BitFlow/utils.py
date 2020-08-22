@@ -112,7 +112,6 @@ class GeneratedDataset(data.Dataset):
         for key in data_range:
             # Create random tensor
             input_range = data_range[key]
-
             if isinstance(input_range, list):
                 self.X[key] = (input_range[1] - input_range[0]) * \
                     torch.rand(dataset_size, input_range) + input_range[0]
