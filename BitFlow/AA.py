@@ -46,7 +46,37 @@ class AInterval:
         else:
             return AInterval(self.base + rhs, self.noise)
 
+    def __radd__(self, rhs):
+        if isinstance(rhs, AInterval):
+            new_base = self.base + rhs.base
+            new_noise = {}
+            es = set(self.noise.keys()).union(rhs.noise.keys())
+            for e in es:
+                noise_val = 0
+                for noise in (self.noise, rhs.noise):
+                    if e in noise:
+                        noise_val += noise[e]
+                new_noise[e] = noise_val
+            return AInterval(new_base, new_noise)
+        else:
+            return AInterval(self.base + rhs, self.noise)
+
     def __sub__(self, rhs):
+        if isinstance(rhs, AInterval):
+            new_base = self.base - rhs.base
+            new_noise = self.noise
+            es = set(rhs.noise.keys())
+            for e in es:
+                noise_val = 0
+                for noise in (self.noise, rhs.noise):
+                    if e in noise:
+                        noise_val -= noise[e]
+                new_noise[e] = noise_val
+            return AInterval(new_base, new_noise)
+        else:
+            return AInterval(self.base - rhs, self.noise)
+
+    def __rsub__(self, rhs):
         if isinstance(rhs, AInterval):
             new_base = self.base - rhs.base
             new_noise = self.noise

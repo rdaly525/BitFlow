@@ -81,66 +81,66 @@ def gen_ex3():
     return dag
 
 
-# def test_fig3():
+def test_fig3():
 
-#     t0 = time.time()
+    t0 = time.time()
 
-#     dag = gen_fig3()
+    dag = gen_fig3()
 
-#     bf = BitFlow(dag, {"z": 8.}, {'a': (-3., 2.),
-#                                   'b': (4., 8.)}, lr=1e-2, range_lr=1e-2, train_range=True, training_size=10000, testing_size=2000, distribution=0, incorporate_ulp_loss=False, batch_size=16, test_optimizer=True)
-#     bf.train(epochs=15)
+    bf = BitFlow(dag, {"z": 8.}, {'a': (-3., 2.),
+                                  'b': (4., 8.)}, lr=1e-2, range_lr=1e-2, train_range=True, training_size=10000, testing_size=2000, distribution=0, incorporate_ulp_loss=False, batch_size=16, test_optimizer=True)
+    bf.train(epochs=15)
 
-#     # # check saving object works
-#     # BitFlow.save("./models/fig3", bf)
-#     # new_bf = BitFlow.load("./models/fig3")
+    # # check saving object works
+    # BitFlow.save("./models/fig3", bf)
+    # new_bf = BitFlow.load("./models/fig3")
 
-#     # new_bf.train(epochs=5)
+    # new_bf.train(epochs=5)
 
-#     # assert new_bf.range_lr == bf.range_lr
+    # assert new_bf.range_lr == bf.range_lr
 
-#     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
+    print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
 
-#     return
-
-
-# def test_ex1():
-#     t0 = time.time()
-
-#     dag = gen_ex1()
-
-#     bf = BitFlow(dag, {"z_1": 8., "z_2": 8.}, {
-#         'a': (-3., 2.), 'b': (4., 8.), 'c': (-1., 1.)}, lr=1e-2, range_lr=1e-2, train_range=True, training_size=10000, testing_size=2000, incorporate_ulp_loss=False, test_optimizer=True)
-#     bf.train(epochs=15)
-
-#     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
-#     return
+    return
 
 
-# def test_ex2():
-#     t0 = time.time()
+def test_ex1():
+    t0 = time.time()
 
-#     dag = gen_ex2()
+    dag = gen_ex1()
 
-#     bf = BitFlow(dag, {"res": 8.}, {
-#         'a': (-3., 2.), 'b': (4., 8.), 'c': (-1., 1.)}, lr=1e-2, range_lr=1e-2, train_range=True, training_size=10000, testing_size=2000, incorporate_ulp_loss=False, test_optimizer=True)
-#     bf.train(epochs=15)
+    bf = BitFlow(dag, {"z_1": 8., "z_2": 8.}, {
+        'a': (-3., 2.), 'b': (4., 8.), 'c': (-1., 1.)}, lr=1e-2, range_lr=1e-2, train_range=True, training_size=10000, testing_size=2000, incorporate_ulp_loss=False, test_optimizer=True)
+    bf.train(epochs=15)
 
-#     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
-#     return
+    print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
+    return
 
 
-# def test_ex3():
-#     t0 = time.time()
+def test_ex2():
+    t0 = time.time()
 
-#     dag = gen_ex3()
+    dag = gen_ex2()
 
-#     bf = BitFlow(dag, {"res": 8.}, {
-#         'a': (-5, 5), 'b': (-5, 5), 'c': (-5, 5), 'd': (-5, 5)}, lr=1e-2, range_lr=1e-2, train_range=True, training_size=10000, testing_size=4000, incorporate_ulp_loss=False, test_optimizer=True, distribution=2)
-#     bf.train(epochs=15)
+    bf = BitFlow(dag, {"res": 8.}, {
+        'a': (-3., 2.), 'b': (4., 8.), 'c': (-1., 1.)}, lr=1e-2, range_lr=1e-2, train_range=True, training_size=10000, testing_size=2000, incorporate_ulp_loss=False, test_optimizer=True)
+    bf.train(epochs=15)
 
-#     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
-#     return
+    print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
+    return
+
+
+def test_ex3():
+    t0 = time.time()
+
+    dag = gen_ex3()
+
+    bf = BitFlow(dag, {"res": 8.}, {
+        'a': (-5, 5), 'b': (-5, 5), 'c': (-5, 5), 'd': (-5, 5)}, lr=1e-2, range_lr=1e-2, train_range=True, training_size=10000, testing_size=4000, incorporate_ulp_loss=False, test_optimizer=True, distribution=2)
+    bf.train(epochs=15)
+
+    print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
+    return
 
 
 def RGB_to_YCbCr():
@@ -308,34 +308,34 @@ def generate_poly_approx(a, b, c, d):
     return approx_dag
 
 
-def test_poly_approx():
-    print("\n=== POLY APPROX ===")
-    t0 = time.time()
+# def test_poly_approx():
+#     print("\n=== POLY APPROX ===")
+#     t0 = time.time()
 
-    dag = generate_poly_approx(-0.25, 0.333, -0.5, 1.)
+#     dag = generate_poly_approx(-0.25, 0.333, -0.5, 1.)
 
-    params = dict(
-        training_size=10000,
-        testing_size=2000,
-        batch_size=16,
-        lr=4e-3,
-        train_range=True,
-        range_lr=4e-3,
-        distribution=0,
-        test_optimizer=True,
-        incorporate_ulp_loss=True,
-        graph_loss=True
-    )
+#     params = dict(
+#         training_size=10000,
+#         testing_size=2000,
+#         batch_size=16,
+#         lr=4e-3,
+#         train_range=True,
+#         range_lr=4e-3,
+#         distribution=0,
+#         test_optimizer=True,
+#         incorporate_ulp_loss=True,
+#         graph_loss=True
+#     )
 
-    bf = BitFlow(dag, {"res": 8.}, {"x": (0., 1.5)}, **params)
-    bf.train(epochs=5)
+#     bf = BitFlow(dag, {"res": 8.}, {"x": (0., 1.5)}, **params)
+#     bf.train(epochs=5)
 
-    print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
+#     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
 
-    test = {"x": 0.3, "P": bf.P, "R": bf.R, "O": bf.O}
-    print(bf.model(**test))
+#     test = {"x": 0.3, "P": bf.P, "R": bf.R, "O": bf.O}
+#     print(bf.model(**test))
 
-    return
+#     return
 
 
 def generate_basic_lut():
@@ -452,5 +452,45 @@ def generate_square_wave():
 
 #     bf = BitFlow(dag, {"res": 4.}, {"X": [(0., 1.), (0., 1.)]}, **params)
 #     bf.train(epochs=10)
+
+#     return
+
+def generate_basic(a):
+    x = Input(name="x")
+    a = Constant(a, name="a")
+
+    output = Mul(a, x, name="res")
+
+    approx_dag = Dag(outputs=[output], inputs=[x])
+
+    return approx_dag
+
+
+# def test_basic():
+#     print("\n=== BASIC ===")
+#     t0 = time.time()
+
+#     dag = generate_basic(-0.25)
+
+#     params = dict(
+#         training_size=10000,
+#         testing_size=2000,
+#         batch_size=16,
+#         lr=4e-3,
+#         train_range=True,
+#         range_lr=4e-3,
+#         distribution=0,
+#         test_optimizer=True,
+#         incorporate_ulp_loss=True,
+#         graph_loss=True
+#     )
+
+#     bf = BitFlow(dag, {"res": 8.}, {"x": (0., 1.)}, **params)
+#     bf.train(epochs=5)
+
+#     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
+
+#     test = {"x": 0.3, "P": bf.P, "R": bf.R, "O": bf.O}
+#     print(bf.model(**test))
 
 #     return

@@ -53,7 +53,8 @@ class BitFlowVisitor(Visitor):
                     return
                 alpha = 2 if ib >= 1. and log2(ib).is_integer() else 1
                 self.IBs[node.name] = int(ceil(log2(ib)) + alpha)
-                self.intervals[node.name + "_round"] = Interval(0., abs(x))
+                self.intervals[node.name +
+                               "_round"] = Interval(-abs(x), abs(x))
                 # if (x == 0.):
                 #     self.IBs[node.name] = 1
                 # elif (x < 1.):
@@ -102,14 +103,14 @@ class BitFlowVisitor(Visitor):
             else:
                 val = self.node_values[node]
 
-            self.errors[node.name] = PrecisionNode(val, node.name, [])
+            self.errors[node.name] = PrecisionNode(abs(val), node.name, [])
 
     def visit_Constant(self, node: Constant):
         self.handleIB(node)
 
         if self.calculate_IB or self.train_MNIST:
             val = self.node_values[node]
-            self.errors[node.name] = PrecisionNode(val, node.name, [])
+            self.errors[node.name] = PrecisionNode(abs(val), node.name, [])
 
     def visit_Add(self, node: Add):
         Visitor.generic_visit(self, node)
@@ -260,8 +261,7 @@ class BitFlowOptimizer():
         for (ind, output) in enumerate(self.outputs):
             self.ufb_fns[ind] += f"{-2**(-self.outputs[output]-1)}"
 
-        print(f"UFB EQ: {self.ufb_fns}")
-        # print(f"UFB EQ: {self.ufb_fn}")
+        #print(f"UFB EQ: {self.ufb_fns}")
         # print(f"-----------")
         exec(f'''def UFBOptimizerFn(UFB):
              return  [{','.join(self.ufb_fns)}] if {len(self.ufb_fns)} == 0 else {self.ufb_fns[0]}''', globals())

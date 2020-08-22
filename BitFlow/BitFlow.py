@@ -466,8 +466,6 @@ class BitFlow:
         print(rng)
         print(ordered_list)
 
-        print()
-
         # initialize the weights and outputs with appropriate gradient toggle
         O, P, init_P, R, init_R = self.initializeWeights(
             outputs, num_precision, num_range, bfo.initial, train_range=train_range)
