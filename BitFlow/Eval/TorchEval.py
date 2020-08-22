@@ -55,17 +55,18 @@ class TorchEval(AbstractEval):
         #         f"{node.name}: {a}, {prec}, {rng}, [{min_val}, {max_val}], {self.intervals[node.name]}")
 
         if t.numel(precise[precise > max_val]) > 0:
-            print(
-                f"P: {prec} | R: {rng} | [{min_val}, {max_val}] | {precise[precise > max_val]} | {node.name} > {self.intervals[node.name]}")
-            assert 0
+            # print(
+            #     f"P: {prec} | R: {rng} | [{min_val}, {max_val}] | {precise[precise > max_val]} | {node.name} > {self.intervals[node.name]}")
+            # assert 0
             self.saturation = self.saturation + (t.sum(precise[precise > max_val] -
-                                                       max_val)/t.numel(precise[precise > max_val])) * 2 ** prec
+                                                       max_val)) * 2 ** prec
 
         if t.numel(precise[precise < min_val]) > 0:
-            print(f"P: {prec} | R: {rng} | [{min_val}, {max_val}]")
-            assert 0
+            # print(
+            #     f"P: {prec} | R: {rng} | [{min_val}, {max_val}] | {precise[precise < min_val]} | {node.name} > {self.intervals[node.name]}")
+            # assert 0
             self.saturation = self.saturation + (t.sum(t.abs(precise[precise < min_val] -
-                                                             min_val))/t.numel(precise[precise < min_val])) * 2 ** prec
+                                                             min_val))) * 2 ** prec
 
         # if rng <= 0.01:
         #     print(f"{rng}.{prec}")

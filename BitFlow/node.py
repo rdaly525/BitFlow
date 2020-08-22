@@ -1,5 +1,4 @@
 from DagVisitor import Visited, AbstractDag
-from BitFlow.utils import LUTGenerator
 from BitFlow.IA import Interval
 import abc
 import typing as tp
