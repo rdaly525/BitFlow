@@ -110,7 +110,7 @@ class Reduce(DagNode):
     def __init__(self, a: DagNode, reduce_dim,  name=None):
         self.reduce_dim = reduce_dim
         if name is None:
-            name = f"{a.name}_reduce"
+            name = f"{a.name}"
         super().__init__(name, a)
 
 

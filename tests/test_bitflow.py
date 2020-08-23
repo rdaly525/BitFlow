@@ -474,7 +474,7 @@ def gen_linearlayer(row, col, size):
 
 
 def test_linearlayer():
-    row = 100
+    row = 10
     col = 10
     size = 784
     dag = gen_linearlayer(row, col, size)
@@ -482,7 +482,7 @@ def test_linearlayer():
     params = dict(
         training_size=60000,
         testing_size=2000,
-        batch_size=100,
+        batch_size=10,
         lr=1e-3,
         train_range=True,
         range_lr=1e-3,
@@ -491,11 +491,7 @@ def test_linearlayer():
         incorporate_ulp_loss=True
     )
 
-    # bf = BitFlow(dag, {"y": [(0., 1.) for i in range(10)]}, {"X": [[(0., 1.) for i in range(row)] for j in range(size)],
-    #                                                          "weight": [[(0., 1.) for i in range(row)] for j in range(size)],
-    #                                                          "bias": [(0., 1.) for i in range(col)]}, **params)
-
-    bf = BitFlow(dag, {"_concat_add_final_bias": torch.ones(10).fill_(1)}, {"X": torch.ones(row, size).fill_(1),
+    bf = BitFlow(dag, {"_concat_add_final_bias": torch.ones(10, 10).fill_(1)}, {"X": torch.ones(row, size).fill_(1),
                                                        "weight": torch.ones(size, col).fill_(1),
                                                        "bias": torch.ones(col).fill_(1)}, **params)
     bf.train(epochs=5)
@@ -567,9 +563,39 @@ def test_vector_ex6():
     return
 
 
+def test_linear_L():
+    row = 10
+    col = 10
+    size = 784
+    dag = gen_linearlayer(row, col, size)
+
+    params = dict(
+        training_size=60000,
+        testing_size=2000,
+        batch_size=10,
+        lr=1e-3,
+        train_range=True,
+        range_lr=1e-3,
+        distribution=0,
+        test_optimizer=True,
+        incorporate_ulp_loss=True
+    )
+
+    bf = BitFlow(dag, {"_concat_add_final_bias": torch.ones(10, 10).fill_(1)}, {"X": torch.ones(row, size).fill_(1),
+                                                       "weight": torch.ones(size, col).fill_(1),
+                                                       "bias": torch.ones(col).fill_(1)}, **params)
+    bf.train(epochs=5)
+
+
+
+    test = {"X": 10.,"weight":10.,"bias":10., "P": bf.P, "R": bf.R, "O": bf.O}
+    print(bf.model(**test))
+
+    return
 
 #test_vector_ex5() WORKS
 #test_vector_ex() WORKS
 
 #test_vector_ex6()
-test_linearlayer()
+#test_linearlayer()
+test_linear_L()

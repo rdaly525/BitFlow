@@ -85,6 +85,23 @@ class PrecisionNode:
 
     def constructErrorFn(self, errors):
         myfn = ""
+        # print('here!!')
+        # print(len(errors))
+        # for err in errors:
+        #     for m in err:
+        #         print(type(m))
+        #         if isinstance(m, FPEpsilon):
+        #             if m.node == self.symbol:
+        #                 return myfn
+        #             myfn += f"+{m.val}*2**(-{m.node}-1)" if m.val >= 0 else f"{m.val}*2**(-{m.node}-1)"
+        #         elif isinstance(m, FPEpsilonMultiplier):
+        #             myfn += f"+{m.val}*("
+        #             myfn += self.constructErrorFn(m.Ex)
+        #             myfn += ")*("
+        #             myfn += self.constructErrorFn(m.Ey)
+        #             myfn += ")"
+        #     return myfn
+
         for err in errors:
             if isinstance(err, FPEpsilon):
                 if err.node == self.symbol:
@@ -118,7 +135,7 @@ class PrecisionNode:
         return self.constructUFBFn(self.error)
 
     def add(self, rhs, symbol):
-        print("here")
+
         print(rhs[0].val)
         print(self,rhs)
         assert isinstance(rhs[0], PrecisionNode)

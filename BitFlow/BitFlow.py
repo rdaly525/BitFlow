@@ -15,6 +15,25 @@ import math
 import copy
 
 
+from torch.autograd import Variable
+import torchvision.transforms as transforms
+import torchvision.datasets as dsets
+
+
+from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, Select
+from BitFlow.IA import Interval
+from BitFlow.Eval.IAEval import IAEval
+from BitFlow.Eval.NumEval import NumEval
+from BitFlow.Eval.TorchEval import TorchEval
+
+from BitFlow.AddRoundNodes import AddRoundNodes
+
+import torch
+from torch.utils import data
+
+import random
+import math
+
 
 class BitFlow:
 
@@ -239,6 +258,7 @@ class BitFlow:
         for key in eval_dict:
             if self.train_MNIST:
                 eval_dict = {"X": 1.,"weight": 1.,"bias":1.}
+                outputs = {'_concat_add_final_bias': torch.ones(10,10)}
                 # eval_dict = {}
                 # for row in range(28):
                 #     for col in range(28):
@@ -251,7 +271,9 @@ class BitFlow:
                 eval_dict[key] = int(max(abs(eval_dict[key][0]),
                                          abs(eval_dict[key][1])))
         self.eval_dict = eval_dict
+        self.outputs = outputs
 
+        print(outputs)
         if not self.train_MNIST:
             evaluator.eval(**eval_dict)
 
@@ -261,34 +283,58 @@ class BitFlow:
         bfo.calculateInitialValues()
         return bfo
 
-    def createExecutableConstraintFunctions(self, area_fn, error_fn, filtered_vars):
-        exec(f'''def AreaOptimizerFn(P):
-             {','.join(filtered_vars)} = P
-             return  {area_fn}''', globals())
 
-        exec(f'''def ErrorConstraintFn(x):
-             {','.join(filtered_vars)} = x
-             return  {error_fn}''', globals())
+
+
+    def createExecutableConstraintFunctions(self, area_fn, error_fn, filtered_vars):
+        print("HERE")
+        print(area_fn)
+        print(error_fn)
+
+        print(filtered_vars)
+
+        exec(f'''def AreaOptimizerFn(P):
+                     return  {area_fn}''', globals())
+
+        exec(f'''def ErrorOptimizerFn(P):
+                             return  {error_fn}''', globals())
+
+        # exec(f'''def AreaOptimizerFn(P):
+        #      {','.join(filtered_vars)} = P
+        #      return  {area_fn}''', globals())
+
+        # exec(f'''def ErrorConstraintFn(x):
+        #      {','.join(filtered_vars)} = x
+        #      return  {error_fn}''', globals())
 
     def initializeData(self, model, training_size, testing_size, num_precision, num_range, output_size, data_range, batch_size, distribution):
         data_params = dict(
             batch_size=batch_size
         )
 
-        # generate testing/training data
-        training_set = self.gen_data(
-            model, training_size, num_precision, num_range, output_size, data_range, dist=distribution)
-        train_gen = data.DataLoader(training_set, **data_params)
-        test_set = self.gen_data(
-            model, testing_size, num_precision, num_range, output_size, data_range, dist=distribution)
-        test_gen = data.DataLoader(test_set, **data_params)
+        # # generate testing/training data
+        # training_set = self.gen_data(
+        #     model, training_size, num_precision, num_range, output_size, data_range, dist=distribution)
+        # train_gen = data.DataLoader(training_set, **data_params)
+        # test_set = self.gen_data(
+        #     model, testing_size, num_precision, num_range, output_size, data_range, dist=distribution)
+        # test_gen = data.DataLoader(test_set, **data_params)
+
+        # LOAD DATA
+        training_set = dsets.MNIST(root='./data', train=True, transform=transforms.ToTensor(), download=True)
+        test_set = dsets.MNIST(root='./data', train=False, transform=transforms.ToTensor())
+
+        train_gen = torch.utils.data.DataLoader(dataset=training_set, batch_size=batch_size, shuffle=True)
+        test_gen = torch.utils.data.DataLoader(dataset=test_set, batch_size=batch_size, shuffle=False)
 
         return train_gen, test_gen
 
     def initializeWeights(self, outputs, num_weights, num_range, initial_P, train_range=False):
         # output without grad
-        O = torch.Tensor(list(outputs.values()))
-
+        print("WEIGHTS")
+        print(outputs.values())
+        #O = torch.Tensor(list(outputs.values()))
+        O = outputs.values()
         # weights matrix
         P = torch.Tensor(num_weights).fill_(initial_P)
         init_P = P.clone()
@@ -332,7 +378,8 @@ class BitFlow:
 
             area_fn = visitor.area_fn
             exec(f"{','.join(filtered_vars)}=P", ldict)
-            ib_vars = [f"{f}_ib" for f in range_list]
+            #ib_vars = [f"{f}_ib" for f in range_list]
+            ib_vars = [f"{f}" for f in range_list]
             exec(f"{','.join(ib_vars)}=R", ldict)
 
             exec(f"area = {area_fn}", ldict)
@@ -521,9 +568,12 @@ class BitFlow:
         for e in range(epochs):
             for t, (inputs, target_y) in enumerate(train_gen):
 
-                # Move data to GPU
-                inputs = {k: inputs[k].to(device) for k in inputs}
+                # # Move data to GPU
+                #
+                # inputs = {k: inputs[k].to(device) for k in inputs}
 
+                print(inputs)
+                print("int")
                 inputs["P"] = P
                 inputs["R"] = R
                 inputs["O"] = O
@@ -594,7 +644,8 @@ class BitFlow:
 
             area_fn = visitor.area_fn
             exec(f"{','.join(filtered_vars)}=P", ldict)
-            ib_vars = [f"{f}_ib" for f in range_list]
+            ib_vars = [f"{f}" for f in range_list]
+            # ib_vars = [f"{f}_ib" for f in range_list]
             exec(f"{','.join(ib_vars)}=R", ldict)
 
             exec(f"area = {area_fn}", ldict)

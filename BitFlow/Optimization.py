@@ -1,17 +1,4 @@
-from .node import Input, Constant, Dag, Add, Sub, Mul, DagNode, Select, LookupTable, BitShift, Concat, Reduce
-from DagVisitor import Visitor
-from .IA import Interval
-from .Eval.IAEval import IAEval
-from .Eval.NumEval import NumEval
-from math import log2, ceil
-from .Precision import PrecisionNode
-from scipy.optimize import fsolve, minimize, basinhopping
-
-
-import torch
-import copy
-
-from .node import Input, Constant, Dag, Add, Sub, Mul, DagNode, Select, LookupTable, BitShift, Concat, Reduce
+from .node import Input, Constant, Dag, Add, Sub, Mul, DagNode, Select, LookupTable, BitShift, Concat, Reduce, Output
 from DagVisitor import Visitor
 from .IA import Interval
 from .Eval.IAEval import IAEval
@@ -22,6 +9,19 @@ from scipy.optimize import fsolve, minimize, basinhopping
 
 import torch
 import copy
+
+from .node import Input, Constant, Dag, Add, Sub, Mul, DagNode, Select, LookupTable, BitShift, Concat, Reduce
+from DagVisitor import Visitor
+from .IA import Interval
+from .Eval.IAEval import IAEval
+from .Eval.NumEval import NumEval
+from math import log2, ceil
+from .Precision import PrecisionNode
+from scipy.optimize import fsolve, minimize, basinhopping
+
+import torch
+import copy
+
 
 class BitFlowVisitor(Visitor):
     def __init__(self, node_values, calculate_IB=True):
@@ -32,7 +32,8 @@ class BitFlowVisitor(Visitor):
         self.train_MNIST = True
         if self.train_MNIST:
             self.calculate_IB = False
-       # self.calculate_IB = calculate_IB
+
+    # self.calculate_IB = calculate_IB
 
     def handleIB(self, node):
         if self.calculate_IB:
@@ -67,20 +68,20 @@ class BitFlowVisitor(Visitor):
         return children
 
     def visit_Input(self, node: Input):
-        print("INPUT", node)
+        # print("INPUT", node)
         self.handleIB(node)
 
         if node.name == 'X':
             print("X---")
             error_mat = []
-            for row in range(100):
+            for row in range(10):
                 error_mat.append([])
                 for col in range(784):
                     error_mat[row].append(PrecisionNode(
                         1., f"{node.name}_input_{row}_{col}", []))
-            print(node.name)
+                    # print(error_mat[row])
+
             self.errors[node.name] = error_mat
-            print(type(error_mat))
 
             return
 
@@ -92,7 +93,7 @@ class BitFlowVisitor(Visitor):
                 for col in range(10):
                     error_mat[row].append(PrecisionNode(
                         1., f"{node.name}_input_{row}_{col}", []))
-            print(node.name)
+
             self.errors[node.name] = error_mat
             return
 
@@ -104,7 +105,7 @@ class BitFlowVisitor(Visitor):
                 for col in range(1):
                     error_mat[row].append(PrecisionNode(
                         1., f"{node.name}_input_{row}_{col}", []))
-            print(node.name)
+            # print(node.name)
             self.errors[node.name] = error_mat
             return
 
@@ -119,7 +120,7 @@ class BitFlowVisitor(Visitor):
             self.errors[node.name] = PrecisionNode(val, node.name, [])
 
     def visit_Constant(self, node: Constant):
-        print("CONSTANT", node)
+        # print("CONSTANT", node)
         self.handleIB(node)
 
         if self.calculate_IB or self.train_MNIST:
@@ -127,58 +128,29 @@ class BitFlowVisitor(Visitor):
             self.errors[node.name] = PrecisionNode(val, node.name, [])
 
     def visit_Add(self, node: Add):
-        print("ADD", node)
+        # print("ADD", node)
 
         Visitor.generic_visit(self, node)
 
         self.handleIB(node)
 
-
         lhs, rhs = self.getChildren(node)
-
 
         if self.calculate_IB or self.train_MNIST:
 
-            res_list = []
-            print(lhs.name,rhs.name)
-            print(len(self.errors[lhs.name][0]))
-            print(len(self.errors[rhs.name][0]))
-            res_list = []
-            print("Addhere")
-            print(lhs.name, rhs.name)
-            print(len(self.errors[lhs.name]))
-            print(len(self.errors[rhs.name]))
-            #self.errors[node.name] = self.errors[lhs.name].add(self.errors[rhs.name], node.name)
-            # for i in range(0, len(self.errors[lhs.name])):
-            #     res_list.append(self.errors[lhs.name][i].add(self.errors[rhs.name][i], node.name))
-            #
-            # self.errors[node.name] = res_list
-            # error_vector_add = []
-            # for i in range(len(self.errors[lhs.name])):
-            #     error_vector_add.append([])
-            #     for j in range(len(self.errors[lhs.name][0])):
-            #         error_vector_add[i].append(self.errors[lhs.name][i][j].add(
-            #             self.errors[rhs.name][i][j], node.name))
-            # self.errors[node.name] = error_vector_add
-
             error_mat = []
-            for row in range(100):
+            for row in range(10):
                 error_mat.append([])
                 for col in range(10):
                     error_mat[row].append(self.errors[lhs.name][row][col].add(
                         self.errors[rhs.name][row][col], node.name))
-            print(node.name)
+            # print(node.name)
             self.errors[node.name] = error_mat
-            print(type(error_mat))
-
-
-            # self.errors[node.name] = self.errors[lhs.name].add(
-            #     self.errors[rhs.name], node.name)
 
         if self.calculate_IB:
             self.area_fn += f"+1 * max({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
         else:
-            self.area_fn += f"+1 * max({lhs.name}_ib + {lhs.name}, {rhs.name}_ib + {rhs.name})"
+            self.area_fn += f"+1 * max({lhs.name} + {lhs.name}, {rhs.name} + {rhs.name})"
 
     def visit_Sub(self, node: Sub):
         print("SUB", node)
@@ -194,34 +166,29 @@ class BitFlowVisitor(Visitor):
         if self.calculate_IB:
             self.area_fn += f"+1 * max({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
         else:
-            self.area_fn += f"+1 * max({lhs.name}_ib + {lhs.name}, {rhs.name}_ib + {rhs.name})"
+            self.area_fn += f"+1 * max({lhs.name} + {lhs.name}, {rhs.name} + {rhs.name})"
 
     def visit_Mul(self, node: Mul):
-        print("MUL", node)
+        # print("MUL", node)
         Visitor.generic_visit(self, node)
 
         self.handleIB(node)
         lhs, rhs = self.getChildren(node)
 
         if self.calculate_IB or self.train_MNIST:
-            #print(self.errors[lhs.name])
-            #print(type(self.errors[lhs.name]))
-            # self.errors[node.name] = self.errors[lhs.name].mul(
-            #     self.errors[rhs.name], node.name)
-
             res_list = []
-            print(lhs.name,rhs.name)
-            print(len(self.errors[lhs.name]))
-            print(len(self.errors[rhs.name]))
+            # print(lhs.name,rhs.name)
+            # print(len(self.errors[lhs.name]))
+            # print(len(self.errors[rhs.name]))
             for i in range(0, len(self.errors[rhs.name])):
-                res_list.append(self.errors[lhs.name][i].mul(self.errors[rhs.name][i],node.name))
+                res_list.append(self.errors[lhs.name][i].mul(self.errors[rhs.name][i], node.name))
 
             self.errors[node.name] = res_list
 
         if self.calculate_IB:
             self.area_fn += f"+1 * ({self.IBs[lhs.name]} + {lhs.name})*({self.IBs[rhs.name]} + {rhs.name})"
         else:
-            self.area_fn += f"+1 * ({lhs.name}_ib + {lhs.name})*({rhs.name}_ib + {rhs.name})"
+            self.area_fn += f"+1 * ({lhs.name} + {lhs.name})*({rhs.name} + {rhs.name})"
 
     def visit_BitShift(self, node: BitShift):
         Visitor.generic_visit(self, node)
@@ -234,21 +201,21 @@ class BitFlowVisitor(Visitor):
                 self.errors[rhs.name], node.name)
 
     def visit_Select(self, node: Select):
-        print("SELECT",node)
+        # print("SELECT",node)
         Visitor.generic_visit(self, node)
 
         self.handleIB(node)
         input_signal = self.getChildren(node)
 
         if self.train_MNIST:
-            if(isinstance(node.index,tuple)):
-                print()
+            if (isinstance(node.index, tuple)):
+
                 self.errors[node.name] = self.errors[input_signal.name][0:][node.index[1]]
             else:
                 self.errors[node.name] = self.errors[input_signal.name][node.index]
 
     def visit_Concat(self, node: Concat):
-        print("CONCAT", node)
+        # print("CONCAT", node)
         Visitor.generic_visit(self, node)
 
         self.handleIB(node)
@@ -257,11 +224,12 @@ class BitFlowVisitor(Visitor):
         if self.train_MNIST:
             precisions = []
             for i in inputs:
-                precisions.append(copy.deepcopy(self.errors[i.name]))
+                precisions.append(self.errors[i.name])
+                # precisions.append(copy.deepcopy(self.errors[i.name]))
             self.errors[node.name] = precisions
 
     def visit_Reduce(self, node: Reduce):
-        print("REDUCE", node)
+        # print("REDUCE", node)
         Visitor.generic_visit(self, node)
 
         self.handleIB(node)
@@ -283,18 +251,57 @@ class BitFlowVisitor(Visitor):
             self.errors[node.name] = PrecisionNode(
                 self.errors[input_signal.name].val, node.name, self.errors[input_signal.name].error)
         else:
-            self.area_fn += f"+1 * (2 ** ({input_signal.name} + {input_signal.name}_ib)) * ({node.name} + {node.name}_ib)"
+            self.area_fn += f"+1 * (2 ** ({input_signal.name} + {input_signal.name})) * ({node.name} + {node.name})"
 
         # if self.calculate_IB:
         #     self.area_fn += f"+1 * ({node.numel}) * ({node.name} + {self.IBs[node.name]})"
+
         # else:
         #     self.area_fn += f"+1 * ({node.numel}) * ({node.name} + {node.name}_ib)"
 
 
 class BitFlowOptimizer():
+
     def __init__(self, evaluator, outputs):
 
+        # node_values = evaluator.node_values
+        # visitor = BitFlowVisitor(node_values)
+        # visitor.run(evaluator.dag)
+        #
+        # self.visitor = visitor
+        # self.error_fn = ""
+        # self.ufb_fn = ""
+        # self.optim_error_fn = " >= "
+        # for output in outputs:
+        #     print(type(outputs))
+        #     print(type(output))
+        #     print(type(output[0]))
+        #     print(outputs)
+        #     print(output)
+        #     print(outputs[output])
+        #     self.error_fn += f"+2**(-{outputs[output]}-1) - (" + \
+        #                      visitor.errors[output].getExecutableError() + ")"
+        #     self.optim_error_fn = f"+ 2**(-{outputs[output]}-1)" + \
+        #                           self.optim_error_fn + \
+        #                           visitor.errors[output].getExecutableError()
+        #     self.ufb_fn += visitor.errors[output].getExecutableUFB()
+        # self.area_fn = visitor.area_fn[1:]
+        # self.outputs = outputs
+        #
+        # print(f"ERROR EQ: {self.error_fn}")
+        # print(f"AREA EQ: {self.area_fn}")
+        #
+        # vars = list(visitor.node_values)
+        # for (i, var) in enumerate(vars):
+        #     vars[i] = var.name
+        # self.vars = vars
+
+        print("A", type(outputs))
+        for o in outputs:
+            print("B", type(o))
+
         node_values = evaluator.node_values
+
         visitor = BitFlowVisitor(node_values)
         visitor.run(evaluator.dag)
 
@@ -302,16 +309,31 @@ class BitFlowOptimizer():
         self.error_fn = ""
         self.ufb_fn = ""
         self.optim_error_fn = " >= "
-        self.area_fn = visitor.area_fn[1:]
-        for output in outputs:
-            self.error_fn += f"+2**(-{outputs[output]}-1) - (" + \
-                visitor.errors[output].getExecutableError() + ")"
-            self.optim_error_fn = f"+ 2**(-{outputs[output]}-1)" + \
-                self.optim_error_fn + \
-                visitor.errors[output].getExecutableError()
-            self.ufb_fn += visitor.errors[output].getExecutableUFB()
 
-        self.outputs = outputs
+        print("TYPE", type(outputs["_concat_add_final_bias"]))
+        for output in outputs:
+            for i in range(5):
+                for j in range(3):
+                    print("output")
+                    print(visitor.errors[output])
+                    print(visitor.errors[output][i])
+                    print(visitor.errors[output][i][j])
+                    print(outputs[output][i][j])
+
+                    self.error_fn += f"+2**(-{outputs[output][i][j]}-1) - (" + \
+                                     visitor.errors[output][i][j].getExecutableError() + ")"
+                    self.optim_error_fn = f"+ 2**(-{outputs[output][i][j]}-1)" + \
+                                          self.optim_error_fn + \
+                                          visitor.errors[output][i][j].getExecutableError()
+                    self.ufb_fn += visitor.errors[output][i][j].getExecutableUFB()
+
+            self.error_fn = self.error_fn
+
+
+
+            self.area_fn = visitor.area_fn[1:]
+            # print(len(visitor.area_fn[0]))
+            self.outputs = outputs
 
         print(f"ERROR EQ: {self.error_fn}")
         print(f"AREA EQ: {self.area_fn}")
@@ -326,31 +348,25 @@ class BitFlowOptimizer():
         # bnd = f"{-2**(-self.output_precision-1)} == 0"
         bnd = ""
         for output in self.outputs:
-            bnd += f"{-2**(-self.outputs[output]-1)}"
+            # print("S",output)
+            # print("S",output[0])
+            print(len(self.outputs))
+            print(len(output))
+            print(self.outputs)
+            print(self.outputs[output][0])
+            for i in range(10):
+                for j in range(10):
+                    bnd += f"{-2 ** (-self.outputs[output][i][j] - 1)}"
         self.ufb_fn += bnd
         # print(f"UFB EQ: {self.ufb_fn}")
         # print(f"-----------")
 
         exec(f'''def UFBOptimizerFn(UFB):
              return  {self.ufb_fn}''', globals())
+        print('EXITED UFB')
 
         sol = ceil(fsolve(UFBOptimizerFn, 0.01))
         self.initial = sol
-
-        # m = GEKKO()
-        # UFB = m.Var(value=0,integer=True)
-        # m.options.IMODE=2
-        # m.options.SOLVER=3
-        #
-        # exec(f'''def UFBOptimizerFn(UFB):
-        #     return  {self.ufb_fn}''', globals())
-        #
-        # m.Equation(UFBOptimizerFn(UFB))
-        # m.solve(disp=True)
-        #
-        # sol = ceil(UFB.value[0])
-        # self.initial = sol
-        # print(f"UFB = {sol}\n")
 
     def solve(self):
         self.calculateInitialValues()
@@ -392,37 +408,3 @@ class BitFlowOptimizer():
             print(f"{key}: {sols[key]}")
 
         self.fb_sols = sols
-
-        # namespace = {"m": GEKKO()}
-        # m = namespace["m"]
-        # m.options.IMODE = 2
-        # m.options.SOLVER = 3
-
-        # filtered_vars = []
-        # for var in self.vars:
-        #     if var not in self.outputs:
-        #         filtered_vars.append(var)
-
-        # vars_init = ','.join(
-        #     filtered_vars) + f" = [m.Var(value={self.initial}, integer=True, lb=0, ub=64) for i in range({len(filtered_vars)})]"
-        # exec(vars_init, namespace)
-
-        # exec(f'''def ErrorOptimizerFn({','.join(filtered_vars)}):
-        #     return  {self.optim_error_fn}''', namespace)
-
-        # exec(f'''def AreaOptimizerFn({','.join(filtered_vars)}):
-        #     return  {self.area_fn.replace("max", "m.max2")}''', namespace)
-
-        # params = [namespace[v] for v in filtered_vars]
-
-        # m.Equation(namespace["ErrorOptimizerFn"](*params))
-        # m.Obj(namespace["AreaOptimizerFn"](*params))
-        # m.solve(disp=True)
-
-        # sols = dict(zip(filtered_vars, params))
-
-        # for key in sols:
-        #     sols[key] = ceil(sols[key].value[0])
-        #     print(f"{key}: {sols[key]}")
-
-        # self.fb_sols = sols
