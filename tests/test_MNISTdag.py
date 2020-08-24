@@ -145,18 +145,40 @@ def gen_reduce_z():
 
 
 def test_linearlayer():
-    row = 100
+    row = 1
     col = 10
     tmp = gen_linearlayer(row, col, 784)
     evaluator = NumEval(tmp)
-    X = torch.rand((100, 784))
+    X = torch.rand((1, 784))
     W = torch.rand((784, 10))
 
     bias = torch.rand((10))
 
+    bias_array = [bias for _ in range(1)]
+    with_bias = torch.stack(bias_array,dim=0)
+
+
     res = evaluator.eval(X=X, W=W, bias=bias)
 
-    gold = X @ W + bias
+    dag_grapher = DAGGrapher(list(evaluator.dag.roots()))
+    dag_grapher.run(evaluator.dag)
+    dag_grapher.draw()
+
+    print("here")
+
+
+    gold = X @ W + with_bias
+    print(gold)
+    print(res)
+
+    #assert torch.all(torch.eq(res,gold))
+
+    # print(res.shape)
+    # print(gold.shape)
+    # for i in range(len(res)):
+    #     for j in range(len(res[i])):
+    #         print(res[i][j],gold[i][j])
+    #         assert torch.eq(res[i][j],gold[i][j])
 
     return
 
@@ -455,6 +477,6 @@ def test_add():
 
 
 #test_select()
-test_matrix_mult()
-test_select()
+# test_matrix_mult()
+# test_select()
 test_linearlayer()

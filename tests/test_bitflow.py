@@ -564,7 +564,7 @@ def test_vector_ex6():
 
 
 def test_linear_L():
-    row = 10
+    row = 1
     col = 10
     size = 784
     dag = gen_linearlayer(row, col, size)
@@ -572,7 +572,7 @@ def test_linear_L():
     params = dict(
         training_size=60000,
         testing_size=2000,
-        batch_size=10,
+        batch_size=1,
         lr=1e-3,
         train_range=True,
         range_lr=1e-3,
@@ -581,9 +581,9 @@ def test_linear_L():
         incorporate_ulp_loss=True
     )
 
-    bf = BitFlow(dag, {"_concat_add_final_bias": torch.ones(10, 10).fill_(1)}, {"X": torch.ones(row, size).fill_(1),
-                                                       "weight": torch.ones(size, col).fill_(1),
-                                                       "bias": torch.ones(col).fill_(1)}, **params)
+    bf = BitFlow(dag, {"1_concat_add_bias": torch.ones(1, 10).fill_(1)}, {"X": torch.ones(1, 784).fill_(1),
+                                                       "weight": torch.ones(784, 10).fill_(1),
+                                                       "bias": torch.ones(1).fill_(10)}, **params)
     bf.train(epochs=5)
 
 
@@ -599,3 +599,4 @@ def test_linear_L():
 #test_vector_ex6()
 #test_linearlayer()
 test_linear_L()
+#test_vector_ex()

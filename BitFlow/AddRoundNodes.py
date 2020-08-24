@@ -4,6 +4,20 @@ from BitFlow.IA import Interval
 from BitFlow.Eval import IAEval, NumEval, AbstractEval
 import torch
 
+from PIL import Image
+import numpy as np
+import os
+
+
+import torch
+from torch.utils import data
+
+from DagVisitor import Visitor
+import networkx as nx
+
+import matplotlib.pyplot as plt
+
+
 from .node import Input, Constant, Dag, Add, Sub, Mul, DagNode, Select
 from DagVisitor import Visitor
 from .IA import Interval
@@ -20,6 +34,21 @@ from scipy.optimize import fsolve, minimize, basinhopping
 import torch
 import copy
 
+from DagVisitor import Visitor
+
+
+from PIL import Image
+import numpy as np
+import os
+
+
+import torch
+
+from DagVisitor import Visitor
+import networkx as nx
+from networkx.drawing.nx_agraph import pygraphviz_layout
+
+import matplotlib.pyplot as plt
 
 
 class NodePrinter(Visitor):
@@ -454,3 +483,82 @@ class BitFlowOptimizer():
             print(f"{key}: {sols[key]}")
 
         self.fb_sols = sols
+
+
+
+from networkx.drawing.nx_agraph import graphviz_layout
+
+class DAGGrapher(Visitor):
+    def __init__(self, allroots):
+        self.G = nx.DiGraph()
+        self.labels = {}
+        self.node_colors = []
+        self.allroots = allroots
+
+    def maintainGraph(self, node, color, symbol):
+        self.G.add_node(node.name)
+        self.labels[node.name] = symbol
+
+        children = self.getChildren(node)
+        self.node_colors.append(color)
+
+        for c in children:
+            self.G.add_edge(c, node.name)
+
+        if (node in self.allroots):
+            self.G.add_node(node.name + "_out")
+            self.node_colors.append('#30336b')
+            self.labels[node.name + "_out"] = "⊙"
+            self.G.add_edge(node.name, node.name + "_out")
+
+    def getChildren(self, node):
+        children = []
+        for child_node in node.children():
+            children.append(child_node.name)
+        if len(children) == 1:
+            return children[0]
+        return children
+
+    def generic_visit(self, node: DagNode):
+        Visitor.generic_visit(self, node)
+        self.maintainGraph(node, '#34495e', " ")
+
+    def visit_Input(self, node: Input):
+        Visitor.generic_visit(self, node)
+        self.maintainGraph(node, 'black', node.name)
+
+    def visit_Add(self, node: Add):
+        Visitor.generic_visit(self, node)
+        self.maintainGraph(node, '#c0392b', "+")
+
+    def visit_Mul(self, node: Mul):
+        Visitor.generic_visit(self, node)
+        self.maintainGraph(node, '#2980b9', "✕")
+
+    def visit_Constant(self, node: Constant):
+        Visitor.generic_visit(self, node)
+        self.maintainGraph(node, '#7f8c8d', "C")
+
+    def visit_Sub(self, node: Sub):
+        Visitor.generic_visit(self, node)
+        self.maintainGraph(node, '#27ae60', "-")
+
+
+
+    def draw(self):
+
+        pos = pygraphviz_layout(self.G, prog='dot')
+
+        options = {
+            'node_color':  self.node_colors,
+            'node_size': 800,
+            'width': 3,
+            'arrowstyle': '-|>',
+            'arrowsize': 12,
+            'font_color': 'white',
+            'labels': self.labels
+        }
+
+        nx.draw_networkx(self.G, pos=pos, arrows=True, **options)
+
+        plt.show()
