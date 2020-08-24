@@ -160,11 +160,11 @@ def test_linearlayer():
 
     res = evaluator.eval(X=X, W=W, bias=bias)
 
-    dag_grapher = DAGGrapher(list(evaluator.dag.roots()))
-    dag_grapher.run(evaluator.dag)
-    dag_grapher.draw()
-
-    print("here")
+    # dag_grapher = DAGGrapher(list(evaluator.dag.roots()))
+    # dag_grapher.run(evaluator.dag)
+    # dag_grapher.draw()
+    #
+    # print("here")
 
 
     gold = X @ W + with_bias

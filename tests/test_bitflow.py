@@ -7,7 +7,7 @@ from BitFlow.Eval.TorchEval import TorchEval
 from BitFlow.BitFlow import BitFlow
 from BitFlow.MNIST.MNIST_library import linear_layer, matrix_multiply, dot_product
 import torch
-from BitFlow.utils import Imgs2Dataset
+#from BitFlow.utils import Imgs2Dataset
 
 from torch.utils import data
 import time
@@ -581,9 +581,9 @@ def test_linear_L():
         incorporate_ulp_loss=True
     )
 
-    bf = BitFlow(dag, {"1_concat_add_bias": torch.ones(1, 10).fill_(1)}, {"X": torch.ones(1, 784).fill_(1),
+    bf = BitFlow(dag, {"1_concat_add_bias": torch.ones(1,10).fill_(1)}, {"X": torch.ones(1, 784).fill_(1),
                                                        "weight": torch.ones(784, 10).fill_(1),
-                                                       "bias": torch.ones(1).fill_(10)}, **params)
+                                                       "bias": torch.ones(1,10).fill_(10)}, **params)
     bf.train(epochs=5)
 
 

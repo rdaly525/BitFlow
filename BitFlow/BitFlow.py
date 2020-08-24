@@ -4,8 +4,8 @@ from .Eval.IAEval import IAEval
 from .Eval.NumEval import NumEval
 from .Eval.TorchEval import TorchEval
 from .Optimization import BitFlowVisitor, BitFlowOptimizer
-from .AddRoundNodes import DAGGrapher, AddRoundNodes
-from .utils import GeneratedDataset
+
+from .utils import DAGGrapher
 
 
 import torch
@@ -35,6 +35,58 @@ from torch.utils import data
 import random
 import math
 
+
+class GeneratedDataset(data.Dataset):
+    def __init__(self, model, dataset_size, size_p, size_r, size_output, data_range, true_width, dist):
+        self.train_MNIST = True
+        self.X = {k: [] for k in data_range}
+        self.Y = []
+        self.data_range = data_range
+
+        P = torch.Tensor(1, size_p).fill_(true_width)[0]
+        R = torch.Tensor(1, size_r).fill_(true_width)[0]
+        torch.manual_seed(42)
+
+        for key in data_range:
+            # Create random tensor
+            input_range = data_range[key]
+            if isinstance(input_range, list):
+                self.X[key] = (input_range[1] - input_range[0]) * \
+                    torch.rand(dataset_size, input_range) + input_range[0]
+            else:
+                val = 0
+                if dist == 1:
+                    mean = (input_range[1]+input_range[0])/2
+                    std = (mean - input_range[0])/3
+                    val = torch.normal(
+                        mean=mean, std=std, size=(1, dataset_size)).squeeze()
+                elif dist == 2:
+                    beta = torch.distributions.beta.Beta(
+                        torch.tensor([0.5]), torch.tensor([0.5]))
+                    val = (input_range[1] - input_range[0]) * \
+                        beta.sample((dataset_size,)).squeeze() + \
+                        input_range[0]
+                else:
+                    val = (input_range[1] - input_range[0]) * \
+                        torch.rand(dataset_size) + input_range[0]
+
+                self.X[key] = val
+
+        for i in range(dataset_size):
+            inputs = {k: self.X[k][i] for k in data_range}
+
+            inputs["P"] = P
+            inputs["R"] = R
+            inputs["O"] = torch.Tensor(
+                1, size_output).fill_(true_width)[0]
+            new_y = model(**inputs)
+            self.Y.append(new_y)
+
+    def __len__(self):
+        return len(self.X[list(self.data_range.keys())[0]])
+
+    def __getitem__(self, index):
+        return {k: self.X[k][index] for k in self.data_range}, self.Y[index]
 
 class BitFlow:
 
@@ -210,12 +262,6 @@ class BitFlow:
             success += torch.sum(ulp)
             total += torch.numel(ulp)
 
-            # if should_print:
-            #     indices = (ulp == 0).nonzero()[:, 0].tolist()
-            #     for index in indices:
-            #         print(
-            #             f"guess: {res[index]}, true: {self.round_to_precision(Y[index], O)} ")
-
         acc = (success * 1.)/total
         print(f"accuracy: {acc}")
 
@@ -235,33 +281,14 @@ class BitFlow:
         vals = tensor < 0
         return vals.any()
 
-    # def filterDAGFromOutputs(self, visitor, outputs):
-    #     # Remove output variables from DAG list (these will be our weights)
-    #     vars = list(visitor.node_values)
-    #     for (i, var) in enumerate(vars):
-    #         vars[i] = var.name
-    #     filtered_vars = []
-    #     for var in vars:
-    #         if var not in outputs:
-    #             filtered_vars.append(var)
-
-    #     return filtered_vars
-
-    # def calculateRange(self, evaluator, outputs):
-    #     node_values = evaluator.node_values
-    #     visitor = BitFlowVisitor(node_values)
-    #     visitor.run(evaluator.dag)
-
-    #     range_bits = visitor.IBs
-    #     return range_bits
 
     def constructOptimizationFunctions(self, dag, outputs, data_range):
         evaluator = NumEval(dag)
 
 
-        dag_grapher = DAGGrapher(list(evaluator.dag.roots()))
-        dag_grapher.run(evaluator.dag)
-        dag_grapher.draw()
+        # dag_grapher = DAGGrapher(list(evaluator.dag.roots()))
+        # dag_grapher.run(evaluator.dag)
+        # dag_grapher.draw()
 
 
         eval_dict = data_range.copy()
@@ -269,7 +296,7 @@ class BitFlow:
         for key in eval_dict:
             if self.train_MNIST:
                 eval_dict = {"X": 1.,"weight": 1.,"bias":1.}
-                outputs = {'1_concat_add_bias': torch.ones(1,10).fill_(10)}
+                outputs = {'_concat_add_bias': torch.ones(1,10).fill_(10)}
                 # eval_dict = {}
                 # for row in range(28):
                 #     for col in range(28):
@@ -298,21 +325,24 @@ class BitFlow:
 
     def createExecutableConstraintFunctions(self, area_fn, error_fn, filtered_vars):
 
-            # exec(f'''def AreaOptimizerFn(P):
-            #              return  {area_fn}''', globals())
-            #
-            # exec(f'''def ErrorOptimizerFn(P):
-            #                      return  {error_fn}''', globals())
+            print(area_fn)
+            print(error_fn)
+
+            exec(f'''def AreaOptimizerFn(P):
+                         return  {area_fn}''', globals())
+
+            exec(f'''def ErrorOptimizerFn(P):
+                                 return  {error_fn}''', globals())
             # #filtered_vars=['X,X_getitem_0,weight,weight_getitem_(slice(None, None, None), 0),X_getitem_0_mul_weight_getitem_(slice(None, None, None), 0),X_getitem_0_mul_weight_getitem_(slice(None, None, None), 0),weight_getitem_(slice(None, None, None), 1),X_getitem_0_mul_weight_getitem_(slice(None, None, None), 1),X_getitem_0_mul_weight_getitem_(slice(None, None, None), 1),weight_getitem_(slice(None, None, None), 2),X_getitem_0_mul_weight_getitem_(slice(None, None, None), 2),X_getitem_0_mul_weight_getitem_(slice(None, None, None), 2),weight_getitem_(slice(None, None, None), 3),X_getitem_0_mul_weight_getitem_(slice(None, None, None), 3),X_getitem_0_mul_weight_getitem_(slice(None, None, None), 3),weight_getitem_(slice(None, None, None), 4),X_getitem_0_mul_weight_getitem_(slice(None, None, None), 4),X_getitem_0_mul_weight_getitem_(slice(None, None, None), 4),weight_getitem_(slice(None, None, None), 5),X_getitem_0_mul_weight_getitem_(slice(None, None, None), 5),X_getitem_0_mul_weight_getitem_(slice(None, None, None), 5),weight_getitem_(slice(None, None, None), 6),X_getitem_0_mul_weight_getitem_(slice(None, None, None), 6),X_getitem_0_mul_weight_getitem_(slice(None, None, None), 6),weight_getitem_(slice(None, None, None), 7),X_getitem_0_mul_weight_getitem_(slice(None, None, None), 7),X_getitem_0_mul_weight_getitem_(slice(None, None, None), 7),weight_getitem_(slice(None, None, None), 8),X_getitem_0_mul_weight_getitem_(slice(None, None, None), 8),X_getitem_0_mul_weight_getitem_(slice(None, None, None), 8),weight_getitem_(slice(None, None, None), 9),X_getitem_0_mul_weight_getitem_(slice(None, None, None), 9),X_getitem_0_mul_weight_getitem_(slice(None, None, None), 9),_concat,X_getitem_1,weight_getitem_(slice(None, None, None), 0),X_getitem_1_mul_weight_getitem_(slice(None, None, None), 0),X_getitem_1_mul_weight_getitem_(slice(None, None, None), 0),weight_getitem_(slice(None, None, None), 1),X_getitem_1_mul_weight_getitem_(slice(None, None, None), 1),X_getitem_1_mul_weight_getitem_(slice(None, None, None), 1),weight_getitem_(slice(None, None, None), 2),X_getitem_1_mul_weight_getitem_(slice(None, None, None), 2),X_getitem_1_mul_weight_getitem_(slice(None, None, None), 2),weight_getitem_(slice(None, None, None), 3),X_getitem_1_mul_weight_getitem_(slice(None, None, None), 3),X_getitem_1_mul_weight_getitem_(slice(None, None, None), 3),weight_getitem_(slice(None, None, None), 4),X_getitem_1_mul_weight_getitem_(slice(None, None, None), 4),X_getitem_1_mul_weight_getitem_(slice(None, None, None), 4),weight_getitem_(slice(None, None, None), 5),X_getitem_1_mul_weight_getitem_(slice(None, None, None), 5),X_getitem_1_mul_weight_getitem_(slice(None, None, None), 5),weight_getitem_(slice(None, None, None), 6),X_getitem_1_mul_weight_getitem_(slice(None, None, None), 6),X_getitem_1_mul_weight_getitem_(slice(None, None, None), 6),weight_getitem_(slice(None, None, None), 7),X_getitem_1_mul_weight_getitem_(slice(None, None, None), 7),X_getitem_1_mul_weight_getitem_(slice(None, None, None), 7),weight_getitem_(slice(None, None, None), 8),X_getitem_1_mul_weight_getitem_(slice(None, None, None), 8),X_getitem_1_mul_weight_getitem_(slice(None, None, None), 8),weight_getitem_(slice(None, None, None), 9),X_getitem_1_mul_weight_getitem_(slice(None, None, None), 9),X_getitem_1_mul_weight_getitem_(slice(None, None, None), 9),_concat,X_getitem_2,weight_getitem_(slice(None, None, None), 0),X_getitem_2_mul_weight_getitem_(slice(None, None, None), 0),X_getitem_2_mul_weight_getitem_(slice(None, None, None), 0),weight_getitem_(slice(None, None, None), 1),X_getitem_2_mul_weight_getitem_(slice(None, None, None), 1),X_getitem_2_mul_weight_getitem_(slice(None, None, None), 1),weight_getitem_(slice(None, None, None), 2),X_getitem_2_mul_weight_getitem_(slice(None, None, None), 2),X_getitem_2_mul_weight_getitem_(slice(None, None, None), 2),weight_getitem_(slice(None, None, None), 3),X_getitem_2_mul_weight_getitem_(slice(None, None, None), 3),X_getitem_2_mul_weight_getitem_(slice(None, None, None), 3),weight_getitem_(slice(None, None, None), 4),X_getitem_2_mul_weight_getitem_(slice(None, None, None), 4),X_getitem_2_mul_weight_getitem_(slice(None, None, None), 4),weight_getitem_(slice(None, None, None), 5),X_getitem_2_mul_weight_getitem_(slice(None, None, None), 5),X_getitem_2_mul_weight_getitem_(slice(None, None, None), 5),weight_getitem_(slice(None, None, None), 6),X_getitem_2_mul_weight_getitem_(slice(None, None, None), 6),X_getitem_2_mul_weight_getitem_(slice(None, None, None), 6),weight_getitem_(slice(None, None, None), 7),X_getitem_2_mul_weight_getitem_(slice(None, None, None), 7),X_getitem_2_mul_weight_getitem_(slice(None, None, None), 7),weight_getitem_(slice(None, None, None), 8),X_getitem_2_mul_weight_getitem_(slice(None, None, None), 8),X_getitem_2_mul_weight_getitem_(slice(None, None, None), 8),weight_getitem_(slice(None, None, None), 9),X_getitem_2_mul_weight_getitem_(slice(None, None, None), 9),X_getitem_2_mul_weight_getitem_(slice(None, None, None), 9),_concat,X_getitem_3,weight_getitem_(slice(None, None, None), 0),X_getitem_3_mul_weight_getitem_(slice(None, None, None), 0),X_getitem_3_mul_weight_getitem_(slice(None, None, None), 0),weight_getitem_(slice(None, None, None), 1),X_getitem_3_mul_weight_getitem_(slice(None, None, None), 1),X_getitem_3_mul_weight_getitem_(slice(None, None, None), 1),weight_getitem_(slice(None, None, None), 2),X_getitem_3_mul_weight_getitem_(slice(None, None, None), 2),X_getitem_3_mul_weight_getitem_(slice(None, None, None), 2),weight_getitem_(slice(None, None, None), 3),X_getitem_3_mul_weight_getitem_(slice(None, None, None), 3),X_getitem_3_mul_weight_getitem_(slice(None, None, None), 3),weight_getitem_(slice(None, None, None), 4),X_getitem_3_mul_weight_getitem_(slice(None, None, None), 4),X_getitem_3_mul_weight_getitem_(slice(None, None, None), 4),weight_getitem_(slice(None, None, None), 5),X_getitem_3_mul_weight_getitem_(slice(None, None, None), 5),X_getitem_3_mul_weight_getitem_(slice(None, None, None), 5),weight_getitem_(slice(None, None, None), 6),X_getitem_3_mul_weight_getitem_(slice(None, None, None), 6),X_getitem_3_mul_weight_getitem_(slice(None, None, None), 6),weight_getitem_(slice(None, None, None), 7),X_getitem_3_mul_weight_getitem_(slice(None, None, None), 7),X_getitem_3_mul_weight_getitem_(slice(None, None, None), 7),weight_getitem_(slice(None, None, None), 8),X_getitem_3_mul_weight_getitem_(slice(None, None, None), 8),X_getitem_3_mul_weight_getitem_(slice(None, None, None), 8),weight_getitem_(slice(None, None, None), 9),X_getitem_3_mul_weight_getitem_(slice(None, None, None), 9),X_getitem_3_mul_weight_getitem_(slice(None, None, None), 9),_concat,X_getitem_4,weight_getitem_(slice(None, None, None), 0),X_getitem_4_mul_weight_getitem_(slice(None, None, None), 0),X_getitem_4_mul_weight_getitem_(slice(None, None, None), 0),weight_getitem_(slice(None, None, None), 1),X_getitem_4_mul_weight_getitem_(slice(None, None, None), 1),X_getitem_4_mul_weight_getitem_(slice(None, None, None), 1),weight_getitem_(slice(None, None, None), 2),X_getitem_4_mul_weight_getitem_(slice(None, None, None), 2),X_getitem_4_mul_weight_getitem_(slice(None, None, None), 2),weight_getitem_(slice(None, None, None), 3),X_getitem_4_mul_weight_getitem_(slice(None, None, None), 3),X_getitem_4_mul_weight_getitem_(slice(None, None, None), 3),weight_getitem_(slice(None, None, None), 4),X_getitem_4_mul_weight_getitem_(slice(None, None, None), 4),X_getitem_4_mul_weight_getitem_(slice(None, None, None), 4),weight_getitem_(slice(None, None, None), 5),X_getitem_4_mul_weight_getitem_(slice(None, None, None), 5),X_getitem_4_mul_weight_getitem_(slice(None, None, None), 5),weight_getitem_(slice(None, None, None), 6),X_getitem_4_mul_weight_getitem_(slice(None, None, None), 6),X_getitem_4_mul_weight_getitem_(slice(None, None, None), 6),weight_getitem_(slice(None, None, None), 7),X_getitem_4_mul_weight_getitem_(slice(None, None, None), 7),X_getitem_4_mul_weight_getitem_(slice(None, None, None), 7),weight_getitem_(slice(None, None, None), 8),X_getitem_4_mul_weight_getitem_(slice(None, None, None), 8),X_getitem_4_mul_weight_getitem_(slice(None, None, None), 8),weight_getitem_(slice(None, None, None), 9),X_getitem_4_mul_weight_getitem_(slice(None, None, None), 9),X_getitem_4_mul_weight_getitem_(slice(None, None, None), 9),_concat,X_getitem_5,weight_getitem_(slice(None, None, None), 0),X_getitem_5_mul_weight_getitem_(slice(None, None, None), 0),X_getitem_5_mul_weight_getitem_(slice(None, None, None), 0),weight_getitem_(slice(None, None, None), 1),X_getitem_5_mul_weight_getitem_(slice(None, None, None), 1),X_getitem_5_mul_weight_getitem_(slice(None, None, None), 1),weight_getitem_(slice(None, None, None), 2),X_getitem_5_mul_weight_getitem_(slice(None, None, None), 2),X_getitem_5_mul_weight_getitem_(slice(None, None, None), 2),weight_getitem_(slice(None, None, None), 3),X_getitem_5_mul_weight_getitem_(slice(None, None, None), 3),X_getitem_5_mul_weight_getitem_(slice(None, None, None), 3),weight_getitem_(slice(None, None, None), 4),X_getitem_5_mul_weight_getitem_(slice(None, None, None), 4),X_getitem_5_mul_weight_getitem_(slice(None, None, None), 4),weight_getitem_(slice(None, None, None), 5),X_getitem_5_mul_weight_getitem_(slice(None, None, None), 5),X_getitem_5_mul_weight_getitem_(slice(None, None, None), 5),weight_getitem_(slice(None, None, None), 6),X_getitem_5_mul_weight_getitem_(slice(None, None, None), 6),X_getitem_5_mul_weight_getitem_(slice(None, None, None), 6),weight_getitem_(slice(None, None, None), 7),X_getitem_5_mul_weight_getitem_(slice(None, None, None), 7),X_getitem_5_mul_weight_getitem_(slice(None, None, None), 7),weight_getitem_(slice(None, None, None), 8),X_getitem_5_mul_weight_getitem_(slice(None, None, None), 8),X_getitem_5_mul_weight_getitem_(slice(None, None, None), 8),weight_getitem_(slice(None, None, None), 9),X_getitem_5_mul_weight_getitem_(slice(None, None, None), 9),X_getitem_5_mul_weight_getitem_(slice(None, None, None), 9),_concat,X_getitem_6,weight_getitem_(slice(None, None, None), 0),X_getitem_6_mul_weight_getitem_(slice(None, None, None), 0),X_getitem_6_mul_weight_getitem_(slice(None, None, None), 0),weight_getitem_(slice(None, None, None), 1),X_getitem_6_mul_weight_getitem_(slice(None, None, None), 1),X_getitem_6_mul_weight_getitem_(slice(None, None, None), 1),weight_getitem_(slice(None, None, None), 2),X_getitem_6_mul_weight_getitem_(slice(None, None, None), 2),X_getitem_6_mul_weight_getitem_(slice(None, None, None), 2),weight_getitem_(slice(None, None, None), 3),X_getitem_6_mul_weight_getitem_(slice(None, None, None), 3),X_getitem_6_mul_weight_getitem_(slice(None, None, None), 3),weight_getitem_(slice(None, None, None), 4),X_getitem_6_mul_weight_getitem_(slice(None, None, None), 4),X_getitem_6_mul_weight_getitem_(slice(None, None, None), 4),weight_getitem_(slice(None, None, None), 5),X_getitem_6_mul_weight_getitem_(slice(None, None, None), 5),X_getitem_6_mul_weight_getitem_(slice(None, None, None), 5),weight_getitem_(slice(None, None, None), 6),X_getitem_6_mul_weight_getitem_(slice(None, None, None), 6),X_getitem_6_mul_weight_getitem_(slice(None, None, None), 6),weight_getitem_(slice(None, None, None), 7),X_getitem_6_mul_weight_getitem_(slice(None, None, None), 7),X_getitem_6_mul_weight_getitem_(slice(None, None, None), 7),weight_getitem_(slice(None, None, None), 8),X_getitem_6_mul_weight_getitem_(slice(None, None, None), 8),X_getitem_6_mul_weight_getitem_(slice(None, None, None), 8),weight_getitem_(slice(None, None, None), 9),X_getitem_6_mul_weight_getitem_(slice(None, None, None), 9),X_getitem_6_mul_weight_getitem_(slice(None, None, None), 9),_concat,X_getitem_7,weight_getitem_(slice(None, None, None), 0),X_getitem_7_mul_weight_getitem_(slice(None, None, None), 0),X_getitem_7_mul_weight_getitem_(slice(None, None, None), 0),weight_getitem_(slice(None, None, None), 1),X_getitem_7_mul_weight_getitem_(slice(None, None, None), 1),X_getitem_7_mul_weight_getitem_(slice(None, None, None), 1),weight_getitem_(slice(None, None, None), 2),X_getitem_7_mul_weight_getitem_(slice(None, None, None), 2),X_getitem_7_mul_weight_getitem_(slice(None, None, None), 2),weight_getitem_(slice(None, None, None), 3),X_getitem_7_mul_weight_getitem_(slice(None, None, None), 3),X_getitem_7_mul_weight_getitem_(slice(None, None, None), 3),weight_getitem_(slice(None, None, None), 4),X_getitem_7_mul_weight_getitem_(slice(None, None, None), 4),X_getitem_7_mul_weight_getitem_(slice(None, None, None), 4),weight_getitem_(slice(None, None, None), 5),X_getitem_7_mul_weight_getitem_(slice(None, None, None), 5),X_getitem_7_mul_weight_getitem_(slice(None, None, None), 5),weight_getitem_(slice(None, None, None), 6),X_getitem_7_mul_weight_getitem_(slice(None, None, None), 6),X_getitem_7_mul_weight_getitem_(slice(None, None, None), 6),weight_getitem_(slice(None, None, None), 7),X_getitem_7_mul_weight_getitem_(slice(None, None, None), 7),X_getitem_7_mul_weight_getitem_(slice(None, None, None), 7),weight_getitem_(slice(None, None, None), 8),X_getitem_7_mul_weight_getitem_(slice(None, None, None), 8),X_getitem_7_mul_weight_getitem_(slice(None, None, None), 8),weight_getitem_(slice(None, None, None), 9),X_getitem_7_mul_weight_getitem_(slice(None, None, None), 9),X_getitem_7_mul_weight_getitem_(slice(None, None, None), 9),_concat,X_getitem_8,weight_getitem_(slice(None, None, None), 0),X_getitem_8_mul_weight_getitem_(slice(None, None, None), 0),X_getitem_8_mul_weight_getitem_(slice(None, None, None), 0),weight_getitem_(slice(None, None, None), 1),X_getitem_8_mul_weight_getitem_(slice(None, None, None), 1),X_getitem_8_mul_weight_getitem_(slice(None, None, None), 1),weight_getitem_(slice(None, None, None), 2),X_getitem_8_mul_weight_getitem_(slice(None, None, None), 2),X_getitem_8_mul_weight_getitem_(slice(None, None, None), 2),weight_getitem_(slice(None, None, None), 3),X_getitem_8_mul_weight_getitem_(slice(None, None, None), 3),X_getitem_8_mul_weight_getitem_(slice(None, None, None), 3),weight_getitem_(slice(None, None, None), 4),X_getitem_8_mul_weight_getitem_(slice(None, None, None), 4),X_getitem_8_mul_weight_getitem_(slice(None, None, None), 4),weight_getitem_(slice(None, None, None), 5),X_getitem_8_mul_weight_getitem_(slice(None, None, None), 5),X_getitem_8_mul_weight_getitem_(slice(None, None, None), 5),weight_getitem_(slice(None, None, None), 6),X_getitem_8_mul_weight_getitem_(slice(None, None, None), 6),X_getitem_8_mul_weight_getitem_(slice(None, None, None), 6),weight_getitem_(slice(None, None, None), 7),X_getitem_8_mul_weight_getitem_(slice(None, None, None), 7),X_getitem_8_mul_weight_getitem_(slice(None, None, None), 7),weight_getitem_(slice(None, None, None), 8),X_getitem_8_mul_weight_getitem_(slice(None, None, None), 8),X_getitem_8_mul_weight_getitem_(slice(None, None, None), 8),weight_getitem_(slice(None, None, None), 9),X_getitem_8_mul_weight_getitem_(slice(None, None, None), 9),X_getitem_8_mul_weight_getitem_(slice(None, None, None), 9),_concat,X_getitem_9,weight_getitem_(slice(None, None, None), 0),X_getitem_9_mul_weight_getitem_(slice(None, None, None), 0),X_getitem_9_mul_weight_getitem_(slice(None, None, None), 0),weight_getitem_(slice(None, None, None), 1),X_getitem_9_mul_weight_getitem_(slice(None, None, None), 1),X_getitem_9_mul_weight_getitem_(slice(None, None, None), 1),weight_getitem_(slice(None, None, None), 2),X_getitem_9_mul_weight_getitem_(slice(None, None, None), 2),X_getitem_9_mul_weight_getitem_(slice(None, None, None), 2),weight_getitem_(slice(None, None, None), 3),X_getitem_9_mul_weight_getitem_(slice(None, None, None), 3),X_getitem_9_mul_weight_getitem_(slice(None, None, None), 3),weight_getitem_(slice(None, None, None), 4),X_getitem_9_mul_weight_getitem_(slice(None, None, None), 4),X_getitem_9_mul_weight_getitem_(slice(None, None, None), 4),weight_getitem_(slice(None, None, None), 5),X_getitem_9_mul_weight_getitem_(slice(None, None, None), 5),X_getitem_9_mul_weight_getitem_(slice(None, None, None), 5),weight_getitem_(slice(None, None, None), 6),X_getitem_9_mul_weight_getitem_(slice(None, None, None), 6),X_getitem_9_mul_weight_getitem_(slice(None, None, None), 6),weight_getitem_(slice(None, None, None), 7),X_getitem_9_mul_weight_getitem_(slice(None, None, None), 7),X_getitem_9_mul_weight_getitem_(slice(None, None, None), 7),weight_getitem_(slice(None, None, None), 8),X_getitem_9_mul_weight_getitem_(slice(None, None, None), 8),X_getitem_9_mul_weight_getitem_(slice(None, None, None), 8),weight_getitem_(slice(None, None, None), 9),X_getitem_9_mul_weight_getitem_(slice(None, None, None), 9),X_getitem_9_mul_weight_getitem_(slice(None, None, None), 9),_concat,_concat,bias,final_bias = W\n                 return  1 * (X_getitem_0 + X_getitem_0)*(weight_getitem_(slice(None, None, None), 0) + weight_getitem_(slice(None, None, None), 0))+1 * (X_getitem_0 + X_getitem_0)*(weight_getitem_(slice(None, None, None), 1) + weight_getitem_(slice(None, None, None), 1))+1 * (X_getitem_0 + X_getitem_0)*(weight_getitem_(slice(None, None, None), 2) + weight_getitem_(slice(None, None, None), 2))+1 * (X_getitem_0 + X_getitem_0)*(weight_getitem_(slice(None, None, None), 3) + weight_getitem_(slice(None, None, None), 3))+1 * (X_getitem_0 + X_getitem_0)*(weight_getitem_(slice(None, None, None), 4) + weight_getitem_(slice(None, None, None), 4))+1 * (X_getitem_0 + X_getitem_0)*(weight_getitem_(slice(None, None, None), 5) + weight_getitem_(slice(None, None, None), 5))+1 * (X_getitem_0 + X_getitem_0)*(weight_getitem_(slice(None, None, None), 6) + weight_getitem_(slice(None, None, None), 6))+1 * (X_getitem_0 + X_getitem_0)*(weight_getitem_(slice(None, None, None), 7) + weight_getitem_(slice(None, None, None), 7))+1 * (X_getitem_0 + X_getitem_0)*(weight_getitem_(slice(None, None, None), 8) + weight_getitem_(slice(None, None, None), 8))+1 * (X_getitem_0 + X_getitem_0)*(weight_getitem_(slice(None, None, None), 9) + weight_getitem_(slice(None, None, None), 9))+1 * (X_getitem_1 + X_getitem_1)*(weight_getitem_(slice(None, None, None), 0) + weight_getitem_(slice(None, None, None), 0))+1 * (X_getitem_1 + X_getitem_1)*(weight_getitem_(slice(None, None, None), 1) + weight_getitem_(slice(None, None, None), 1))+1 * (X_getitem_1 + X_getitem_1)*(weight_getitem_(slice(None, None, None), 2) + weight_getitem_(slice(None, None, None), 2))+1 * (X_getitem_1 + X_getitem_1)*(weight_getitem_(slice(None, None, None), 3) + weight_getitem_(slice(None, None, None), 3))+1 * (X_getitem_1 + X_getitem_1)*(weight_getitem_(slice(None, None, None), 4) + weight_getitem_(slice(None, None, None), 4))+1 * (X_getitem_1 + X_getitem_1)*(weight_getitem_(slice(None, None, None), 5) + weight_getitem_(slice(None, None, None), 5))+1 * (X_getitem_1 + X_getitem_1)*(weight_getitem_(slice(None, None, None), 6) + weight_getitem_(slice(None, None, None), 6))+1 * (X_getitem_1 + X_getitem_1)*(weight_getitem_(slice(None, None, None), 7) + weight_getitem_(slice(None, None, None), 7))+1 * (X_getitem_1 + X_getitem_1)*(weight_getitem_(slice(None, None, None), 8) + weight_getitem_(slice(None, None, None), 8))+1 * (X_getitem_1 + X_getitem_1)*(weight_getitem_(slice(None, None, None), 9) + weight_getitem_(slice(None, None, None), 9))+1 * (X_getitem_2 + X_getitem_2)*(weight_getitem_(slice(None, None, None), 0) + weight_getitem_(slice(None, None, None), 0))+1 * (X_getitem_2 + X_getitem_2)*(weight_getitem_(slice(None, None, None), 1) + weight_getitem_(slice(None, None, None), 1))+1 * (X_getitem_2 + X_getitem_2)*(weight_getitem_(slice(None, None, None), 2) + weight_getitem_(slice(None, None, None), 2))+1 * (X_getitem_2 + X_getitem_2)*(weight_getitem_(slice(None, None, None), 3) + weight_getitem_(slice(None, None, None), 3))+1 * (X_getitem_2 + X_getitem_2)*(weight_getitem_(slice(None, None, None), 4) + weight_getitem_(slice(None, None, None), 4))+1 * (X_getitem_2 + X_getitem_2)*(weight_getitem_(slice(None, None, None), 5) + weight_getitem_(slice(None, None, None), 5))+1 * (X_getitem_2 + X_getitem_2)*(weight_getitem_(slice(None, None, None), 6) + weight_getitem_(slice(None, None, None), 6))+1 * (X_getitem_2 + X_getitem_2)*(weight_getitem_(slice(None, None, None), 7) + weight_getitem_(slice(None, None, None), 7))+1 * (X_getitem_2 + X_getitem_2)*(weight_getitem_(slice(None, None, None), 8) + weight_getitem_(slice(None, None, None), 8))+1 * (X_getitem_2 + X_getitem_2)*(weight_getitem_(slice(None, None, None), 9) + weight_getitem_(slice(None, None, None), 9))+1 * (X_getitem_3 + X_getitem_3)*(weight_getitem_(slice(None, None, None), 0) + weight_getitem_(slice(None, None, None), 0))+1 * (X_getitem_3 + X_getitem_3)*(weight_getitem_(slice(None, None, None), 1) + weight_getitem_(slice(None, None, None), 1))+1 * (X_getitem_3 + X_getitem_3)*(weight_getitem_(slice(None, None, None), 2) + weight_getitem_(slice(None, None, None), 2))+1 * (X_getitem_3 + X_getitem_3)*(weight_getitem_(slice(None, None, None), 3) + weight_getitem_(slice(None, None, None), 3))+1 * (X_getitem_3 + X_getitem_3)*(weight_getitem_(slice(None, None, None), 4) + weight_getitem_(slice(None, None, None), 4))+1 * (X_getitem_3 + X_getitem_3)*(weight_getitem_(slice(None, None, None), 5) + weight_getitem_(slice(None, None, None), 5))+1 * (X_getitem_3 + X_getitem_3)*(weight_getitem_(slice(None, None, None), 6) + weight_getitem_(slice(None, None, None), 6))+1 * (X_getitem_3 + X_getitem_3)*(weight_getitem_(slice(None, None, None), 7) + weight_getitem_(slice(None, None, None), 7))+1 * (X_getitem_3 + X_getitem_3)*(weight_getitem_(slice(None, None, None), 8) + weight_getitem_(slice(None, None, None), 8))+1 * (X_getitem_3 + X_getitem_3)*(weight_getitem_(slice(None, None, None), 9) + weight_getitem_(slice(None, None, None), 9))+1 * (X_getitem_4 + X_getitem_4)*(weight_getitem_(slice(None, None, None), 0) + weight_getitem_(slice(None, None, None), 0))+1 * (X_getitem_4 + X_getitem_4)*(weight_getitem_(slice(None, None, None), 1) + weight_getitem_(slice(None, None, None), 1))+1 * (X_getitem_4 + X_getitem_4)*(weight_getitem_(slice(None, None, None), 2) + weight_getitem_(slice(None, None, None), 2))+1 * (X_getitem_4 + X_getitem_4)*(weight_getitem_(slice(None, None, None), 3) + weight_getitem_(slice(None, None, None), 3))+1 * (X_getitem_4 + X_getitem_4)*(weight_getitem_(slice(None, None, None), 4) + weight_getitem_(slice(None, None, None), 4))+1 * (X_getitem_4 + X_getitem_4)*(weight_getitem_(slice(None, None, None), 5) + weight_getitem_(slice(None, None, None), 5))+1 * (X_getitem_4 + X_getitem_4)*(weight_getitem_(slice(None, None, None), 6) + weight_getitem_(slice(None, None, None), 6))+1 * (X_getitem_4 + X_getitem_4)*(weight_getitem_(slice(None, None, None), 7) + weight_getitem_(slice(None, None, None), 7))+1 * (X_getitem_4 + X_getitem_4)*(weight_getitem_(slice(None, None, None), 8) + weight_getitem_(slice(None, None, None), 8))+1 * (X_getitem_4 + X_getitem_4)*(weight_getitem_(slice(None, None, None), 9) + weight_getitem_(slice(None, None, None), 9))+1 * (X_getitem_5 + X_getitem_5)*(weight_getitem_(slice(None, None, None), 0) + weight_getitem_(slice(None, None, None), 0))+1 * (X_getitem_5 + X_getitem_5)*(weight_getitem_(slice(None, None, None), 1) + weight_getitem_(slice(None, None, None), 1))+1 * (X_getitem_5 + X_getitem_5)*(weight_getitem_(slice(None, None, None), 2) + weight_getitem_(slice(None, None, None), 2))+1 * (X_getitem_5 + X_getitem_5)*(weight_getitem_(slice(None, None, None), 3) + weight_getitem_(slice(None, None, None), 3))+1 * (X_getitem_5 + X_getitem_5)*(weight_getitem_(slice(None, None, None), 4) + weight_getitem_(slice(None, None, None), 4))+1 * (X_getitem_5 + X_getitem_5)*(weight_getitem_(slice(None, None, None), 5) + weight_getitem_(slice(None, None, None), 5))+1 * (X_getitem_5 + X_getitem_5)*(weight_getitem_(slice(None, None, None), 6) + weight_getitem_(slice(None, None, None), 6))+1 * (X_getitem_5 + X_getitem_5)*(weight_getitem_(slice(None, None, None), 7) + weight_getitem_(slice(None, None, None), 7))+1 * (X_getitem_5 + X_getitem_5)*(weight_getitem_(slice(None, None, None), 8) + weight_getitem_(slice(None, None, None), 8))+1 * (X_getitem_5 + X_getitem_5)*(weight_getitem_(slice(None, None, None), 9) + weight_getitem_(slice(None, None, None), 9))+1 * (X_getitem_6 + X_getitem_6)*(weight_getitem_(slice(None, None, None), 0) + weight_getitem_(slice(None, None, None), 0))+1 * (X_getitem_6 + X_getitem_6)*(weight_getitem_(slice(None, None, None), 1) + weight_getitem_(slice(None, None, None), 1))+1 * (X_getitem_6 + X_getitem_6)*(weight_getitem_(slice(None, None, None), 2) + weight_getitem_(slice(None, None, None), 2))+1 * (X_getitem_6 + X_getitem_6)*(weight_getitem_(slice(None, None, None), 3) + weight_getitem_(slice(None, None, None), 3))+1 * (X_getitem_6 + X_getitem_6)*(weight_getitem_(slice(None, None, None), 4) + weight_getitem_(slice(None, None, None), 4))+1 * (X_getitem_6 + X_getitem_6)*(weight_getitem_(slice(None, None, None), 5) + weight_getitem_(slice(None, None, None), 5))+1 * (X_getitem_6 + X_getitem_6)*(weight_getitem_(slice(None, None, None), 6) + weight_getitem_(slice(None, None, None), 6))+1 * (X_getitem_6 + X_getitem_6)*(weight_getitem_(slice(None, None, None), 7) + weight_getitem_(slice(None, None, None), 7))+1 * (X_getitem_6 + X_getitem_6)*(weight_getitem_(slice(None, None, None), 8) + weight_getitem_(slice(None, None, None), 8))+1 * (X_getitem_6 + X_getitem_6)*(weight_getitem_(slice(None, None, None), 9) + weight_getitem_(slice(None, None, None), 9))+1 * (X_getitem_7 + X_getitem_7)*(weight_getitem_(slice(None, None, None), 0) + weight_getitem_(slice(None, None, None), 0))+1 * (X_getitem_7 + X_getitem_7)*(weight_getitem_(slice(None, None, None), 1) + weight_getitem_(slice(None, None, None), 1))+1 * (X_getitem_7 + X_getitem_7)*(weight_getitem_(slice(None, None, None), 2) + weight_getitem_(slice(None, None, None), 2))+1 * (X_getitem_7 + X_getitem_7)*(weight_getitem_(slice(None, None, None), 3) + weight_getitem_(slice(None, None, None), 3))+1 * (X_getitem_7 + X_getitem_7)*(weight_getitem_(slice(None, None, None), 4) + weight_getitem_(slice(None, None, None), 4))+1 * (X_getitem_7 + X_getitem_7)*(weight_getitem_(slice(None, None, None), 5) + weight_getitem_(slice(None, None, None), 5))+1 * (X_getitem_7 + X_getitem_7)*(weight_getitem_(slice(None, None, None), 6) + weight_getitem_(slice(None, None, None), 6))+1 * (X_getitem_7 + X_getitem_7)*(weight_getitem_(slice(None, None, None), 7) + weight_getitem_(slice(None, None, None), 7))+1 * (X_getitem_7 + X_getitem_7)*(weight_getitem_(slice(None, None, None), 8) + weight_getitem_(slice(None, None, None), 8))+1 * (X_getitem_7 + X_getitem_7)*(weight_getitem_(slice(None, None, None), 9) + weight_getitem_(slice(None, None, None), 9))+1 * (X_getitem_8 + X_getitem_8)*(weight_getitem_(slice(None, None, None), 0) + weight_getitem_(slice(None, None, None), 0))+1 * (X_getitem_8 + X_getitem_8)*(weight_getitem_(slice(None, None, None), 1) + weight_getitem_(slice(None, None, None), 1))+1 * (X_getitem_8 + X_getitem_8)*(weight_getitem_(slice(None, None, None), 2) + weight_getitem_(slice(None, None, None), 2))+1 * (X_getitem_8 + X_getitem_8)*(weight_getitem_(slice(None, None, None), 3) + weight_getitem_(slice(None, None, None), 3))+1 * (X_getitem_8 + X_getitem_8)*(weight_getitem_(slice(None, None, None), 4) + weight_getitem_(slice(None, None, None), 4))+1 * (X_getitem_8 + X_getitem_8)*(weight_getitem_(slice(None, None, None), 5) + weight_getitem_(slice(None, None, None), 5))+1 * (X_getitem_8 + X_getitem_8)*(weight_getitem_(slice(None, None, None), 6) + weight_getitem_(slice(None, None, None), 6))+1 * (X_getitem_8 + X_getitem_8)*(weight_getitem_(slice(None, None, None), 7) + weight_getitem_(slice(None, None, None), 7))+1 * (X_getitem_8 + X_getitem_8)*(weight_getitem_(slice(None, None, None), 8) + weight_getitem_(slice(None, None, None), 8))+1 * (X_getitem_8 + X_getitem_8)*(weight_getitem_(slice(None, None, None), 9) + weight_getitem_(slice(None, None, None), 9))+1 * (X_getitem_9 + X_getitem_9)*(weight_getitem_(slice(None, None, None), 0) + weight_getitem_(slice(None, None, None), 0))+1 * (X_getitem_9 + X_getitem_9)*(weight_getitem_(slice(None, None, None), 1) + weight_getitem_(slice(None, None, None), 1))+1 * (X_getitem_9 + X_getitem_9)*(weight_getitem_(slice(None, None, None), 2) + weight_getitem_(slice(None, None, None), 2))+1 * (X_getitem_9 + X_getitem_9)*(weight_getitem_(slice(None, None, None), 3) + weight_getitem_(slice(None, None, None), 3))+1 * (X_getitem_9 + X_getitem_9)*(weight_getitem_(slice(None, None, None), 4) + weight_getitem_(slice(None, None, None), 4))+1 * (X_getitem_9 + X_getitem_9)*(weight_getitem_(slice(None, None, None), 5) + weight_getitem_(slice(None, None, None), 5))+1 * (X_getitem_9 + X_getitem_9)*(weight_getitem_(slice(None, None, None), 6) + weight_getitem_(slice(None, None, None), 6))+1 * (X_getitem_9 + X_getitem_9)*(weight_getitem_(slice(None, None, None), 7) + weight_getitem_(slice(None, None, None), 7))+1 * (X_getitem_9 + X_getitem_9)*(weight_getitem_(slice(None, None, None), 8) + weight_getitem_(slice(None, None, None), 8))+1 * (X_getitem_9 + X_getitem_9)*(weight_getitem_(slice(None, None, None), 9) + weight_getitem_(slice(None, None, None), 9))+1 * max(_concat + _concat, final_bias + final_bias)')
-            exec(f'''def AreaOptimizerFn(W):
-                 {','.join(filtered_vars)} = W
-                 return  {area_fn}''', globals())
-
-            assert 1 ==0
-
-            # exec(f'''def ErrorConstraintFn(x):
-            #      {','.join(filtered_vars)} = x
-            #      return  {''}''', globals())
+            # exec(f'''def AreaOptimizerFn(W):
+            #      {','.join(filtered_vars)} = W
+            #      return  {area_fn}''', globals())
+            #
+            # assert 1 ==0
+            #
+            # # exec(f'''def ErrorConstraintFn(x):
+            # #      {','.join(filtered_vars)} = x
+            # #      return  {''}''', globals())
 
     def initializeData(self, model, training_size, testing_size, num_precision, num_range, output_size, data_range, batch_size, distribution):
         data_params = dict(
@@ -344,6 +374,7 @@ class BitFlow:
 
         #O = torch.Tensor(list(outputs.values()))
         O = outputs.values()
+        print(O)
         # weights matrix
         P = torch.Tensor(num_weights).fill_(initial_P)
         init_P = P.clone()
@@ -540,6 +571,14 @@ class BitFlow:
         self.range_lr = range_lr
         self.graph_loss = graph_loss
         self.incorporate_ulp_loss = incorporate_ulp_loss
+        # Dimensions for input, hidden and output
+        self.output_dim = 10
+        self.hidden_dim = 784
+        self.batch_size = 1
+
+        self.weight = torch.ones(self.hidden_dim, self.output_dim, requires_grad=True)
+        self.bias = torch.ones(self.output_dim, requires_grad=True)
+
 
     def train(self, epochs=10):
 
@@ -582,13 +621,13 @@ class BitFlow:
         for e in range(epochs):
             for t, (inputs, target_y) in enumerate(train_gen):
 
-                # # Move data to GPU
-                #
-                # inputs = {k: inputs[k].to(device) for k in inputs}
+                # Move data to GPU
+                #create new dictionary
+                print("ENT")
+                print(inputs.view(-1, 28 * 28).shape)
 
-                #print(inputs)
-                print("INDI")
-                print(P.shape)
+                inputs = {"X": inputs.view(-1, 28 * 28), "weight": self.weight, "bias": self.bias}
+
                 inputs["P"] = P
 
                 inputs["R"] = R

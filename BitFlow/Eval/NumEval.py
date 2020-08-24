@@ -26,7 +26,8 @@ class NumEval(AbstractEval):
 
             #return a[0,a.shape[0]][node.index[1]]
             return a[:,node.index[1]]
-        #print(node.index)
+
+        print(node,node.index)
         return a[node.index]
 
     def eval_Relu(self, a, node: DagNode):
@@ -37,7 +38,7 @@ class NumEval(AbstractEval):
 
     def eval_Reduce(self, a, node: DagNode):
         sum = t.sum(a, dim=node.reduce_dim)
-        # pass in the size we are reducing over
+        # pass in the size werou are reducing over
         return sum
 
 

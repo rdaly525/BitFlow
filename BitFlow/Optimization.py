@@ -144,17 +144,33 @@ class BitFlowVisitor(Visitor):
 
             error_mat = []
 
-            print(lhs,rhs)
-            for row in range(1):
-                error_mat.append([])
-                for col in range(10):
-                    print(row,col)
-                    print(self.errors[lhs.name][row][col])
-                    print(self.errors[rhs.name][row][col])
-                    error_mat[row].append(self.errors[lhs.name][row][col].add(
-                        self.errors[rhs.name][row][col], node.name))
-            # print(node.name)
-            self.errors[node.name] = error_mat
+
+            if(len(self.errors[rhs.name])==1):
+                print('here')
+                print(lhs, rhs)
+                print(len(self.errors[lhs.name]))
+                print(len(self.errors[rhs.name][0]))
+                for row in range(1):
+                    error_mat.append([])
+                    for col in range(10):
+
+                        error_mat[row].append(self.errors[lhs.name][col].add(
+                            self.errors[rhs.name][row][col], node.name))
+                    # print(node.name)
+                self.errors[node.name] = error_mat
+
+
+            else:
+                for row in range(1):
+                    error_mat.append([])
+                    for col in range(10):
+                        print(row,col)
+                        print(len(self.errors[lhs.name]))
+                        print(self.errors[lhs.name][row][col])
+                        error_mat[row].append(self.errors[lhs.name][row][col].add(
+                            self.errors[rhs.name][row][col], node.name))
+                # print(node.name)
+                self.errors[node.name] = error_mat
 
         if self.calculate_IB:
             self.area_fn += f"+1 * max({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
@@ -241,25 +257,13 @@ class BitFlowVisitor(Visitor):
             print("inputs")
             counter = 0
 
+            for i in inputs:
+               precisions.append(self.errors[i.name])
+                #precisions.append(copy.deepcopy(self.errors[i.name]))
 
-            if node.name == '1_concat':
-                self.errors[node.name]= [self.errors['10_concat']]
+            self.errors[node.name] = precisions
+            print(len(self.errors[node.name]))
 
-            else:
-                for i in inputs:
-                    print(counter)
-                    counter+=1
-                    print(i)
-                    #print(self.errors['10_concat'])
-                    print(self.errors)
-                    print(self.errors[i.name])
-                    precisions.append(self.errors[i.name])
-                print(precisions[0])
-                    # precisions.append(copy.deepcopy(self.errors[i.name]))
-
-                print("HELLO",node.name)
-                self.errors[node.name] = precisions
-                print(len(self.errors['10_concat']))
 
     def visit_Reduce(self, node: Reduce):
 

@@ -5,7 +5,7 @@ import torchvision.datasets as dsets
 
 import torch
 
-from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, Select, Output, Relu, Reduce, Concat
+from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, Select, Output, Reduce, Concat
 from BitFlow.IA import Interval
 from BitFlow.Eval.TorchEval import TorchEval
 

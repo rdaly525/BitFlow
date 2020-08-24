@@ -1,5 +1,5 @@
 from DagVisitor import Visited, AbstractDag
-from BitFlow.utils import LUTGenerator
+#from BitFlow.utils import LUTGenerator
 import abc
 import typing as tp
 import random
@@ -102,7 +102,7 @@ class Concat(DagNode):
         self.inputs = args
         self.concat_dim = concat_dim
         if name is None:
-            name = f"{len(args)}_concat"
+            name = f"_concat"
         super().__init__(name, *args)
 
 
@@ -124,7 +124,7 @@ class Round(DagNode):
 
 
 class LookupTable(DagNode):
-    def __init__(self, func, a: DagNode, name=None):
+    def __init__(self, func, a: DagNode, fname=None):
         self.func = func
         if name is None:
             name = f"lookup_{a.name}_{func.__name__}"
