@@ -220,7 +220,7 @@ class BitFlowVisitor(Visitor):
         else:
             if node.precision >= 0.:
                 # TODO: the 5. here shouldn't be hardcoded!
-                self.area_fn += f"+1 * (2 ** ({input_signal.name} + {input_signal.name}_ib)) * ({node.precision} + 5.)"
+                self.area_fn += f"+1 * (2 ** ({input_signal.name} + {input_signal.name}_ib)) * ({node.precision} + 8.)"
             else:
                 self.area_fn += f"+1 * (2 ** ({input_signal.name} + {input_signal.name}_ib)) * ({node.name} + {node.name}_ib)"
 
@@ -302,108 +302,108 @@ class BitFlowOptimizer():
         print(f"AREA EQ: {self.area_fn}")
         print(f"-----------")
 
-        filtered_vars = []
-        for var in self.vars:
-            if var not in self.outputs:
-                filtered_vars.append(var)
-
-        functions = {}
-
-        exec(f'''def ErrorConstraintFn(x):
-             {','.join(filtered_vars)} = x
-             return  [{','.join(self.error_fns)}] if {len(self.error_fns)} == 0 else {self.error_fns[0]}''', functions)
-
-        exec(f'''def AreaOptimizerFn(x):
-             {','.join(filtered_vars)} = x
-             return  {self.area_fn}''', functions)
-
-        x0 = [self.initial for i in range(len(filtered_vars))]
-        bounds = [(0, 64) for i in range(len(filtered_vars))]
-
-        cons = []
-        for ind, fn in enumerate(self.error_fns):
-            exec(f'''def ErrorConstraintFn_{ind}(x):
-             {','.join(filtered_vars)} = x
-             return  {fn}''', functions)
-            con = {'type': 'ineq',
-                   'fun': functions[f"ErrorConstraintFn_{ind}"]}
-            cons.append(con)
-
-        # note: minimize uses SLSQP by default but I specify it to be explicit; we're using basinhopping to find the global minimum while using SLSQP to find local minima
-        minimizer_kwargs = {'constraints': (
-            cons), 'bounds': bounds, 'method': "SLSQP"}
-        solution = basinhopping(functions[f"AreaOptimizerFn"], x0,
-                                minimizer_kwargs=minimizer_kwargs)
-
-        sols = dict(zip(filtered_vars, solution.x))
-
-        for key in sols:
-            sols[key] = ceil(sols[key])
-            print(f"{key}: {sols[key]}")
-
-        self.fb_sols = sols
-
-        test = list(self.fb_sols.values())
-
-        # err = functions["ErrorConstraintFn_0"]
-        # err1 = functions["ErrorConstraintFn_1"]
-        # err2 = functions["ErrorConstraintFn_2"]
-        area = functions["AreaOptimizerFn"]
-
-        # print(f"ERROR: {err(test)}")
-        # print(f"ERROR: {err1(test)}")
-        # print(f"ERROR: {err2(test)}")
-        print(f"AREA: {area(test)}")
-
-        # namespace = {"m": GEKKO()}
-        # m = namespace["m"]
-        # m.options.IMODE = 2
-        # m.options.SOLVER = 3
-
         # filtered_vars = []
         # for var in self.vars:
         #     if var not in self.outputs:
         #         filtered_vars.append(var)
 
-        # vars_init = ','.join(
-        #     filtered_vars) + f" = [m.Var(value={self.initial}, integer=True, lb=0, ub=64) for i in range({len(filtered_vars)})]"
-        # exec(vars_init, namespace)
+        # functions = {}
 
-        # exec(f'''def ErrorOptimizerFn({','.join(filtered_vars)}):
-        #     return  {self.optim_error_fns}''', namespace)
+        # exec(f'''def ErrorConstraintFn(x):
+        #      {','.join(filtered_vars)} = x
+        #      return  [{','.join(self.error_fns)}] if {len(self.error_fns)} == 0 else {self.error_fns[0]}''', functions)
 
-        # exec(f'''def AreaOptimizerFn({','.join(filtered_vars)}):
-        #     return  {self.area_fn.replace("max", "m.max2")}''', namespace)
+        # exec(f'''def AreaOptimizerFn(x):
+        #      {','.join(filtered_vars)} = x
+        #      return  {self.area_fn}''', functions)
 
-        # exec(f'''def AreaOptimizerFn0({','.join(filtered_vars)}):
-        #     return  {self.area_fn}''', namespace)
+        # x0 = [self.initial for i in range(len(filtered_vars))]
+        # bounds = [(0, 64) for i in range(len(filtered_vars))]
 
-        # params = [namespace[v] for v in filtered_vars]
+        # cons = []
+        # for ind, fn in enumerate(self.error_fns):
+        #     exec(f'''def ErrorConstraintFn_{ind}(x):
+        #      {','.join(filtered_vars)} = x
+        #      return  {fn}''', functions)
+        #     con = {'type': 'ineq',
+        #            'fun': functions[f"ErrorConstraintFn_{ind}"]}
+        #     cons.append(con)
 
-        # for ind, fn in enumerate(self.optim_error_fns):
-        #     exec(f'''def ErrorConstraintFn_{ind}({','.join(filtered_vars)}):
-        #             return  {fn}''', namespace)
-        #     m.Equation(namespace[f"ErrorConstraintFn_{ind}"](*params))
+        # # note: minimize uses SLSQP by default but I specify it to be explicit; we're using basinhopping to find the global minimum while using SLSQP to find local minima
+        # minimizer_kwargs = {'constraints': (
+        #     cons), 'bounds': bounds, 'method': "SLSQP"}
+        # solution = basinhopping(functions[f"AreaOptimizerFn"], x0,
+        #                         minimizer_kwargs=minimizer_kwargs)
 
-        # m.Obj(namespace["AreaOptimizerFn"](*params))
-        # m.solve(disp=True)
-
-        # sols = dict(zip(filtered_vars, params))
+        # sols = dict(zip(filtered_vars, solution.x))
 
         # for key in sols:
-        #     sols[key] = ceil(sols[key].value[0])
+        #     sols[key] = ceil(sols[key])
         #     print(f"{key}: {sols[key]}")
 
         # self.fb_sols = sols
 
         # test = list(self.fb_sols.values())
 
-        # #err = namespace["ErrorConstraintFn_0"]
-        # # err1 = namespace["ErrorConstraintFn_1"]
-        # # err2 = namespace["ErrorConstraintFn_2"]
-        # area = namespace["AreaOptimizerFn0"]
+        # # err = functions["ErrorConstraintFn_0"]
+        # # err1 = functions["ErrorConstraintFn_1"]
+        # # err2 = functions["ErrorConstraintFn_2"]
+        # area = functions["AreaOptimizerFn"]
 
-        # # print(f"ERROR: {err(*test)}")
-        # # print(f"ERROR: {err1(*test)}")
-        # # print(f"ERROR: {err2(*test)}")
+        # # print(f"ERROR: {err(test)}")
+        # # print(f"ERROR: {err1(test)}")
+        # # print(f"ERROR: {err2(test)}")
+        # print(f"AREA: {area(test)}")
+
+        namespace = {"m": GEKKO()}
+        m = namespace["m"]
+        m.options.IMODE = 2
+        m.options.SOLVER = 3
+
+        filtered_vars = []
+        for var in self.vars:
+            if var not in self.outputs:
+                filtered_vars.append(var)
+
+        vars_init = ','.join(
+            filtered_vars) + f" = [m.Var(value={self.initial}, integer=True, lb=0, ub=64) for i in range({len(filtered_vars)})]"
+        exec(vars_init, namespace)
+
+        exec(f'''def ErrorOptimizerFn({','.join(filtered_vars)}):
+            return  {self.optim_error_fns}''', namespace)
+
+        exec(f'''def AreaOptimizerFn({','.join(filtered_vars)}):
+            return  {self.area_fn.replace("max", "m.max2")}''', namespace)
+
+        exec(f'''def AreaOptimizerFn0({','.join(filtered_vars)}):
+            return  {self.area_fn}''', namespace)
+
+        params = [namespace[v] for v in filtered_vars]
+
+        for ind, fn in enumerate(self.optim_error_fns):
+            exec(f'''def ErrorConstraintFn_{ind}({','.join(filtered_vars)}):
+                    return  {fn}''', namespace)
+            m.Equation(namespace[f"ErrorConstraintFn_{ind}"](*params))
+
+        m.Obj(namespace["AreaOptimizerFn"](*params))
+        m.solve(disp=False)
+
+        sols = dict(zip(filtered_vars, params))
+
+        for key in sols:
+            sols[key] = ceil(sols[key].value[0])
+            print(f"{key}: {sols[key]}")
+
+        self.fb_sols = sols
+
+        test = list(self.fb_sols.values())
+
+        #err = namespace["ErrorConstraintFn_0"]
+        # err1 = namespace["ErrorConstraintFn_1"]
+        # err2 = namespace["ErrorConstraintFn_2"]
+        area = namespace["AreaOptimizerFn0"]
+
+        # print(f"ERROR: {err(*test)}")
+        # print(f"ERROR: {err1(*test)}")
+        # print(f"ERROR: {err2(*test)}")
         # print(f"AREA: {area(*test)}")

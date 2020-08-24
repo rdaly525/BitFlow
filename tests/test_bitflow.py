@@ -83,12 +83,10 @@ def gen_ex3():
 
 # def test_fig3():
 
-#     t0 = time.time()
-
 #     dag = gen_fig3()
 
-#     bf = BitFlow(dag, {"z": 8.}, {'a': (-3., 2.),
-#                                   'b': (4., 8.)}, lr=1e-2, range_lr=1e-2, train_range=True, training_size=10000, testing_size=2000, distribution=2, incorporate_ulp_loss=False, batch_size=16, test_optimizer=True)
+#     bf = BitFlow(dag, {"z": 4.}, {'a': (-3., 2.),
+#                                   'b': (4., 8.)}, lr=1e-2, range_lr=1e-2, train_range=True, training_size=50000, testing_size=10000, distribution=2, incorporate_ulp_loss=False, batch_size=16, test_optimizer=True)
 #     bf.train(epochs=10)
 
 #     # # check saving object works
@@ -98,8 +96,6 @@ def gen_ex3():
 #     # new_bf.train(epochs=5)
 
 #     # assert new_bf.range_lr == bf.range_lr
-
-#     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
 
 #     return
 
@@ -175,13 +171,13 @@ def test_rgb_case_study():
         range_lr=1e-2,
         distribution=2,
         test_optimizer=True,
-        incorporate_ulp_loss=False,
-        graph_loss=True
+        incorporate_ulp_loss=True,
+        graph_loss=False
     )
 
     bf = BitFlow(dag, {"col_1": 8., "col_2": 8., "col_3": 8.}, {
         'r': (0., 255.), 'b': (0., 255.), 'g': (0., 255.)}, **params)
-    bf.train(epochs=30)
+    bf.train(epochs=10)
 
     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
 
@@ -190,6 +186,34 @@ def test_rgb_case_study():
     print(bf.model(**test))
 
     return
+
+# def test_rgb_case_study_4():
+#     print("\n=== RGB ===")
+
+#     dag = RGB_to_YCbCr()
+
+#     params = dict(
+#         training_size=50000,
+#         testing_size=10000,
+#         batch_size=16,
+#         lr=1e-2,
+#         train_range=True,
+#         range_lr=1e-2,
+#         distribution=2,
+#         test_optimizer=True,
+#         incorporate_ulp_loss=False,
+#         graph_loss=False
+#     )
+
+#     bf = BitFlow(dag, {"col_1": 4., "col_2": 4., "col_3": 4.}, {
+#         'r': (0., 255.), 'b': (0., 255.), 'g': (0., 255.)}, **params)
+#     bf.train(epochs=10)
+
+#     # Sample Matrix Product
+#     test = {"r": 252., "g": 59., "b": 32., "P": bf.P, "R": bf.R, "O": bf.O}
+#     print(bf.model(**test))
+
+#     return
 
 
 # def test_rgb_case_study_custom_dataset():
@@ -243,16 +267,16 @@ def matrix_multiply():
 
     p0 = Mul(Add(a00, a11), Add(b00, b11), name="p0")
     p1 = Mul(Add(a10, a11), b00, name="p1")
-    p2 = Mul(a00, Add(b01, Mul(Constant(-1.), b11)), name="p2")
-    p3 = Mul(a11, Add(b10, Mul(Constant(-1.), b00)), name="p3")
+    p2 = Mul(a00, Sub(b01, b11), name="p2")
+    p3 = Mul(a11, Sub(b10, b00), name="p3")
     p4 = Mul(b11, Add(a00, a01), name="p4")
-    p5 = Mul(Add(b00, b01), Add(a10, Mul(Constant(-1.), a00)), name="p5")
-    p6 = Mul(Add(b10, b11), Add(a01, Mul(Constant(-1.), a11)), name="p6")
+    p5 = Mul(Add(b00, b01), Sub(a10, a00), name="p5")
+    p6 = Mul(Add(b10, b11), Sub(a01, a11), name="p6")
 
-    y00 = Add(Add(Add(p0, p3), Mul(Constant(-1.), p4)), p6, name="y00")
+    y00 = Add(Sub(Add(p0, p3), p4), p6, name="y00")
     y01 = Add(p2, p4, name="y01")
     y10 = Add(p1, p3, name="y10")
-    y11 = Add(Add(Add(p0, p2), Mul(Constant(-1.), p1)), p5, name="y11")
+    y11 = Add(Sub(Add(p0, p2), p1), p5, name="y11")
 
     matrix_dag = Dag(outputs=[y00, y01, y10, y11], inputs=[
         a00, a01, a10, a11, b00, b01, b10, b11])
@@ -266,19 +290,48 @@ def matrix_multiply():
 #     dag = matrix_multiply()
 
 #     params = dict(
-#         training_size=10000,
-#         testing_size=2000,
+#         training_size=50000,
+#         testing_size=10000,
 #         batch_size=16,
 #         lr=1e-2,
 #         train_range=True,
 #         range_lr=1e-2,
 #         distribution=2,
 #         test_optimizer=True,
-#         incorporate_ulp_loss=True,
+#         incorporate_ulp_loss=False,
 #         graph_loss=False
 #     )
 
 #     bf = BitFlow(dag, {"y00": 8., "y01": 8., "y10": 8., "y11": 8.}, {
+#         'a00': (-5., 5.), 'a01': (-5., 5.), 'a10': (-5., 5.), 'a11': (-5., 5.), 'b00': (-5., 5.), 'b01': (-5., 5.), 'b10': (-5., 5.), 'b11': (-5., 5.)}, **params)
+#     bf.train(epochs=10)
+
+#     # Sample Matrix Product (Identity Product)
+#     test = {"a00": 1., "a01": 1., "a10": 1., "a11": 1., "b00": 1.,
+#             "b01": 0., "b10": 0., "b11": 1., "P": bf.P, "R": bf.R, "O": bf.O}
+#     print(bf.model(**test))
+
+#     return
+
+# def test_matrix_case_study_4():
+#     print("\n=== MATRIX ===")
+
+#     dag = matrix_multiply()
+
+#     params = dict(
+#         training_size=50000,
+#         testing_size=10000,
+#         batch_size=16,
+#         lr=1e-2,
+#         train_range=True,
+#         range_lr=1e-2,
+#         distribution=2,
+#         test_optimizer=True,
+#         incorporate_ulp_loss=False,
+#         graph_loss=False
+#     )
+
+#     bf = BitFlow(dag, {"y00": 4., "y01": 4., "y10": 4., "y11": 4.}, {
 #         'a00': (-5., 5.), 'a01': (-5., 5.), 'a10': (-5., 5.), 'a11': (-5., 5.), 'b00': (-5., 5.), 'b01': (-5., 5.), 'b10': (-5., 5.), 'b11': (-5., 5.)}, **params)
 #     bf.train(epochs=10)
 
@@ -312,8 +365,8 @@ def generate_poly_approx(a, b, c, d):
 #     dag = generate_poly_approx(-0.25, 0.333, -0.5, 1.)
 
 #     params = dict(
-#         training_size=10000,
-#         testing_size=2000,
+#         training_size=50000,
+#         testing_size=10000,
 #         batch_size=16,
 #         lr=1e-2,
 #         train_range=True,
@@ -321,10 +374,39 @@ def generate_poly_approx(a, b, c, d):
 #         distribution=2,
 #         test_optimizer=True,
 #         incorporate_ulp_loss=False,
-#         graph_loss=True
+#         graph_loss=False
 #     )
 
 #     bf = BitFlow(dag, {"res": 8.}, {"x": (0., 1.5)}, **params)
+#     bf.train(epochs=10)
+
+#     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
+
+#     test = {"x": 0.3, "P": bf.P, "R": bf.R, "O": bf.O}
+#     print(bf.model(**test))
+
+#     return
+
+# def test_poly_approx_4():
+#     print("\n=== POLY APPROX ===")
+#     t0 = time.time()
+
+#     dag = generate_poly_approx(-0.25, 0.333, -0.5, 1.)
+
+#     params = dict(
+#         training_size=50000,
+#         testing_size=10000,
+#         batch_size=16,
+#         lr=1e-2,
+#         train_range=True,
+#         range_lr=1e-2,
+#         distribution=2,
+#         test_optimizer=True,
+#         incorporate_ulp_loss=False,
+#         graph_loss=False
+#     )
+
+#     bf = BitFlow(dag, {"res": 4.}, {"x": (0., 1.5)}, **params)
 #     bf.train(epochs=10)
 
 #     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
@@ -399,18 +481,43 @@ def generate_square_wave():
 #     dag = generate_square_wave()
 
 #     params = dict(
-#         training_size=10000,
-#         testing_size=2000,
+#         training_size=50000,
+#         testing_size=10000,
+#         batch_size=16,
+#         lr=4e-2,
+#         train_range=True,
+#         range_lr=1e-2,
+#         distribution=2,
+#         test_optimizer=True,
+#         incorporate_ulp_loss=False
+#     )
+
+#     bf = BitFlow(dag, {"res": 8.}, {"x": (-3., 3.)}, **params)
+#     bf.train(epochs=5)
+
+#     test = {"x": 2.1, "P": bf.P, "R": bf.R, "O": bf.O}
+#     print(bf.model(**test))
+
+#     return
+
+# def test_square_wave_4():
+#     print("=== SQUARE WAVE ===")
+
+#     dag = generate_square_wave()
+
+#     params = dict(
+#         training_size=50000,
+#         testing_size=10000,
 #         batch_size=16,
 #         lr=1e-2,
 #         train_range=True,
 #         range_lr=1e-2,
 #         distribution=2,
 #         test_optimizer=True,
-#         incorporate_ulp_loss=True
+#         incorporate_ulp_loss=False
 #     )
 
-#     bf = BitFlow(dag, {"res": 8.}, {"x": (-3., 3.)}, **params)
+#     bf = BitFlow(dag, {"res": 4.}, {"x": (-3., 3.)}, **params)
 #     bf.train(epochs=10)
 
 #     test = {"x": 2.1, "P": bf.P, "R": bf.R, "O": bf.O}

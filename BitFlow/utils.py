@@ -68,12 +68,20 @@ class DAGGrapher(Visitor):
 
     def visit_Sub(self, node: Sub):
         Visitor.generic_visit(self, node)
-        self.maintainGraph(node, '#27ae60', "-")
+        self.maintainGraph(node, '#27ae60', "—")
 
     def visit_LookupTable(self, node: LookupTable):
         Visitor.generic_visit(self, node)
         self.maintainGraph(
             node, '#8e44ad', node.func.__name__.replace('np.', "") + "(x)")
+
+    def visit_Round(self, node: Round):
+        Visitor.generic_visit(self, node)
+        self.maintainGraph(node, '#e67e22', " ")
+
+    def visit_Select(self, node: Select):
+        Visitor.generic_visit(self, node)
+        self.maintainGraph(node, '#d35400', "W")
 
     def draw(self):
         pos = graphviz_layout(self.G, prog='dot')

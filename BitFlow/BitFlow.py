@@ -6,7 +6,7 @@ from .Eval.NumEval import NumEval
 from .Eval.TorchEval import TorchEval
 from .Optimization import BitFlowVisitor, BitFlowOptimizer
 from .AddRoundNodes import AddRoundNodes, LookupTableTransformer
-from .utils import GeneratedDataset
+from .utils import GeneratedDataset, DAGGrapher
 
 import torch
 from torch.utils import data
@@ -66,7 +66,7 @@ class BitFlow:
 
         return GeneratedDataset(model, dataset_size, size_p, size_r, size_output, data_range, true_width, dist)
 
-    def update_dag(self, dag):
+    def update_dag(self, dag, graph_loss=False):
         """
         Args:
             dag: Input dag
@@ -79,6 +79,11 @@ class BitFlow:
 
         rounder = AddRoundNodes(P, R, O)
         roundedDag = rounder.doit(dag)
+
+        if graph_loss:
+            dag_grapher = DAGGrapher(list(roundedDag.roots()))
+            dag_grapher.run(roundedDag)
+            dag_grapher.draw()
 
         print(f"NUMBER NODES: {rounder.num_nodes}")
 
@@ -272,7 +277,7 @@ class BitFlow:
         if not self.train_MNIST:
             evaluator.eval(**eval_dict)
 
-        #range_bits = self.calculateRange(evaluator, outputs)
+        # range_bits = self.calculateRange(evaluator, outputs)
 
         bfo = BitFlowOptimizer(evaluator, outputs, should_graph=should_graph)
         bfo.calculateInitialValues()
@@ -286,8 +291,6 @@ class BitFlow:
         exec(f'''def ErrorConstraintFn(x):
              {','.join(filtered_vars)} = x
              return  [{','.join(error_fns)}]''', globals())
-
-        print(error_fns)
 
         self.lambdas = [1e5] * len(error_fns)
 
@@ -387,16 +390,18 @@ class BitFlow:
 
             decay = 0.95
             error_sum = 0
+            limit = -1e-4
             for (ind, constraint_err) in enumerate(constraint_errs):
-                if constraint_err > 0 and self.lambdas[ind] > 1e-8:
+                if constraint_err > limit and self.lambdas[ind] > 1e-8:
                     self.lambdas[ind] *= decay
                 else:
                     self.lambdas[ind] = 1e5
                 error_sum = error_sum + \
-                    self.lambdas[ind] * torch.exp(-10000 * constraint_err)
+                    self.lambdas[ind] * \
+                    torch.exp(-10000 * (constraint_err - limit))
 
-            loss = (error_sum + S * area + torch.sum(torch.exp(-1000 * (R - 1))
-                                                     ) + torch.sum(torch.exp(-1000 * P)))/(batch_size)
+            loss = (error_sum + S * area + torch.sum(torch.exp(-1000 *
+                                                               (R - 1))) + torch.sum(torch.exp(-1000 * P)))/(batch_size)
 
             if incorporate_ulp_loss:
                 loss = loss + ulp_err/batch_size
@@ -452,7 +457,7 @@ class BitFlow:
 
         # Update the dag with round nodes and set up the model for torch training
         dag, num_precision, num_inputs, num_outputs, num_range, ordered_list, area_weight = self.update_dag(
-            dag)
+            dag, graph_loss=graph_loss)
 
         self.area_weight = area_weight
 
@@ -507,7 +512,7 @@ class BitFlow:
         self.incorporate_ulp_loss = incorporate_ulp_loss
         self.outputs = outputs
 
-    def train(self, epochs=10):
+    def train(self, epochs=10, eval_bitflow=True):
 
         # retrieve initialized data from object
         train_gen = self.train_gen
@@ -580,99 +585,103 @@ class BitFlow:
             plt.show()
 
         # Show final results for weight and round them
-        print(P)
-        P = self.custom_round(P, factor=0.05)
+        if eval_bitflow:
+            print(P)
+            P = self.custom_round(P, factor=0.05)
 
-        # add 1 to account for the necessary sign bit
-        R = self.custom_round(R, factor=0.05)
+            # add 1 to account for the necessary sign bit
+            R = self.custom_round(R, factor=0.05)
 
-        # P = torch.ceil(P)
-        # R = torch.ceil(R)
-        print(f"PRECISION: {P}")
-        print(f"RANGE: {R}")
-        print(f"ORDER: {filtered_vars}")
+            # P = torch.ceil(P)
+            # R = torch.ceil(R)
+            print(f"PRECISION: {P}")
+            print(f"RANGE: {R}")
+            print(f"ORDER: {filtered_vars}")
 
-        print(f"TIME: {time.time() - self.t0} SECONDS ELAPSED")
+            print(f"TIME: {time.time() - self.t0} SECONDS ELAPSED")
 
-        LUTTransformer = LookupTableTransformer(P, R, filtered_vars)
-        model = self.gen_model(LUTTransformer.doit(
-            self.transformed_dag), self.intervals)
+            LUTTransformer = LookupTableTransformer(P, R, filtered_vars)
+            model = self.gen_model(LUTTransformer.doit(
+                self.transformed_dag), self.intervals)
 
-        self.calc_accuracy("TEST", test_gen, P, R,
-                           O, model, False)
+            self.calc_accuracy("TEST", test_gen, P, R,
+                               O, model, False)
 
-        self.calc_ulp("TEST", test_gen, P, R,
-                      O, model)
+            self.calc_ulp("TEST", test_gen, P, R,
+                          O, model)
 
-        self.calc_accuracy("TRAIN", train_gen, P, R,
-                           O, model, False)
+            self.calc_accuracy("TRAIN", train_gen, P, R,
+                               O, model, False)
 
-        print("\n##### MODEL DETAILS #####")
-        print(f"ERROR: {ErrorConstraintFn(P.tolist())}")
-        if train_range:
-            ldict = {"P": P, "R": R}
-            evaluator = IAEval(self.original_dag)
-            evaluator.eval(**self.eval_dict)
+            print("\n##### MODEL DETAILS #####")
+            print(f"ERROR: {ErrorConstraintFn(P.tolist())}")
+            if train_range:
+                ldict = {"P": P, "R": R}
+                evaluator = IAEval(self.original_dag)
+                evaluator.eval(**self.eval_dict)
 
-            node_values = evaluator.node_values
-            visitor = BitFlowVisitor(node_values, calculate_IB=False)
-            visitor.run(evaluator.dag)
+                node_values = evaluator.node_values
+                visitor = BitFlowVisitor(node_values, calculate_IB=False)
+                visitor.run(evaluator.dag)
 
-            range_list = [val for val in list(
-                visitor.node_values) if val not in evaluator.dag.outputs]
+                range_list = [val for val in list(
+                    visitor.node_values) if val not in evaluator.dag.outputs]
 
-            area_fn = visitor.area_fn
-            exec(f"{','.join(filtered_vars)}=P", ldict)
-            ib_vars = [f"{f}_ib" for f in range_list]
-            exec(f"{','.join(ib_vars)}=R", ldict)
+                area_fn = visitor.area_fn
+                exec(f"{','.join(filtered_vars)}=P", ldict)
+                ib_vars = [f"{f}_ib" for f in range_list]
+                exec(f"{','.join(ib_vars)}=R", ldict)
 
-            exec(f"area = {area_fn}", ldict)
+                exec(f"area = {area_fn}", ldict)
 
-            area = ldict["area"]
-            print(f"AREA: {area}")
-            print(f"UFB AREA: {AreaOptimizerFn(init_P)}")
-        else:
-            print(f"AREA: {AreaOptimizerFn(P.tolist())}")
-            print(f"UFB AREA: {AreaOptimizerFn(init_P)}")
+                area = ldict["area"]
+                print(f"AREA: {area}")
+                print(f"UFB AREA: {AreaOptimizerFn(init_P)}")
+            else:
+                print(f"AREA: {AreaOptimizerFn(P.tolist())}")
+                print(f"UFB AREA: {AreaOptimizerFn(init_P)}")
 
-        print(f"UFB: {bfo.initial} bits")
+            print(f"UFB: {bfo.initial} bits")
 
-        if test_optimizer:
-            print("\n##### FROM OPTIMIZER ######")
+            if test_optimizer:
+                print("\n##### FROM OPTIMIZER ######")
 
-            bfo.solve()
-            test = list(bfo.fb_sols.values())
-            print(test)
-            ibs = bfo.visitor.IBs
-            for out in outputs:
-                ibs.pop(out, None)
-            rng = list(ibs.values())
-            print(rng)
-            print(filtered_vars)
+                bfo.solve()
+                test = list(bfo.fb_sols.values())
+                print(test)
+                ibs = bfo.visitor.IBs
+                for out in outputs:
+                    ibs.pop(out, None)
+                rng = list(ibs.values())
+                print(rng)
+                print(filtered_vars)
 
-            print(f"ERROR: {ErrorConstraintFn(test)}")
-            print(f"AREA: {AreaOptimizerFn(test)}")
+                # for (index, val) in enumerate(test):
+                #     print(f"{val} vs {P[index]} = {val - P[index]}")
 
-            if test_ufb:
-                self.calc_accuracy("UFB TEST", test_gen, init_P, torch.tensor(rng),
+                print(f"ERROR: {ErrorConstraintFn(test)}")
+                print(f"AREA: {AreaOptimizerFn(test)}")
+
+                if test_ufb:
+                    self.calc_accuracy("UFB TEST", test_gen, init_P, torch.tensor(rng),
+                                       O, model, False)
+
+                    self.calc_accuracy("UFB TRAIN", train_gen, init_P, torch.tensor(rng),
+                                       O, model, False)
+
+                self.calc_accuracy("OPTIMIZER TEST", test_gen, torch.tensor(test), torch.tensor(rng),
                                    O, model, False)
 
-                self.calc_accuracy("UFB TRAIN", train_gen, init_P, torch.tensor(rng),
+                self.calc_accuracy("UFB TEST (BITFLOW PRECISION):", test_gen, P, torch.tensor(rng),
                                    O, model, False)
 
-            self.calc_accuracy("OPTIMIZER TEST", test_gen, torch.tensor(test), torch.tensor(rng),
-                               O, model, False)
+                print(
+                    f"AREA with BITFLOW PRECISION and FIXED RANGE: {AreaOptimizerFn(P.tolist())}")
 
-            self.calc_accuracy("UFB TEST (BITFLOW PRECISION):", test_gen, P, torch.tensor(rng),
-                               O, model, False)
+                self.calc_accuracy("UFB TEST (BITFLOW RANGE):", test_gen, torch.tensor(test), R,
+                                   O, model, False)
 
-            print(
-                f"AREA with BITFLOW PRECISION and FIXED RANGE: {AreaOptimizerFn(P.tolist())}")
-
-            self.calc_accuracy("UFB TEST (BITFLOW RANGE):", test_gen, torch.tensor(test), R,
-                               O, model, False)
-
-        # Save outputs to object
+            # Save outputs to object
         self.model = model
         self.P = P
         self.R = R
