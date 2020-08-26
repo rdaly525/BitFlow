@@ -36,61 +36,10 @@ import random
 import math
 
 
-class GeneratedDataset(data.Dataset):
-    def __init__(self, model, dataset_size, size_p, size_r, size_output, data_range, true_width, dist):
-        self.train_MNIST = True
-        self.X = {k: [] for k in data_range}
-        self.Y = []
-        self.data_range = data_range
-
-        P = torch.Tensor(1, size_p).fill_(true_width)[0]
-        R = torch.Tensor(1, size_r).fill_(true_width)[0]
-        torch.manual_seed(42)
-
-        for key in data_range:
-            # Create random tensor
-            input_range = data_range[key]
-            if isinstance(input_range, list):
-                self.X[key] = (input_range[1] - input_range[0]) * \
-                    torch.rand(dataset_size, input_range) + input_range[0]
-            else:
-                val = 0
-                if dist == 1:
-                    mean = (input_range[1]+input_range[0])/2
-                    std = (mean - input_range[0])/3
-                    val = torch.normal(
-                        mean=mean, std=std, size=(1, dataset_size)).squeeze()
-                elif dist == 2:
-                    beta = torch.distributions.beta.Beta(
-                        torch.tensor([0.5]), torch.tensor([0.5]))
-                    val = (input_range[1] - input_range[0]) * \
-                        beta.sample((dataset_size,)).squeeze() + \
-                        input_range[0]
-                else:
-                    val = (input_range[1] - input_range[0]) * \
-                        torch.rand(dataset_size) + input_range[0]
-
-                self.X[key] = val
-
-        for i in range(dataset_size):
-            inputs = {k: self.X[k][i] for k in data_range}
-
-            inputs["P"] = P
-            inputs["R"] = R
-            inputs["O"] = torch.Tensor(
-                1, size_output).fill_(true_width)[0]
-            new_y = model(**inputs)
-            self.Y.append(new_y)
-
-    def __len__(self):
-        return len(self.X[list(self.data_range.keys())[0]])
-
-    def __getitem__(self, index):
-        return {k: self.X[k][index] for k in self.data_range}, self.Y[index]
-
 class BitFlow:
 
     def make_model(self, **kwargs):
+        print(kwargs)
         return self.evaluator.eval(**kwargs)
 
     def gen_model(self, dag):
@@ -408,7 +357,7 @@ class BitFlow:
 
         for k,v in outputs.items():
             print(k,v)
-        assert 0
+
 
 
         O = torch.Tensor(list(outputs.values()))
@@ -622,9 +571,10 @@ class BitFlow:
         self.graph_loss = graph_loss
         self.incorporate_ulp_loss = incorporate_ulp_loss
         # Dimensions for input, hidden and output
+        self.outputs = outputs
         self.output_dim = 10
         self.hidden_dim = 784
-        self.batch_size = 2
+        self.batch_size =  1
 
         self.X = torch.ones(self.batch_size, self.hidden_dim)
 
@@ -655,6 +605,7 @@ class BitFlow:
         range_lr = self.range_lr
         graph_loss = self.graph_loss
         incorporate_ulp_loss = self.incorporate_ulp_loss
+        outputs = self.outputs
 
         # Set up optimizer
         opt = torch.optim.AdamW(
@@ -779,6 +730,9 @@ class BitFlow:
             bfo.solve()
             test = list(bfo.fb_sols.values())
             print(test)
+            ibs = bfo.visitor.IBs
+            for out in outputs:
+                ibs.pop(out, None)
             rng = list(bfo.visitor.IBs.values())
             print(rng)
             print(f"ERROR: {ErrorConstraintFn(test)}")

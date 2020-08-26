@@ -106,7 +106,7 @@ class Concat(DagNode):
         self.inputs = args
         self.concat_dim = concat_dim
         if name is None:
-            name = f"_concat"
+            name = f"_concat{len(args)}"
         super().__init__(name, *args)
 
 

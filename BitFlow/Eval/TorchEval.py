@@ -7,7 +7,7 @@ import numpy as np
 
 
 from .AbstractEval import AbstractEval
-from ..node import DagNode, Dag, LookupTable
+from ..node import DagNode, Dag, LookupTable, Output
 from ..torch.functions import IntRound
 import torch as t
 import math
@@ -69,12 +69,27 @@ class TorchEval(AbstractEval):
 
         return precise
 
+    # def eval_Select(self, a, node: DagNode):
+    #     # if(isinstance(node.index,tuple)):
+    #     #     print(node.index)
+    #     #
+    #     #     return a[0,a.shape[0],node.index]
+    #     #print(node.index)n
+    #     return a[node.index]
+
     def eval_Select(self, a, node: DagNode):
-        # if(isinstance(node.index,tuple)):
-        #     print(node.index)
-        #
-        #     return a[0,a.shape[0],node.index]
-        #print(node.index)
+
+        print("this")
+        print(node,node.index,a)
+        if(isinstance(node.index,tuple)):
+
+            #return a[0,a.shape[0]][node.index[1]]
+            return a[:,node.index[1]]
+
+        print("a",node.name)
+        if(node.name == 'output1' or node.name == 'output2' or node.name == 'output3' or node.name == 'output4' or node.name == 'output5' or node.name == 'output6' or node.name == 'output7' or node.name == 'output8' or node.name == 'output9'):
+
+            return a[0]
         return a[node.index]
 
     # def eval_Select(self, a, node: DagNode):

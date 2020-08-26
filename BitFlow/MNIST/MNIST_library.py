@@ -73,13 +73,32 @@ def linear_layer(X: DagNode, weight: DagNode, bias: DagNode, batch_dim, output_d
     y = matrix_multiply(X, weight, batch_dim, output_dim, size)
     print("linear layer",X,weight,bias,batch_dim,output_dim,size)
 
-    bias_array = [bias for _ in range(batch_dim)]
+    if batch_dim>1:
+            bias_array = [bias for _ in range(batch_dim)]
 
-    with_bias = Concat(*bias_array, concat_dim=0,name="final_bias")
 
-    joined_outputs = y + with_bias
 
-    #TODO: Add ReLu
 
-    outputs = [joined_outputs[i] for i in range(output_dim)]
+            with_bias = Concat(*bias_array, concat_dim=0,name="final_bias")
+
+
+            joined_outputs = y + with_bias
+
+            #TODO: Add ReLu
+
+            outputs = [joined_outputs[i] for i in range(output_dim)]
+    else:
+
+        bias_array = [bias]
+        print("HERE")
+        print(len(bias_array))
+        with_bias = Concat(*bias_array, concat_dim=0, name="final_bias")
+
+        #with_bias = Concat(*bias_array, concat_dim=0, name="final_bias")
+
+        joined_outputs = y + with_bias
+
+        # TODO: Add ReLu
+
+        outputs = [joined_outputs[i] for i in range(output_dim)]
     return outputs
