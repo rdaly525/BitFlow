@@ -33,7 +33,7 @@ class BitFlowVisitor(Visitor):
         if self.train_MNIST:
             self.calculate_IB = False
 
-    # self.calculate_IB = calculate_IB
+        #self.calculate_IB = calculate_IB
 
     def handleIB(self, node):
         if self.calculate_IB:
@@ -78,7 +78,7 @@ class BitFlowVisitor(Visitor):
                 error_mat.append([])
                 for col in range(784):
                     error_mat[row].append(PrecisionNode(
-                        1., f"{node.name}_input_{row}_{col}", []))
+                        1., f"{node.name}", []))
 
                     # print(error_mat[row])
 
@@ -95,7 +95,7 @@ class BitFlowVisitor(Visitor):
                 error_mat.append([])
                 for col in range(10):
                     error_mat[row].append(PrecisionNode(
-                        1., f"{node.name}_input_{row}_{col}", []))
+                        1., f"{node.name}", []))
 
             self.errors[node.name] = error_mat
             return
@@ -107,7 +107,17 @@ class BitFlowVisitor(Visitor):
                 error_mat.append([])
                 for col in range(10):
                     error_mat[row].append(PrecisionNode(
-                        1., f"{node.name}_input_{row}_{col}", []))
+                        1., f"{node.name}", []))
+            # print(node.name)
+            self.errors[node.name] = error_mat
+            return
+
+        if node.name == 'bias':
+            print("BIAS---")
+            error_mat = []
+            for row in range(10):
+                    error_mat[row].append(PrecisionNode(
+                        1., f"{node.name}", []))
             # print(node.name)
             self.errors[node.name] = error_mat
             return
@@ -142,35 +152,43 @@ class BitFlowVisitor(Visitor):
 
         if self.calculate_IB or self.train_MNIST:
 
+            res_list = []
+            print(lhs.name,rhs.name)
+            print(len(self.errors[lhs.name][0]))
+            print(len(self.errors[rhs.name][0]))
+            res_list = []
+            print("Addhere")
+            print(lhs.name, rhs.name)
+            print(len(self.errors[lhs.name]))
+            print(len(self.errors[rhs.name]))
+            #self.errors[node.name] = self.errors[lhs.name].add(self.errors[rhs.name], node.name)
+            # for i in range(0, len(self.errors[lhs.name])):
+            #     res_list.append(self.errors[lhs.name][i].add(self.errors[rhs.name][i], node.name))
+            #
+            # self.errors[node.name] = res_list
+            # error_vector_add = []
+            # for i in range(len(self.errors[lhs.name])):
+            #     error_vector_add.append([])
+            #     for j in range(len(self.errors[lhs.name][0])):
+            #         error_vector_add[i].append(self.errors[lhs.name][i][j].add(
+            #             self.errors[rhs.name][i][j], node.name))
+            # self.errors[node.name] = error_vector_add
+
             error_mat = []
+            for row in range(2):
+                error_mat.append([])
+                for col in range(10):
+                    print(row,col)
+                    print(type(self.errors[lhs.name][row][col]))
+                    print(type(self.errors[rhs.name][row][col][0]))
+
+                    error_mat[row].append(self.errors[lhs.name][row][col].add(
+                        self.errors[rhs.name][row][col][0], node.name))
+            print(node.name)
+            self.errors[node.name] = error_mat
+            print(type(error_mat))
 
 
-            if(len(self.errors[rhs.name])==1):
-                print('here')
-                print(lhs, rhs)
-                print(len(self.errors[lhs.name]))
-                print(len(self.errors[rhs.name][0]))
-                for row in range(1):
-                    error_mat.append([])
-                    for col in range(10):
-
-                        error_mat[row].append(self.errors[lhs.name][col].add(
-                            self.errors[rhs.name][row][col], node.name))
-                    # print(node.name)
-                self.errors[node.name] = error_mat
-
-
-            else:
-                for row in range(1):
-                    error_mat.append([])
-                    for col in range(10):
-                        print(row,col)
-                        print(len(self.errors[lhs.name]))
-                        print(self.errors[lhs.name][row][col])
-                        error_mat[row].append(self.errors[lhs.name][row][col].add(
-                            self.errors[rhs.name][row][col], node.name))
-                # print(node.name)
-                self.errors[node.name] = error_mat
 
         if self.calculate_IB:
             self.area_fn += f"+1 * max({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
@@ -208,7 +226,7 @@ class BitFlowVisitor(Visitor):
             # print(len(self.errors[lhs.name]))
             # print(len(self.errors[rhs.name]))
             for i in range(0, len(self.errors[rhs.name])):
-                res_list.append(self.errors[lhs.name][i].mul(self.errors[rhs.name][i], node.name))
+                res_list.append(self.errors[lhs.name][i].mul(self.errors[rhs.name][i],node.name))
 
             self.errors[node.name] = res_list
 
@@ -258,9 +276,7 @@ class BitFlowVisitor(Visitor):
             counter = 0
 
             for i in inputs:
-               precisions.append(self.errors[i.name])
-                #precisions.append(copy.deepcopy(self.errors[i.name]))
-
+                precisions.append(copy.deepcopy(self.errors[i.name]))
             self.errors[node.name] = precisions
             print(len(self.errors[node.name]))
 
@@ -318,10 +334,9 @@ class BitFlowOptimizer():
         self.ufb_fn = ""
         self.optim_error_fn = " >= "
 
-
+        print("HERE")
         for output in outputs:
-            print(output)
-            for i in range(1):
+            for i in range(2):
                 for j in range(10):
                     print("output")
                     print(visitor.errors[output])
@@ -336,16 +351,19 @@ class BitFlowOptimizer():
                                           visitor.errors[output][i][j].getExecutableError()
                     self.ufb_fn += visitor.errors[output][i][j].getExecutableUFB()
 
-            self.error_fn = self.error_fn
+            #self.error_fn = '+2**(-1.0-1) - (+1.0*2**(-X_input_9_0-1)+1.0*2**(-weight_input_0_0-1)+1*(+1*2**(-weight_input_0_0-1))*(+1*2**(-X_input_9_0-1))+1*2**(-X_getitem_9_mul_weight_getitem_(slice(None, None, None), 0)-1)+1.0*2**(-X_input_9_1-1)+1.0*2**(-weight_input_0_1-1)+1*(+1*2**(-weight_input_0_1-1))*(+1*2**(-X_input_9_1-1))+1*2**(-X_getitem_9_mul_weight_getitem_(slice(None, None, None), 0)-1)+1.0*2**(-X_input_9_2-1)+1.0*2**(-weight_input_0_2-1)+1*(+1*2**(-weight_input_0_2-1))*(+1*2**(-X_input_9_2-1))+1*2**(-X_getitem_9_mul_weight_getitem_(slice(None, None, None), 0)-1)+1.0*2**(-X_input_9_3-1)+1.0*2**(-weight_input_0_3-1)+1*(+1*2**(-weight_input_0_3-1))*(+1*2**(-X_input_9_3-1))+1*2**(-X_getitem_9_mul_weight_getitem_(slice(None, None, None), 0)-1)+1.0*2**(-X_input_9_4-1)+1.0*2**(-weight_input_0_4-1)+1*(+1*2**(-weight_input_0_4-1))*(+1*2**(-X_input_9_4-1))+1*2**(-X_getitem_9_mul_weight_getitem_(slice(None, None, None), 0)-1)+1.0*2**(-X_input_9_5-1)+1.0*2**(-weight_input_0_5-1)+1*(+1*2**(-weight_input_0_5-1))*(+1*2**(-X_input_9_5-1))+1*2**(-X_getitem_9_mul_weight_getitem_(slice(None, None, None), 0)-1)+1.0*2**(-X_input_9_6-1)+1.0*2**(-weight_input_0_6-1)+1*(+1*2**(-weight_input_0_6-1))*(+1*2**(-X_input_9_6-1))+1*2**(-X_getitem_9_mul_weight_getitem_(slice(None, None, None), 0)-1)+1.0*2**(-X_input_9_7-1)+1.0*2**(-weight_input_0_7-1)+1*(+1*2**(-weight_input_0_7-1))*(+1*2**(-X_input_9_7-1))+1*2**(-X_getitem_9_mul_weight_getitem_(slice(None, None, None), 0)-1)+1.0*2**(-X_input_9_8-1)+1.0*2**(-weight_input_0_8-1)+1*(+1*2**(-weight_input_0_8-1))*(+1*2**(-X_input_9_8-1))+1*2**(-X_getitem_9_mul_weight_getitem_(slice(None, None, None), 0)-1)+1.0*2**(-X_input_9_9-1)+1.0*2**(-weight_input_0_9-1)+1*(+1*2**(-weight_input_0_9-1))*(+1*2**(-X_input_9_9-1))+1*2**(-X_getitem_9_mul_weight_getitem_(slice(None, None, None), 0)-1))'
 
 
 
+
+            #self.error_fn = self.error_fn[1:]
             self.area_fn = visitor.area_fn[1:]
             # print(len(visitor.area_fn[0]))
             self.outputs = outputs
 
         print(f"ERROR EQ: {self.error_fn}")
         print(f"AREA EQ: {self.area_fn}")
+
 
         vars = list(visitor.node_values)
         for (i, var) in enumerate(vars):
@@ -360,7 +378,7 @@ class BitFlowOptimizer():
             # print("S",output)
             # print("S",output[0])
 
-            for i in range(1):
+            for i in range(2):
                 for j in range(10):
                     bnd += f"{-2 ** (-self.outputs[output][i][j] - 1)}"
         self.ufb_fn += bnd
@@ -378,7 +396,7 @@ class BitFlowOptimizer():
 
         self.calculateInitialValues()
         print("SOLVING AREA/ERROR...")
-        # self.error_fn = f"2**(-{self.output_precision}-1)>=" + self.error_fn
+        self.error_fn = f"2**(-{self.output_precision}-1)>=" + self.error_fn
 
         print(f"ERROR EQ: {self.optim_error_fn}")
         print(f"AREA EQ: {self.area_fn}")

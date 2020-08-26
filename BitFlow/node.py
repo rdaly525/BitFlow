@@ -93,7 +93,11 @@ class Select(DagNode):
     def __init__(self, a: DagNode, index, name=None):
         self.index = index
         if name is None:
-            name = f"{a.name}_getitem_{str(index)}"
+            if(isinstance(index,tuple)):
+                #return a[:, node.index[1]]
+                name = f"{a.name}_getitem_{str(index[1])}"
+            else:
+                name = f"{a.name}_getitem_{str(index)}"
         super().__init__(name, a)
 
 
