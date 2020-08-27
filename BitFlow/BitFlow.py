@@ -330,7 +330,7 @@ class BitFlow:
         return O, P, init_P, R, init_R
 
     # Loss function
-    def compute_loss(self, target, y, P, R, O, iter, filtered_vars, batch_size, epochs, training_size, error_type=1, should_print=True, shouldErrorCheck=False, train_range=False, incorporate_ulp_loss=False):
+    def compute_loss(self, target, y, P, R, O, iter, filtered_vars, batch_size, epochs, training_size, error_type=1, should_print=True, shouldErrorCheck=False, train_range=False, incorporate_ulp_loss=False, limit=1e-4, decay=0.95):
         """
         Args:
             error_type:
@@ -388,9 +388,7 @@ class BitFlow:
             # If ulp error is reasonable, relax error constraints
             S = 1./self.area_weight
 
-            decay = 0.95
             error_sum = 0
-            limit = -1e-4
             for (ind, constraint_err) in enumerate(constraint_errs):
                 if constraint_err > limit and self.lambdas[ind] > 1e-8:
                     self.lambdas[ind] *= decay
@@ -512,7 +510,7 @@ class BitFlow:
         self.incorporate_ulp_loss = incorporate_ulp_loss
         self.outputs = outputs
 
-    def train(self, epochs=10, eval_bitflow=True):
+    def train(self, epochs=10, eval_bitflow=True, limit=-1e-4, decay=0.95):
 
         # retrieve initialized data from object
         train_gen = self.train_gen
@@ -568,7 +566,7 @@ class BitFlow:
                     target_y = torch.stack(target_y).squeeze().to(device)
 
                 loss = self.compute_loss(target_y, y, P, R, O, iter, filtered_vars, batch_size, epochs, training_size,
-                                         error_type=error_type, should_print=True, train_range=train_range, incorporate_ulp_loss=incorporate_ulp_loss)
+                                         error_type=error_type, should_print=True, train_range=train_range, incorporate_ulp_loss=incorporate_ulp_loss, limit=limit, decay=decay)
                 loss_values.append(loss)
 
                 opt.zero_grad()
@@ -578,8 +576,8 @@ class BitFlow:
             scheduler.step()
 
         if graph_loss:
-            plt.plot(loss_values, '#40739e')
-            plt.title('4TH DEGREE POLY APPROX')
+            plt.plot(loss_values, '#00505B')
+            plt.title('Polynomial Approximation Loss Graph')
             plt.xlabel('Number of Iterations')
             plt.ylabel('Loss')
             plt.show()
@@ -587,10 +585,9 @@ class BitFlow:
         # Show final results for weight and round them
         if eval_bitflow:
             print(P)
-            P = self.custom_round(P, factor=0.05)
 
-            # add 1 to account for the necessary sign bit
-            R = self.custom_round(R, factor=0.05)
+            P = self.custom_round(P + 1, factor=0.1)
+            R = self.custom_round(R, factor=0.1)
 
             # P = torch.ceil(P)
             # R = torch.ceil(R)

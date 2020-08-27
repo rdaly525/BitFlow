@@ -1,0 +1,47 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.8.3, pytest-5.4.2, py-1.8.1, pluggy-0.13.1
+rootdir: /Users/varunshenoy/Documents/20-29 Research/25 Curis 2020/BitFlow
+collected 1 item
+
+tests/test_bitflow.py 
+=== MATRIX ===
+a00: [-5.0, 5.0], 4
+a11: [-5.0, 5.0], 4
+a00_add_a11: [-10.0, 10.0], 5
+b00: [-5.0, 5.0], 4
+b11: [-5.0, 5.0], 4
+b00_add_b11: [-10.0, 10.0], 5
+p0: [-100.0, 100.0], 8
+b10: [-10.0, 10.0], 5
+b10_sub_b00: [-10.0, 10.0], 5
+p3: [-50.0, 50.0], 7
+p0_add_p3: [-200.0, 200.0], 9
+a01: [-10.0, 10.0], 5
+a00_add_a01: [-10.0, 10.0], 5
+p4: [-50.0, 50.0], 7
+p0_add_p3_sub_p4: [-200.0, 200.0], 9
+b10_add_b11: [-15.0, 15.0], 5
+a01_sub_a11: [-10.0, 10.0], 5
+p6: [-150.0, 150.0], 9
+y00: [-50.0, 50.0], 7
+b01: [-10.0, 10.0], 5
+b01_sub_b11: [-10.0, 10.0], 5
+p2: [-50.0, 50.0], 7
+y01: [-100.0, 100.0], 8
+a10: [-10.0, 10.0], 5
+a10_add_a11: [-10.0, 10.0], 5
+p1: [-50.0, 50.0], 7
+y10: [-100.0, 100.0], 8
+p0_add_p2: [-200.0, 200.0], 9
+p0_add_p2_sub_p1: [-200.0, 200.0], 9
+b00_add_b01: [-15.0, 15.0], 5
+a10_sub_a00: [-10.0, 10.0], 5
+p5: [-150.0, 150.0], 9
+y11: [-350.0, 350.0], 10
+NUMBER NODES: 33
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! KeyboardInterrupt !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+/Users/varunshenoy/Documents/20-29 Research/25 Curis 2020/BitFlow/BitFlow/torch/functions.py:11: KeyboardInterrupt
+(to show a full traceback on KeyboardInterrupt use --full-trace)
+============================ no tests ran in 1.77s =============================

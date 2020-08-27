@@ -4,7 +4,7 @@ from .IA import Interval
 from .AA import AInterval
 from .Eval.IAEval import IAEval
 from .Eval.NumEval import NumEval
-from math import log2, ceil, floor
+from math import log2, ceil, floor, sin
 from .Precision import PrecisionNode
 from scipy.optimize import fsolve, minimize, basinhopping
 from gekko import GEKKO
@@ -215,8 +215,8 @@ class BitFlowVisitor(Visitor):
                 self.area_fn += f"+1 * (2 ** ({self.IBs[input_signal.name]} + {input_signal.name})) * ({node.precision} + {self.IBs[node.name]})"
             else:
                 self.area_fn += f"+1 * (2 ** ({self.IBs[input_signal.name]} + {input_signal.name})) * ({node.name} + {self.IBs[node.name]})"
-            self.errors[node.name] = PrecisionNode(
-                self.errors[input_signal.name].val, node.name, self.errors[input_signal.name].error)
+            self.errors[node.name] = PrecisionNode(sin(
+                self.errors[input_signal.name].val), node.name, self.errors[input_signal.name].error)
         else:
             if node.precision >= 0.:
                 # TODO: the 5. here shouldn't be hardcoded!
