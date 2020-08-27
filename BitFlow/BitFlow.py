@@ -586,7 +586,7 @@ class BitFlow:
         if eval_bitflow:
             print(P)
 
-            P = self.custom_round(P + 1, factor=0.1)
+            P = self.custom_round(P, factor=0.1)
             R = self.custom_round(R, factor=0.1)
 
             # P = torch.ceil(P)

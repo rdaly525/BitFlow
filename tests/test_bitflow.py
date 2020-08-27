@@ -137,17 +137,17 @@ def gen_ex3():
 #     return
 
 
-# def test_ex1():
-#     t0 = time.time()
+def test_ex1():
+    t0 = time.time()
 
-#     dag = gen_ex1()
+    dag = gen_ex1()
 
-#     bf = BitFlow(dag, {"z_1": 8., "z_2": 8.}, {
-#         'a': (-3., 2.), 'b': (4., 8.), 'c': (-1., 1.)}, lr=1e-2, range_lr=1e-2, train_range=True, training_size=10000, testing_size=2000, incorporate_ulp_loss=False, test_optimizer=True)
-#     bf.train(epochs=5)
+    bf = BitFlow(dag, {"z_1": 16., "z_2": 16.}, {
+        'a': (-3., 2.), 'b': (4., 8.), 'c': (-1., 1.)}, lr=1e-4, range_lr=1e-4, train_range=True, training_size=10000, testing_size=2000, incorporate_ulp_loss=False, test_optimizer=True)
+    bf.train(epochs=20)
 
-#     print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
-#     return
+    print(f"TIME: {time.time() - t0} SECONDS ELAPSED")
+    return
 
 
 # def test_ex2():
@@ -250,33 +250,33 @@ def RGB_to_YCbCr():
 
 #     return
 
-def test_rgb_case_study_12():
-    print("\n=== RGB ===")
+# def test_rgb_case_study_12():
+#     print("\n=== RGB ===")
 
-    dag = RGB_to_YCbCr()
+#     dag = RGB_to_YCbCr()
 
-    params = dict(
-        training_size=200000,
-        testing_size=10000,
-        batch_size=16,
-        lr=1e-2,
-        train_range=True,
-        range_lr=1e-2,
-        distribution=2,
-        test_optimizer=True,
-        incorporate_ulp_loss=False,
-        graph_loss=False
-    )
+#     params = dict(
+#         training_size=200000,
+#         testing_size=10000,
+#         batch_size=16,
+#         lr=1e-2,
+#         train_range=True,
+#         range_lr=1e-2,
+#         distribution=2,
+#         test_optimizer=True,
+#         incorporate_ulp_loss=False,
+#         graph_loss=False
+#     )
 
-    bf = BitFlow(dag, {"col_1": 12., "col_2": 12., "col_3": 12.}, {
-        'r': (0., 255.), 'b': (0., 255.), 'g': (0., 255.)}, **params)
-    bf.train(epochs=5, limit=0.00001, decay=0.0)
+#     bf = BitFlow(dag, {"col_1": 12., "col_2": 12., "col_3": 12.}, {
+#         'r': (0., 255.), 'b': (0., 255.), 'g': (0., 255.)}, **params)
+#     bf.train(epochs=5, limit=0.00001, decay=0.0)
 
-    # Sample Matrix Product
-    test = {"r": 252., "g": 59., "b": 32., "P": bf.P, "R": bf.R, "O": bf.O}
-    print(bf.model(**test))
+#     # Sample Matrix Product
+#     test = {"r": 252., "g": 59., "b": 32., "P": bf.P, "R": bf.R, "O": bf.O}
+#     print(bf.model(**test))
 
-    return
+#     return
 
 
 # def test_rgb_case_study_custom_dataset():
