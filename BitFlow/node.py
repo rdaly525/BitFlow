@@ -119,6 +119,7 @@ class Round(DagNode):
         self.prec = prec
         self.rng = rng
         self.mid = mid
+        self.origin = val.name
         if name is None:
             name = f"{val.name}_round_{prec.name}_{rng}"
         super().__init__(name, val, prec, rng)

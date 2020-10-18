@@ -79,6 +79,7 @@ class BitFlow:
 
         rounder = AddRoundNodes(P, R, O)
         roundedDag = rounder.doit(dag)
+        self.rounded_dag = roundedDag
 
         if graph_loss:
             dag_grapher = DAGGrapher(list(roundedDag.roots()))
