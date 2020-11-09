@@ -207,8 +207,8 @@ def test_rgb_case_study():
     dag = RGB_to_YCbCr()
 
     params = dict(
-        training_size=1000,
-        testing_size=200,
+        training_size=50000,
+        testing_size=10000,
         batch_size=16,
         lr=1e-2,
         train_range=True,

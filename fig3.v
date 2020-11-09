@@ -1,12 +1,23 @@
-module fig3 (input [17:0] a, input [17:0] b, input [19:0] c, output [13.0:0] z); 
+`include "svreal.sv"
+module fig3 #(
+	`DECL_REAL(a),
+	`DECL_REAL(b), 
+	`DECL_REAL(z)) 
+(
+	`INPUT_REAL(a), 
+	`INPUT_REAL(b), 
+	`OUTPUT_REAL(z)
+); 
  
-	wire [19:0] d;
-	assign d = a * b;
+	`MAKE_CONST_REAL(4.3, c);
 
-	wire [18:0] e;
-	assign e = d + c;
+	`MAKE_GENERIC_REAL(d, -16.0, 17);
+	`MUL_INTO_REAL(a, b, d);
 
-	assign z = e - b;
+	`MAKE_GENERIC_REAL(e, -16.0, 18);
+	`ADD_INTO_REAL(d, c, e);
+
+	`SUB_INTO_REAL(e, b, z);
 
 
 endmodule
