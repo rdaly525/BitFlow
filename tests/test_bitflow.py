@@ -473,6 +473,7 @@ def gen_linearlayer(row, col, size):
         node.name=f"output{i}"
 
     fig = Dag(outputs=outputs, inputs=[X, weight, bias])
+
     return fig
 
 
@@ -485,7 +486,7 @@ def test_linearlayer():
     params = dict(
         training_size=60000,
         testing_size=2000,
-        batch_size=2,
+        batch_size=1,
         lr=1e-3,
         train_range=True,
         range_lr=1e-3,
@@ -496,8 +497,8 @@ def test_linearlayer():
     outputs = {f'output{i}': 1. for i in range(10)}
     bf = BitFlow(dag, outputs, {"X": torch.ones(row, size).fill_(1.),
                                                        "weight": torch.ones(size, col).fill_(1),
-                                                       "bias": torch.ones(col).fill_(10)}, **params)
-    bf.train(epochs=10)
+                                                       "bias": torch.ones(col).fill_(1)}, **params)
+    bf.train(epochs=100)
 
     return
 
@@ -592,7 +593,7 @@ def test_linear_L():
 
 
     test = {"X": 10.,"weight":10.,"bias":10., "P": bf.P, "R": bf.R, "O": bf.O}
-    print(bf.model(**test))
+    # print(bf.model(**test))
 
     return
 
