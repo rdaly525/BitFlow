@@ -5,7 +5,7 @@ from .Eval.NumEval import NumEval
 from .Eval.TorchEval import TorchEval
 from .Optimization import BitFlowVisitor, BitFlowOptimizer
 
-from .utils import DAGGrapher
+# from .utils import DAGGrapher
 
 
 import torch
