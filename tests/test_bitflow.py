@@ -9,7 +9,7 @@ from BitFlow.MNIST.MNIST_library import linear_layer, matrix_multiply, dot_produ
 import torch
 #from BitFlow.utils import Imgs2Dataset
 
-# from torch.utils import data
+from torch.utils import data
 import time
 
 import numpy as np
