@@ -95,6 +95,7 @@ class AddRoundNodes(Transformer):
         self.rounded_outputs = []
         self.allroots = []
         self.order = []
+        self.num_nodes = 0
 
     def doit(self, dag: Dag):  # takes a Dag and returns new Dag with round nodes added in
 
@@ -113,6 +114,7 @@ class AddRoundNodes(Transformer):
     def generic_visit(self, node: DagNode):
         # make sure code run on all children nodes first
         Transformer.generic_visit(self, node)
+        self.num_nodes += 1
 
         self.area_weight += 1
         self.order.append(node.name)
@@ -260,7 +262,7 @@ class BitFlowVisitor(Visitor):
         val = torch.mean(val)
 
         self.errors[node.name] = PrecisionNode(val, node.name, [])
-        print(self.errors[node.name])
+        # print(self.errors[node.name])
 
         print("exit select")
 
@@ -317,9 +319,7 @@ class BitFlowVisitor(Visitor):
         self.handleIB(node)
 
         lhs, rhs = self.getChildren(node)
-        print("hello:",lhs,rhs)
-        print(type(self.errors[lhs.name]))
-        print(self.errors[rhs.name])
+
         self.errors[node.name] = self.errors[lhs.name].add(
             self.errors[rhs.name], node.name)
         # self.area_fn += f"+m.max2({self.IBs[lhs.name]} + {lhs.name}, {self.IBs[rhs.name]} + {rhs.name})"
@@ -348,10 +348,10 @@ class BitFlowVisitor(Visitor):
         Visitor.generic_visit(self, node)
 
         self.handleIB(node)
-        print("node", node)
-        lhs, rhs = self.getChildren(node)
-        print(node.name)
-        print("left",lhs.name)
+        # print("node", node)
+        # lhs, rhs = self.getChildren(node)
+        # print(node.name)
+        # print("left",lhs.name)
         self.errors[node.name] = self.errors[lhs.name].mul(
             self.errors[rhs.name], node.name)
         self.area_fn += f"+1 * ({self.IBs[lhs.name]} + {lhs.name})*({self.IBs[rhs.name]} + {rhs.name})"
@@ -373,7 +373,7 @@ class BitFlowVisitor(Visitor):
     def visit_Concat(self, node: Concat):
 
             Visitor.generic_visit(self, node)
-            print(node)
+            # print(node)
             self.handleIB(node)
             lhs, rhs = self.getChildren(node)
             self.errors[node.name] = self.errors[lhs.name].add(
@@ -396,7 +396,7 @@ class BitFlowOptimizer():
 
         for output in outputs:
 
-            print(outputs,output)
+            # print(outputs,output)
             self.error_fn += f"+2**(-{outputs[output]}-1) - (" + \
                              visitor.errors[output].getExecutableError() + ")"
             #print(self.error_fn)
