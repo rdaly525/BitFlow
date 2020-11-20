@@ -602,8 +602,9 @@ class BitFlow:
         scheduler = torch.optim.lr_scheduler.StepLR(
             optimizer=opt, step_size=5, gamma=lr_decay)
 
-        device = torch.device(
-            "cuda:0" if torch.cuda.is_available() else "cpu")
+        # device = torch.device(
+        #     "cuda:0" if torch.cuda.is_available() else "cpu")
+        device = torch.device("cpu")
 
         # Run training process
         loss_values = []
