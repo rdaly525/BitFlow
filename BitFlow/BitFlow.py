@@ -615,6 +615,7 @@ class BitFlow:
 
         # assert 0
         for e in range(600000):
+            print(e)
             for t, (inputs, target_y) in enumerate(train_gen):
 
                 self.X = inputs.view(-1, 28 * 28)
