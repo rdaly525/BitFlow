@@ -46,7 +46,7 @@ class MNIST_dag(torch.nn.Module):
         output_dim = 10
         lr_rate = 1e-3
 
-        print("here")
+
         W = torch.ones(input_dim, output_dim, requires_grad=True)
 
         bias = torch.ones(output_dim, requires_grad=True)
@@ -56,9 +56,15 @@ class MNIST_dag(torch.nn.Module):
         optimizer = torch.optim.SGD([W], lr=lr_rate)
 
         iter = 0
+
+
+
         for epoch in range(int(epochs)):
             for i, (images, labels) in enumerate(train_loader):
 
+                print(i,images,labels)
+                print(i,images.shape,labels.shape)
+                assert 0
                 images = Variable(images.view(-1, 28 * 28))
                 labels = Variable(labels)
 
@@ -83,6 +89,8 @@ class MNIST_dag(torch.nn.Module):
                     correct = 0
                     total = 0
                     for images, labels in test_loader:
+                        print(labels)
+
                         images = Variable(images.view(-1, 28 * 28))
                         # outputs = model(images)
                         outputs = model(images, W, bias, batch_size, output_dim)

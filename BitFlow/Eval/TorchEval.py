@@ -79,14 +79,14 @@ class TorchEval(AbstractEval):
 
     def eval_Select(self, a, node: DagNode):
 
-        print("this")
-        print(node,node.index,a)
+
+
         if(isinstance(node.index,tuple)):
 
             #return a[0,a.shape[0]][node.index[1]]
             return a[:,node.index[1]]
 
-        print("a",node.name)
+
         if(node.name == 'output1' or node.name == 'output2' or node.name == 'output3' or node.name == 'output4' or node.name == 'output5' or node.name == 'output6' or node.name == 'output7' or node.name == 'output8' or node.name == 'output9'):
 
             return a[0]
@@ -116,6 +116,6 @@ class TorchEval(AbstractEval):
         return len(a)
 
     def eval_Concat(self, *args, node: DagNode):
-        print(args)
+
         return t.stack(args, dim=node.concat_dim)
 
