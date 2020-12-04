@@ -157,6 +157,9 @@ def test_linearlayer():
     bias_array = [bias for _ in range(1)]
     with_bias = torch.stack(bias_array,dim=0)
 
+    gold = X @ W + with_bias
+    print(gold)
+
 
     res = evaluator.eval(X=X, W=W, bias=bias)
 
@@ -167,8 +170,7 @@ def test_linearlayer():
     # print("here")
 
 
-    gold = X @ W + with_bias
-    print(gold)
+
     print(res)
 
     #assert torch.all(torch.eq(res,gold))

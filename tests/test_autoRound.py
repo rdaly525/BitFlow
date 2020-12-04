@@ -1,6 +1,6 @@
 import torch
 
-from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, Select, Output, Relu, Reduce
+from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, Select, Output, Reduce
 from BitFlow.IA import Interval
 from BitFlow.Eval.TorchEval import TorchEval
 from BitFlow.AddRoundNodes import AddRoundNodes

@@ -1,4 +1,4 @@
-from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, Select, Output, Reduce, Concat
+from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, Select, Output, Relu, Reduce, Concat
 
 from BitFlow.MNIST.MNIST_library import linear_layer
 from BitFlow.MNIST.run_MNIST import MNIST_dag
