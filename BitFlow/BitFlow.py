@@ -475,6 +475,7 @@ class BitFlow:
 
         # Print out model details every so often
         if iter % 1000 == 0 and should_print == True:
+
             print(
                 f"iteration {iter} of {epochs * training_size / batch_size} ({(iter * 100.) / (epochs * training_size / batch_size)}%)")
             print(f"AREA: {area}")
@@ -613,7 +614,7 @@ class BitFlow:
         # print(len(train_gen))
 
         # assert 0
-        for e in range(60000):
+        for e in range(600000):
             for t, (inputs, target_y) in enumerate(train_gen):
 
                 self.X = inputs.view(-1, 28 * 28)
