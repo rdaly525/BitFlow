@@ -324,8 +324,7 @@ class BitFlowOptimizer():
         visitor = BitFlowVisitor(node_values)
         visitor.run(evaluator.dag)
 
-
-
+        self.intervals = visitor.intervals
         self.visitor = visitor
         self.error_fn = ""
         self.ufb_fn = ""
