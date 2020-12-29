@@ -2,6 +2,7 @@ from .node import Input, Constant, Dag, Add, Sub, Mul, Round, DagNode, Select
 from .IA import Interval
 from .Eval.IAEval import IAEval
 from .Eval.NumEval import NumEval
+from BitFlow.IA import Interval
 from .Eval.TorchEval import TorchEval
 from .Optimization import BitFlowVisitor, BitFlowOptimizer
 
@@ -9,6 +10,8 @@ from .Optimization import BitFlowVisitor, BitFlowOptimizer
 
 
 import torch
+
+from .AddRoundNodes import AddRoundNodes, LookupTableTransformer
 from torch.utils import data
 
 import random
@@ -60,6 +63,8 @@ class BitFlow:
         return self.make_model
 
     def custom_round(self, P, factor=0.5):
+
+        # print(P)
         P = P.tolist()
         for (index, weight) in enumerate(P):
             f, _ = math.modf(weight)
@@ -156,11 +161,29 @@ class BitFlow:
 
     def is_within_ulp(self, num, truth, precision, should_print=False):
 
+        # print("NUM",num,"TRUTH",truth,"PRECISION",precision)
 
-        r = torch.abs(num - self.round_to_precision(truth, precision))
+        a =self.round_to_precision(truth, precision)
+        # print("a",len(a))
+        # print(num)
+        # print(a)
+        #
+        # print(len(num),len(num[0]))
+        # print(len(precision))
+
+
+
+        r = [torch.abs(a - b) for a, b in zip(num, a)]
+        # print(len(r),len(r[0]))
+
+        # print(r)
+
+        # assert 0
+        # r = torch.abs(num - self.round_to_precision(truth, precision))
         ulp = 2**-(precision)
         if len(precision) > 1:
-            sol = torch.ones(r.shape)
+            # sol = torch.ones(r.shape)
+            sol = torch.ones(len(r),len(r[0]))
             for (y, row) in enumerate(r):
                 for (x, val) in enumerate(row):
                     if val > ulp[y]:
@@ -169,7 +192,7 @@ class BitFlow:
                                 f"guess: {num[y][x]}, true: {truth[y][x]}, ulp: {ulp[y]}")
                         sol[y][x] = 0
             return sol
-        else:
+        else:a
             sol = torch.ones(r.shape)
             for (x, val) in enumerate(r):
                 if val > ulp[0]:
@@ -196,8 +219,6 @@ class BitFlow:
         row = torch.tensor(row)
 
         r = row
-        # assert 0
-        # r = torch.abs(num - self.round_to_precision(truth, precision))
 
         if len(precision) > 1:
 
@@ -247,18 +268,79 @@ class BitFlow:
         success = 0
         total = 0
         print(f"\n##### {name} SET ######")
+
+        print(P)
+        print(R)
+        print(O)
         for t, (inputs, Y) in enumerate(test_gen):
+
+            # print(P)
+            # print(R)
+            #
+            # print(O)
+
+            self.X = inputs.view(-1, 28 * 28)
+
+            inputs = {"X": self.X, "weight": self.weight, "bias": self.bias}
+            # inputs = {k: inputs[k].to(device) for k in inputs}
+
+            # print("INPUTS",inputs)
+            # print(inputs.shape)
+
+
+
+            # self.X = inputs.view(-1, 28 * 28)
+
+            # inputs = {"X": self.X, "weight": self.weight, "bias": self.bias}
+
+            #
+            # #REMOVE
+            #
+            # for t, (inputs, target_y) in enumerate(train_gen):
+            #
+            #     self.X = inputs.view(-1, 28 * 28)
+            #
+            #
+            #     inputs = {"X": self.X, "weight": self.weight, "bias": self.bias}
+            #     inputs = {k: inputs[k].to(device) for k in inputs}
+            #
+            #
+            #     inputs["P"] = P
+            #     inputs["R"] = R
+            #     inputs["O"] = O
+            # #REMOVE
+
+            # print(inputs.keys())
             inputs["P"] = P
             inputs["R"] = R
             inputs["O"] = O
 
+
+            # for i in (inputs):
+            #     print(i)
+            # assert 0
             res = model(**inputs)
+
+            # print("res",res)
+            # print("Y",Y)
+
+            # if isinstance(y, list):
+            #     y = torch.stack(y)
+            #
+            #     target_y = torch.stack([target_y]).squeeze().float()
+
+
+
             if isinstance(res, list):
                 res = torch.stack(res)
-                Y = torch.stack(Y).squeeze()
+                # print(Y)
+                # print(Y.squeeze())
+                # Y = torch.stack(Y).squeeze()
+                Y = Y.squeeze()
             else:
                 Y = Y.squeeze()
-
+            # Y = Y.squeeze()
+            # print(Y)
             ulp = self.is_within_ulp(res, Y, O, should_print)
             success += torch.sum(ulp)
             total += torch.numel(ulp)
@@ -499,7 +581,10 @@ class BitFlow:
         bfo = self.constructOptimizationFunctions(
             dag, outputs, data_range, should_graph=graph_loss)
 
+
+
         # self.intervals = bfo.intervals
+        self.intervals = bfo.intervals
 
         # Update the dag with round nodes and set up the model for torch training
         dag, num_precision, num_inputs, num_outputs, num_range, ordered_list, area_weight = self.update_dag(
@@ -508,6 +593,8 @@ class BitFlow:
         self.area_weight = area_weight
 
         model = self.gen_model(dag)
+
+
 
         # create the data according to specifications
         train_gen = None
@@ -570,7 +657,7 @@ class BitFlow:
         self.weight = torch.ones(self.hidden_dim, self.output_dim, requires_grad=True)
         self.bias = torch.ones(self.output_dim, requires_grad=True)
 
-    def train(self, epochs=10, eval_bitflow=True):
+    def train(self, epochs=1, eval_bitflow=True):
 
         # retrieve initialized data from object
         train_gen = self.train_gen
@@ -614,7 +701,7 @@ class BitFlow:
         # print(len(train_gen))
 
         # assert 0
-        for e in range(600000):
+        for e in range(0):
             print("*****************EPOCH NUMBER*****************",e)
             for t, (inputs, target_y) in enumerate(train_gen):
 
@@ -624,22 +711,34 @@ class BitFlow:
                 inputs = {"X": self.X, "weight": self.weight, "bias": self.bias}
                 inputs = {k: inputs[k].to(device) for k in inputs}
 
+
                 inputs["P"] = P
                 inputs["R"] = R
                 inputs["O"] = O
 
+                # print(inputs.keys())
+
                 y = model(**inputs)
+
+                # print(y)
+                #
+
 
 
 
                 if isinstance(y, list):
+                    # print("HERE")
 
                     y = torch.stack(y)
 
                     target_y = torch.stack([target_y]).squeeze().float()
 
 
+                # print(y)
+                # print(target_y)
+                # assert 0
 
+                # break
                 loss = self.compute_loss(target_y, y, P, R, O, iter, filtered_vars, batch_size, epochs, training_size,
                                          error_type=error_type, should_print=True, train_range=train_range, incorporate_ulp_loss=incorporate_ulp_loss)
 
@@ -662,7 +761,29 @@ class BitFlow:
             plt.show()
 
         # Show final results for weight and round them
+
+        #REMOVE
+
+        P = torch.tensor([5.9743e+00, 4.5683e+00, 6.7684e+00, 5.7919e+00, 4.5934e+00, 5.5308e+00,
+                          5.7919e+00, 4.5934e+00, 5.5308e+00, 5.7919e+00, 4.5934e+00, 5.5308e+00,
+                          5.7919e+00, 4.5934e+00, 5.5308e+00, 5.7919e+00, 4.5934e+00, 5.5308e+00,
+                          5.7919e+00, 4.5934e+00, 5.5308e+00, 5.7919e+00, 4.5934e+00, 5.5308e+00,
+                          5.7919e+00, 4.5934e+00, 5.5308e+00, 5.7919e+00, 4.5934e+00, 5.5308e+00,
+                          5.7919e+00, 4.5934e+00, 5.5308e+00, 2.0443e-03, 5.2847e+00, 6.5930e+00,
+                          5.5825e+00, 5.5772e+00])
+        R = torch.tensor([4.1753, 4.1753, 4.1753, 4.1753, 4.1753, 8.5919, 4.1753, 4.1753, 8.5919,
+                          4.1753, 4.1753, 8.5919, 4.1753, 4.1753, 8.5919, 4.1753, 4.1753, 8.5919,
+                          4.1753, 4.1753, 8.5919, 4.1753, 4.1753, 8.5919, 4.1753, 4.1753, 8.5919,
+                          4.1753, 4.1753, 8.5919, 4.1753, 4.1753, 8.5919, 5.0932, 5.0162, 4.1753,
+                          4.1753, 5.1106])
+
+        #REMOVE
         if eval_bitflow:
+
+            # REMOVE
+
+
+            # REMOVE
 
             P = self.custom_round(P, factor=0.05)
 
@@ -679,8 +800,10 @@ class BitFlow:
 
             LUTTransformer = LookupTableTransformer(P, R, filtered_vars)
             model = self.gen_model(LUTTransformer.doit(
-                self.transformed_dag), self.intervals)
+                self.transformed_dag))#, self.intervals)
 
+
+            print("CALC ACCURACY")
             self.calc_accuracy("TEST", test_gen, P, R,
                                O, model, False)
 
@@ -693,6 +816,8 @@ class BitFlow:
             print("\n##### MODEL DETAILS #####")
             print(f"ERROR: {ErrorConstraintFn(P.tolist())}")
             if train_range:
+
+
                 ldict = {"P": P, "R": R}
                 evaluator = IAEval(self.original_dag)
                 evaluator.eval(**self.eval_dict)
