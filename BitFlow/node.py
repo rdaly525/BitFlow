@@ -1,6 +1,8 @@
 from DagVisitor import Visited, AbstractDag
+#from BitFlow.utils import LUTGenerator
 import abc
 import typing as tp
+import random
 
 
 # Passes will be run on this
@@ -37,7 +39,7 @@ class DagNode(Visited):
         return Mul(self, rhs)
 
     def __getitem__(self, rhs):
-        assert isinstance(rhs,int)
+        #assert isinstance(rhs, int)
         return Select(self, rhs)
 
 
@@ -45,15 +47,17 @@ class Input(DagNode):
     def __init__(self, name):
         super().__init__(name)
 
+
 class Output(DagNode):
     def __init__(self, name):
         super().__init__(name)
+
 
 class Constant(DagNode):
     def __init__(self, value, name=None):
         self.value = value
         if name is None:
-            name = str(value)
+            name = f"Constant_{random.randint(0, 100000)}"
         super().__init__(name)
 
 
@@ -78,18 +82,57 @@ class Mul(DagNode):
         super().__init__(name, a, b)
 
 
+class BitShift(DagNode):
+    def __init__(self, a: DagNode, b: DagNode, *, name=None):
+        if name is None:
+            name = f"{a.name}_shift_{b.name}"
+        super().__init__(name, a, b)
+
+
 class Select(DagNode):
     def __init__(self, a: DagNode, index, name=None):
-        self.index=index
+        self.index = index
         if name is None:
-            name = f"{a.name}_getitem_{str(index)}"
+            if(isinstance(index,tuple)):
+                #return a[:, node.index[1]]
+                name = f"{a.name}_getitem_{str(index[1])}"
+            else:
+                name = f"{a.name}_getitem_{str(index)}"
         super().__init__(name, a)
 
-class Round(DagNode):
-    def __init__(self, val: DagNode, prec: DagNode, name=None):
+
+class Concat(DagNode):
+    def __init__(self, *args, concat_dim, name=None):
+        self.inputs = args
+        self.concat_dim = concat_dim
         if name is None:
-            name = f"{val.name}_round_{prec.name}"
-        super().__init__(name, val, prec)
+            name = f"_concat{len(args)}"
+        super().__init__(name, *args)
+
+
+class Reduce(DagNode):
+    def __init__(self, a: DagNode, reduce_dim,  name=None):
+        self.reduce_dim = reduce_dim
+        if name is None:
+            name = f"{a.name}"
+        super().__init__(name, a)
+
+
+class Round(DagNode):
+    def __init__(self, val: DagNode, prec: DagNode, rng: DagNode, name=None):
+        self.prec = prec
+        self.rng = rng
+        if name is None:
+            name = f"{val.name}_round_{prec.name}_{rng}"
+        super().__init__(name, val, prec, rng)
+
+
+class LookupTable(DagNode):
+    def __init__(self, func, a: DagNode, fname=None):
+        self.func = func
+        if name is None:
+            name = f"lookup_{a.name}_{func.__name__}"
+        super().__init__(name, a)
 
 
 class Dag(AbstractDag):
@@ -97,5 +140,5 @@ class Dag(AbstractDag):
         assert isinstance(outputs, list)
         assert isinstance(inputs, list)
         self.inputs = inputs
-        self.outputs= outputs
+        self.outputs = outputs
         super().__init__(*outputs)
