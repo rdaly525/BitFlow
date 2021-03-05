@@ -498,7 +498,7 @@ def test_linearlayer():
     bf = BitFlow(dag, outputs, {"X": torch.ones(row, size).fill_(1.),
                                                        "weight": torch.ones(size, col).fill_(1),
                                                        "bias": torch.ones(col).fill_(1)}, **params)
-    bf.train(epochs=100)
+    bf.train(epochs=1)
 
     return
 

@@ -38,12 +38,25 @@ def gen_add():
 
 
 def gen_linearlayer(row, col, size):
-    X = Input(name="X")
-    W = Input(name="W")
-    bias = Input(name="bias")
-    y = linear_layer(X, W, bias, row, col, size)
+    # X = Input(name="X")
+    # W = Input(name="W")
+    # bias = Input(name="bias")
+    # y = linear_layer(X, W, bias, row, col, size)
+    #
+    # fig = Dag(outputs=[y], inputs=[X, W, bias])
+    # return fig
 
-    fig = Dag(outputs=[y], inputs=[X, W, bias])
+    X = Input(name="X")
+    weight = Input(name="weight")
+    bias = Input(name="bias")
+    # _concat_add__concat_bias = linear_layer(X, weight, bias, row, col, size)
+    outputs = linear_layer(X, weight, bias, row, col, size)
+
+    for i,node in enumerate(outputs):
+        node.name=f"output{i}"
+
+    fig = Dag(outputs=outputs, inputs=[X, weight, bias])
+
     return fig
 
 
@@ -145,14 +158,17 @@ def gen_reduce_z():
 
 
 def test_linearlayer():
+
     row = 1
     col = 10
-    tmp = gen_linearlayer(row, col, 784)
+    size = 784
+    tmp = gen_linearlayer(row, col, size)
     evaluator = NumEval(tmp)
-    X = torch.rand((1, 784))
-    W = torch.rand((784, 10))
 
-    bias = torch.rand((10))
+    X = torch.ones(row, size).fill_(1.)
+    W = torch.ones(size, col).fill_(1)
+
+    bias = torch.ones(col).fill_(1)
 
     bias_array = [bias for _ in range(1)]
     with_bias = torch.stack(bias_array,dim=0)
@@ -161,26 +177,29 @@ def test_linearlayer():
     print(gold)
 
 
-    res = evaluator.eval(X=X, W=W, bias=bias)
+    res = evaluator.eval(X=X, weight=W, bias=bias)
 
-    # dag_grapher = DAGGrapher(list(evaluator.dag.roots()))
-    # dag_grapher.run(evaluator.dag)
-    # dag_grapher.draw()
+    # print(res)
+
+    # row = 1
+    # col = 10
+    # tmp = gen_linearlayer(row, col, 784)
+    # evaluator = NumEval(tmp)
+    # X = torch.rand((1, 784))
+    # W = torch.rand((784, 10))
     #
-    # print("here")
-
-
-
-    print(res)
-
-    #assert torch.all(torch.eq(res,gold))
-
-    # print(res.shape)
-    # print(gold.shape)
-    # for i in range(len(res)):
-    #     for j in range(len(res[i])):
-    #         print(res[i][j],gold[i][j])
-    #         assert torch.eq(res[i][j],gold[i][j])
+    # bias = torch.rand((10))
+    #
+    # bias_array = [bias for _ in range(1)]
+    # with_bias = torch.stack(bias_array,dim=0)
+    #
+    # gold = X @ W + with_bias
+    # print(gold)
+    #
+    #
+    # res = evaluator.eval(X=X, W=W, bias=bias)
+    #
+    # print(res)
 
     return
 

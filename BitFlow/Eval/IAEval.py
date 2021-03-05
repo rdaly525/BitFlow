@@ -15,7 +15,7 @@ class IAEval(AbstractEval):
         return a * b
 
     def eval_Select(self, a, node: DagNode):
-        print(node, node.index, a)
+
         if (isinstance(node.index, tuple)):
             # return a[0,a.shape[0]][node.index[1]]
             return a[:, node.index[1]]

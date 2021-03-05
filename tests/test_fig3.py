@@ -6,7 +6,6 @@ import torch
 
 
 def gen_fig3():
-    #(a*b) + 4 - b
     a = Input(name="a")
     b = Input(name="b")
     c = Constant(4, name="c")

@@ -192,7 +192,7 @@ class BitFlow:
                                 f"guess: {num[y][x]}, true: {truth[y][x]}, ulp: {ulp[y]}")
                         sol[y][x] = 0
             return sol
-        else:a
+        else:
             sol = torch.ones(r.shape)
             for (x, val) in enumerate(r):
                 if val > ulp[0]:
@@ -701,7 +701,7 @@ class BitFlow:
         # print(len(train_gen))
 
         # assert 0
-        for e in range(0):
+        for e in range(1):
             print("*****************EPOCH NUMBER*****************",e)
             for t, (inputs, target_y) in enumerate(train_gen):
 
