@@ -14,8 +14,10 @@ class AbstractEval(Visitor):
         self.node_values = {}
         for dag_input in self.dag.inputs:
             if dag_input.name not in input_values:
-                if not self.train_MNIST:
-                    raise ValueError(f"Missing {dag_input} in input values")
+                raise ValueError(f"Missing {dag_input} in input values")
+                #if not self.train_MNIST:
+                #    raise ValueError(f"Missing {dag_input} in input values")
+            self.check_type(dag_input.type, input_values[dag_input.name])
         super().run(self.dag)
         outputs = [self.node_values[root] for root in self.dag.roots()]
         #print(outputs, len(outputs), outputs[0])
@@ -35,6 +37,11 @@ class AbstractEval(Visitor):
 
     def eval_Input(self, node: DagNode):
         return self.input_values[node.name]
+
+    #Typecheck the value against the dagnode type
+    @abstractmethod
+    def check_type(self, node_type, concrete_value):
+        pass
 
     @abstractmethod
     def eval_Constant(self, node: DagNode):

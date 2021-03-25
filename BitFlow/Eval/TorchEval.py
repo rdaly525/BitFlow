@@ -11,6 +11,10 @@ class TorchEval(AbstractEval):
         self.saturation = t.Tensor([0.])
         self.intervals = intervals
 
+    def check_type(self, node_type, concrete_type):
+        if node_type != tuple(concrete_type.shape):
+            raise ValueError(f"{concrete_type} does not match type {node_type}")
+
     def eval_Constant(self, node: DagNode):
         return t.Tensor([node.value])
 

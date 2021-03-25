@@ -10,6 +10,10 @@ import torch
 # Passes will be run on this
 class DagNode(Visited):
     def __init__(self, name, type, *children):
+        if not isinstance(name, str):
+            raise ValueError("Name needs to be a string")
+        if not isinstance(type, tuple):
+            raise ValueError(f"Type needs to be a tuple {type}")
         self.name = name
         self.type = type
         self.set_children(*children)
@@ -42,19 +46,19 @@ class DagNode(Visited):
         return Mul(self, rhs)
 
     def __getitem__(self, rhs):
+        raise NotImplementedError()
         assert isinstance(rhs, int)
         return Select(self, rhs)
 
-
+# Defaults to Scalar
 class Input(DagNode):
     def __init__(self, name, type=()):
         super().__init__(name, type)
 
-
 class Output(DagNode):
     def __init__(self, name, type=()):
+        raise NotImplementedError()
         super().__init__(name)
-
 
 class Constant(DagNode):
     def __init__(self, value, name=None):
@@ -69,35 +73,37 @@ class Constant(DagNode):
             name = f"Constant_{random.randint(0, 100000)}"
         super().__init__(name, type)
 
-
 def check_same_type(a: DagNode, b: DagNode):
     if a.type != b.type:
-        raise ValueError
+        raise ValueError(f"Incompatable Types {a.type}, {b.type}")
 
 class Add(DagNode):
     def __init__(self, a: DagNode, b: DagNode, *, name=None):
+        check_same_type(a, b)
         if name is None:
             name = f"{a.name}_add_{b.name}"
-        if (a.type != b.type)
-        super().__init__(name, a, b)
+        super().__init__(name, a.type, a, b)
 
 
 class Sub(DagNode):
     def __init__(self, a: DagNode, b: DagNode, *, name=None):
+        check_same_type(a, b)
         if name is None:
             name = f"{a.name}_sub_{b.name}"
-        super().__init__(name, a, b)
+        super().__init__(name, a.type, a, b)
 
 
 class Mul(DagNode):
     def __init__(self, a: DagNode, b: DagNode, *, name=None):
+        check_same_type(a, b)
         if name is None:
             name = f"{a.name}_mul_{b.name}"
-        super().__init__(name, a, b)
+        super().__init__(name, a.type, a, b)
 
 
 class BitShift(DagNode):
     def __init__(self, a: DagNode, b: DagNode, *, name=None):
+        raise NotImplementedError()
         if name is None:
             name = f"{a.name}_shift_{b.name}"
         super().__init__(name, a, b)
@@ -105,6 +111,12 @@ class BitShift(DagNode):
 
 class Select(DagNode):
     def __init__(self, a: DagNode, index, name=None):
+        if not isinstance(index, int):
+            raise NotImplementedError()
+        if len(a.type)==0:
+            raise ValueError("Cannot select from a scalar!")
+        if index not in range(a.type[-1]):
+            raise ValueError(f"Index {index} out of range for type {a.type}")
         self.index = index
         if name is None:
             name = f"{a.name}_getitem_{str(index)}"
@@ -113,6 +125,7 @@ class Select(DagNode):
 
 class Concat(DagNode):
     def __init__(self, *args, concat_dim, name=None):
+        raise NotImplementedError("missing type")
         self.inputs = args
         self.concat_dim = concat_dim
         if name is None:
@@ -122,6 +135,7 @@ class Concat(DagNode):
 
 class Reduce(DagNode):
     def __init__(self, a: DagNode, reduce_dim,  name=None):
+        raise NotImplementedError("missing type")
         self.reduce_dim = reduce_dim
         if name is None:
             name = f"{a.name}_reduce"
@@ -130,6 +144,8 @@ class Reduce(DagNode):
 
 class Round(DagNode):
     def __init__(self, val: DagNode, prec: DagNode, rng: DagNode, mid=0., name=None):
+        check_same_type(prec, rng)
+
         self.prec = prec
         self.rng = rng
         self.mid = mid
@@ -146,7 +162,7 @@ class LookupTable(DagNode):
         self.ib = 0
         if name is None:
             name = f"lookup_{a.name}_{func.__name__}"
-        super().__init__(name, a)
+        super().__init__(name, a.type, a)
 
 
 class Dag(AbstractDag):

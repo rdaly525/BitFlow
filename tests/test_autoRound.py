@@ -66,7 +66,7 @@ def test_fig3():
 
     W = torch.tensor([20., 20., 20., 20., 20.])
     O = torch.tensor([20.])
-    a, b = 10.45454524545452, 10.2323223232
+    a, b = torch.tensor(10.45454524545452), torch.tensor(10.2323223232)
 
     print("EVAL Before Rounding")
     evaluator = TorchEval(fig3)

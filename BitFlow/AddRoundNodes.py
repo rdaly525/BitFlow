@@ -46,6 +46,12 @@ class LookupTableTransformer(Transformer):
 class AddRoundNodes(Transformer):
 
     def __init__(self, P, R, O):
+        if not isinstance(P, list):
+            raise ValueError("P must be a list")
+        if not isinstance(R, list):
+            raise ValueError("R must be a list")
+        if not isinstance(O, list):
+            raise ValueError("P must be a list")
         self.P = P
         self.R = R
         self.O = O
@@ -78,7 +84,6 @@ class AddRoundNodes(Transformer):
         # make sure code run on all children nodes first
         Transformer.generic_visit(self, node)
         self.num_nodes += 1
-
         self.area_weight += 1
 
         if isinstance(node, LookupTable):
@@ -89,8 +94,9 @@ class AddRoundNodes(Transformer):
 
         if isinstance(node, Input):
             # current node + need to get prec_input
-            returnNode = Round(node, Select(
-                self.P, self.round_count), Select(self.R, self.range_count), name=node.name + "_round")
+            P = self.P[self.round_count]
+            R = self.R[self.range_count]
+            returnNode = Round(node, P, R, name=node.name + "_round")
 
             self.input_count += 1
             self.round_count += 1
