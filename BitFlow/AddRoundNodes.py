@@ -55,6 +55,8 @@ class AddRoundNodes(Transformer):
         self.output_count = 0
         self.rounded_outputs = []
         self.allroots = []
+        self.sharedNodes = True
+        self.nodesToShare = {3:3,4:3}
 
     def doit(self, dag: Dag):  # takes a Dag and returns new Dag with round nodes added in
 
@@ -82,8 +84,31 @@ class AddRoundNodes(Transformer):
 
         for child in node.children():
             assert isinstance(child, Round)
+        #
+        # if self.sharedNodes is True:
+        #     #we are sharing precision/range weights between nodes
+        print("sharing nodes",self.round_count, node)
+        if self.round_count in self.nodesToShare:
+                round_index = self.nodesToShare[self.round_count]
+                returnNode = Round(node, Select(self.W, round_index),
+                                   name=node.name + "_round_W")
+                self.round_count += 1
 
-        if isinstance(node, Input):
+
+
+
+        # else:
+        #     #where we need to account for shared node for multipliers
+        #     #maybe like a sharedNodes boolean for node or a list that keeps track of shared nodes
+        #     if(shareNodes == true):
+        #             #two options:
+        #             #have self.P and self.R only have one pair of range/precision values for the nodes to share
+        #             #still maintain self.P and self.R size but ensure that sharedNodes have same precision/range
+        #             returnNode = Round(node, Select(self.P, self.round_count), Select(
+        #             self.R, self.range_count), name=node.name + "_round")
+        #
+
+        elif isinstance(node, Input):
             # current node + need to get prec_input
             returnNode = Round(node, Select(
                 self.W, self.round_count), name=node.name + "_round")
