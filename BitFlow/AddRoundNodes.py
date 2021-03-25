@@ -58,7 +58,7 @@ class AddRoundNodes(Transformer):
         self.rounded_outputs = []
         self.allroots = []
 
-        self.sharedNodes = True
+        self.sharedNodes = False
         self.nodesToShare = {}
         #self.nodesToShare = {3:3,4:3}
 
@@ -90,10 +90,10 @@ class AddRoundNodes(Transformer):
 
         for child in node.children():
             assert isinstance(child, Round)
-        #
+
         # if self.sharedNodes is True:
         #     #we are sharing precision/range weights between nodes
-        print("sharing nodes",self.round_count, node)
+        #print("sharing nodes",self.round_count, node)
         if self.round_count in self.nodesToShare:
             round_index = self.nodesToShare[self.round_count]
             returnNode = Round(node, Select(self.P, round_index), Select(
