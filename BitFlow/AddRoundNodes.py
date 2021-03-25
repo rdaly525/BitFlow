@@ -91,6 +91,9 @@ class AddRoundNodes(Transformer):
         for child in node.children():
             assert isinstance(child, Round)
 
+        if isinstance(node, LookupTable):
+            self.area_weight += 9
+
         # if self.sharedNodes is True:
         #     #we are sharing precision/range weights between nodes
         #print("sharing nodes",self.round_count, node)
@@ -102,9 +105,6 @@ class AddRoundNodes(Transformer):
             self.range_count += 1
             self.order.append(node.name)
             return returnNode
-
-        if isinstance(node, LookupTable):
-            self.area_weight += 9
 
         elif isinstance(node, Input):
             # current node + need to get prec_input
@@ -122,13 +122,6 @@ class AddRoundNodes(Transformer):
             self.round_count += 1
             self.range_count += 1
             return Round(node, 0., 0., name=node.name + "_round")
-
-        # elif isinstance(node, LookupTable):
-
-        #     self.round_count += 1
-        #     self.range_count += 1
-
-        #     return node
 
         elif (node in self.allroots):
 
