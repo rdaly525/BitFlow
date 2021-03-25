@@ -1,0 +1,30 @@
+                                  : ... Top module 'assertion_real'
+  888 | module assertion_real #(
+      |        ^~~~~~~~~~~~~~
+                                  : ... Top module 'negate_real'
+  979 | module negate_real #(
+      |        ^~~~~~~~~~~
+                                  : ... Top module 'abs_real'
+  998 | module abs_real #(
+      |        ^~~~~~~~
+                                  : ... Top module 'comp_real'
+ 1055 | module comp_real #(
+      |        ^~~~~~~~~
+                                  : ... Top module 'ite_real'
+ 1135 | module ite_real #(
+      |        ^~~~~~~~
+                                  : ... Top module 'dff_real'
+ 1154 | module dff_real #(
+      |        ^~~~~~~~
+                                  : ... Top module 'sync_rom_real'
+ 1190 | module sync_rom_real #(
+      |        ^~~~~~~~~~~~~
+                                  : ... Top module 'sync_ram_real'
+ 1234 | module sync_ram_real #(
+      |        ^~~~~~~~~~~~~
+                                  : ... Top module 'compress_uint'
+ 1302 | module compress_uint #(
+      |        ^~~~~~~~~~~~~
+                                  : ... Top module 'fig3'
+    2 | module fig3 #(
+      |        ^~~~

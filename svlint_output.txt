@@ -1,0 +1,869 @@
+Config file '.svlint.toml' is not found. Enable all rules
+[91mFail[97m: function_with_automatic
+[94m   -->[37m svreal.sv:45:1
+[94m   |
+[94m45 |[37m function int clog2_math(input real x);
+[94m   |[93m ^^^^^^^^[93m hint  : `function` must be `automatic`
+[94m   |[33m         [33m reason: this causes mismatch between simulation and synthesis
+(B[m
+[91mFail[97m: function_with_automatic
+[94m   -->[37m svreal.sv:76:1
+[94m   |
+[94m76 |[37m function real recfn2real(input logic [((`HARD_FLOAT_EXP_WIDTH)+(`HARD_FLOAT_SIG_WIDTH)):0] in);
+[94m   |[93m ^^^^^^^^[93m hint  : `function` must be `automatic`
+[94m   |[33m         [33m reason: this causes mismatch between simulation and synthesis
+(B[m
+[91mFail[97m: function_with_automatic
+[94m   -->[37m svreal.sv:140:1
+[94m    |
+[94m140 |[37m function logic [((`HARD_FLOAT_EXP_WIDTH)+(`HARD_FLOAT_SIG_WIDTH)):0] real2recfn(input real in);
+[94m    |[93m ^^^^^^^^[93m hint  : `function` must be `automatic`
+[94m    |[33m         [33m reason: this causes mismatch between simulation and synthesis
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:254:25
+[94m    |
+[94m254 |[37m `define INPUT_REAL(port) \
+[94m    |[93m                         ^^[93m hint  : `input` must have `var`
+[94m    |[33m                           [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:255:4
+[94m    |
+[94m255 |[37m     input `PORT_REAL(``port``)
+[94m    |[93m    ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m        [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: level_sensitive_always
+[94m   -->[37m svreal.sv:901:5
+[94m    |
+[94m901 |[37m     always @(in) begin
+[94m    |[93m     ^^^^^^[93m hint  : level sensitive `always` must be `always_comb`
+[94m    |[33m           [33m reason: `always` can't detect blocking/non-blocking mistake
+(B[m
+[91mFail[97m: legacy_always
+[94m   -->[37m svreal.sv:901:5
+[94m    |
+[94m901 |[37m     always @(in) begin
+[94m    |[93m     ^^^^^^[93m hint  : `always_comb`/`always_ff`/`always_latch` must be used
+[94m    |[33m           [33m reason: `always` can't detect blocking/non-blocking mistake
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:254:25
+[94m    |
+[94m254 |[37m `define INPUT_REAL(port) \
+[94m    |[93m                         ^^[93m hint  : `input` must have `var`
+[94m    |[33m                           [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:255:4
+[94m    |
+[94m255 |[37m     input `PORT_REAL(``port``)
+[94m    |[93m    ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m        [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: output_with_var
+[94m   -->[37m svreal.sv:257:26
+[94m    |
+[94m257 |[37m `define OUTPUT_REAL(port) \
+[94m    |[93m                          ^^[93m hint  : `output` must have `var`
+[94m    |[33m                            [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:258:5
+[94m    |
+[94m258 |[37m     output `PORT_REAL(``port``)
+[94m    |[93m     ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m         [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: generate_keyword_forbidden
+[94m   -->[37m svreal.sv:924:9
+[94m    |
+[94m924 |[37m         generate
+[94m    |[93m         ^^^^^^^^[93m hint  : `generate`/`endgenerate` must be omitted
+[94m    |[33m                 [33m reason: 
+(B[m
+[91mFail[97m: generate_if_with_label
+[94m   -->[37m svreal.sv:925:13
+[94m    |
+[94m925 |[37m             if (lshift >= 0) begin
+[94m    |[93m             ^^[93m hint  : `generate if` must have label
+[94m    |[33m               [33m reason: the hierarchiral path can't be determined
+(B[m
+[91mFail[97m: tab_character
+[94m   -->[37m svreal.sv:938:1
+[94m    |
+[94m938 |[37m 	parameter integer opcode=0
+[94m    |[93m ^[93m hint  : tab character is forbidden
+[94m    |[33m  [33m reason: may cause misalignment depending on editor setting
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:254:25
+[94m    |
+[94m254 |[37m `define INPUT_REAL(port) \
+[94m    |[93m                         ^^[93m hint  : `input` must have `var`
+[94m    |[33m                           [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:255:4
+[94m    |
+[94m255 |[37m     input `PORT_REAL(``port``)
+[94m    |[93m    ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m        [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:254:25
+[94m    |
+[94m254 |[37m `define INPUT_REAL(port) \
+[94m    |[93m                         ^^[93m hint  : `input` must have `var`
+[94m    |[33m                           [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:255:4
+[94m    |
+[94m255 |[37m     input `PORT_REAL(``port``)
+[94m    |[93m    ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m        [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: output_with_var
+[94m   -->[37m svreal.sv:257:26
+[94m    |
+[94m257 |[37m `define OUTPUT_REAL(port) \
+[94m    |[93m                          ^^[93m hint  : `output` must have `var`
+[94m    |[33m                            [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:258:5
+[94m    |
+[94m258 |[37m     output `PORT_REAL(``port``)
+[94m    |[93m     ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m         [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: generate_keyword_forbidden
+[94m   -->[37m svreal.sv:951:5
+[94m    |
+[94m951 |[37m     generate
+[94m    |[93m     ^^^^^^^^[93m hint  : `generate`/`endgenerate` must be omitted
+[94m    |[33m             [33m reason: 
+(B[m
+[91mFail[97m: generate_if_with_label
+[94m   -->[37m svreal.sv:952:9
+[94m    |
+[94m952 |[37m         if          (opcode == `ADD_OPCODE_REAL) begin
+[94m    |[93m         ^^[93m hint  : `generate if` must have label
+[94m    |[33m           [33m reason: the hierarchiral path can't be determined
+(B[m
+[91mFail[97m: generate_if_with_label
+[94m   -->[37m svreal.sv:954:18
+[94m    |
+[94m954 |[37m         end else if (opcode == `SUB_OPCODE_REAL) begin
+[94m    |[93m                  ^^[93m hint  : `generate if` must have label
+[94m    |[33m                    [33m reason: the hierarchiral path can't be determined
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:254:25
+[94m    |
+[94m254 |[37m `define INPUT_REAL(port) \
+[94m    |[93m                         ^^[93m hint  : `input` must have `var`
+[94m    |[33m                           [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:255:4
+[94m    |
+[94m255 |[37m     input `PORT_REAL(``port``)
+[94m    |[93m    ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m        [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: output_with_var
+[94m   -->[37m svreal.sv:257:26
+[94m    |
+[94m257 |[37m `define OUTPUT_REAL(port) \
+[94m    |[93m                          ^^[93m hint  : `output` must have `var`
+[94m    |[33m                            [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:258:5
+[94m    |
+[94m258 |[37m     output `PORT_REAL(``port``)
+[94m    |[93m     ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m         [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:254:25
+[94m    |
+[94m254 |[37m `define INPUT_REAL(port) \
+[94m    |[93m                         ^^[93m hint  : `input` must have `var`
+[94m    |[33m                           [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:255:4
+[94m    |
+[94m255 |[37m     input `PORT_REAL(``port``)
+[94m    |[93m    ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m        [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: output_with_var
+[94m   -->[37m svreal.sv:257:26
+[94m    |
+[94m257 |[37m `define OUTPUT_REAL(port) \
+[94m    |[93m                          ^^[93m hint  : `output` must have `var`
+[94m    |[33m                            [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:258:5
+[94m    |
+[94m258 |[37m     output `PORT_REAL(``port``)
+[94m    |[93m     ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m         [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:254:25
+[94m    |
+[94m254 |[37m `define INPUT_REAL(port) \
+[94m    |[93m                         ^^[93m hint  : `input` must have `var`
+[94m    |[33m                           [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:255:4
+[94m    |
+[94m255 |[37m     input `PORT_REAL(``port``)
+[94m    |[93m    ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m        [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:254:25
+[94m    |
+[94m254 |[37m `define INPUT_REAL(port) \
+[94m    |[93m                         ^^[93m hint  : `input` must have `var`
+[94m    |[33m                           [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:255:4
+[94m    |
+[94m255 |[37m     input `PORT_REAL(``port``)
+[94m    |[93m    ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m        [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: output_with_var
+[94m   -->[37m svreal.sv:257:26
+[94m    |
+[94m257 |[37m `define OUTPUT_REAL(port) \
+[94m    |[93m                          ^^[93m hint  : `output` must have `var`
+[94m    |[33m                            [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:258:5
+[94m    |
+[94m258 |[37m     output `PORT_REAL(``port``)
+[94m    |[93m     ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m         [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:254:25
+[94m    |
+[94m254 |[37m `define INPUT_REAL(port) \
+[94m    |[93m                         ^^[93m hint  : `input` must have `var`
+[94m    |[33m                           [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:255:4
+[94m    |
+[94m255 |[37m     input `PORT_REAL(``port``)
+[94m    |[93m    ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m        [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:254:25
+[94m    |
+[94m254 |[37m `define INPUT_REAL(port) \
+[94m    |[93m                         ^^[93m hint  : `input` must have `var`
+[94m    |[33m                           [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:255:4
+[94m    |
+[94m255 |[37m     input `PORT_REAL(``port``)
+[94m    |[93m    ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m        [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: output_with_var
+[94m   -->[37m svreal.sv:1065:5
+[94m     |
+[94m1065 |[37m     output wire logic c
+[94m     |[93m     ^^^^^^[93m hint  : `output` must have `var`
+[94m     |[33m           [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:1065:12
+[94m     |
+[94m1065 |[37m     output wire logic c
+[94m     |[93m            ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m     |[33m                [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: generate_keyword_forbidden
+[94m   -->[37m svreal.sv:1078:5
+[94m     |
+[94m1078 |[37m     generate
+[94m     |[93m     ^^^^^^^^[93m hint  : `generate`/`endgenerate` must be omitted
+[94m     |[33m             [33m reason: 
+(B[m
+[91mFail[97m: generate_if_with_label
+[94m   -->[37m svreal.sv:1079:9
+[94m     |
+[94m1079 |[37m         if          (opcode == `GT_OPCODE_REAL) begin
+[94m     |[93m         ^^[93m hint  : `generate if` must have label
+[94m     |[33m           [33m reason: the hierarchiral path can't be determined
+(B[m
+[91mFail[97m: generate_if_with_label
+[94m   -->[37m svreal.sv:1081:18
+[94m     |
+[94m1081 |[37m         end else if (opcode == `GE_OPCODE_REAL) begin
+[94m     |[93m                  ^^[93m hint  : `generate if` must have label
+[94m     |[33m                    [33m reason: the hierarchiral path can't be determined
+(B[m
+[91mFail[97m: generate_if_with_label
+[94m   -->[37m svreal.sv:1083:18
+[94m     |
+[94m1083 |[37m         end else if (opcode == `LT_OPCODE_REAL) begin
+[94m     |[93m                  ^^[93m hint  : `generate if` must have label
+[94m     |[33m                    [33m reason: the hierarchiral path can't be determined
+(B[m
+[91mFail[97m: generate_if_with_label
+[94m   -->[37m svreal.sv:1085:18
+[94m     |
+[94m1085 |[37m         end else if (opcode == `LE_OPCODE_REAL) begin
+[94m     |[93m                  ^^[93m hint  : `generate if` must have label
+[94m     |[33m                    [33m reason: the hierarchiral path can't be determined
+(B[m
+[91mFail[97m: generate_if_with_label
+[94m   -->[37m svreal.sv:1087:18
+[94m     |
+[94m1087 |[37m         end else if (opcode == `EQ_OPCODE_REAL) begin
+[94m     |[93m                  ^^[93m hint  : `generate if` must have label
+[94m     |[33m                    [33m reason: the hierarchiral path can't be determined
+(B[m
+[91mFail[97m: generate_if_with_label
+[94m   -->[37m svreal.sv:1089:18
+[94m     |
+[94m1089 |[37m         end else if (opcode == `NE_OPCODE_REAL) begin
+[94m     |[93m                  ^^[93m hint  : `generate if` must have label
+[94m     |[33m                    [33m reason: the hierarchiral path can't be determined
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:1143:5
+[94m     |
+[94m1143 |[37m     input wire logic cond,
+[94m     |[93m     ^^^^^[93m hint  : `input` must have `var`
+[94m     |[33m          [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:1143:11
+[94m     |
+[94m1143 |[37m     input wire logic cond,
+[94m     |[93m           ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m     |[33m               [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:254:25
+[94m    |
+[94m254 |[37m `define INPUT_REAL(port) \
+[94m    |[93m                         ^^[93m hint  : `input` must have `var`
+[94m    |[33m                           [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:255:4
+[94m    |
+[94m255 |[37m     input `PORT_REAL(``port``)
+[94m    |[93m    ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m        [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:254:25
+[94m    |
+[94m254 |[37m `define INPUT_REAL(port) \
+[94m    |[93m                         ^^[93m hint  : `input` must have `var`
+[94m    |[33m                           [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:255:4
+[94m    |
+[94m255 |[37m     input `PORT_REAL(``port``)
+[94m    |[93m    ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m        [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: output_with_var
+[94m   -->[37m svreal.sv:257:26
+[94m    |
+[94m257 |[37m `define OUTPUT_REAL(port) \
+[94m    |[93m                          ^^[93m hint  : `output` must have `var`
+[94m    |[33m                            [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:258:5
+[94m    |
+[94m258 |[37m     output `PORT_REAL(``port``)
+[94m    |[93m     ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m         [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: tab_character
+[94m   -->[37m svreal.sv:1160:1
+[94m     |
+[94m1160 |[37m 	parameter real init=0
+[94m     |[93m ^[93m hint  : tab character is forbidden
+[94m     |[33m  [33m reason: may cause misalignment depending on editor setting
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:254:25
+[94m    |
+[94m254 |[37m `define INPUT_REAL(port) \
+[94m    |[93m                         ^^[93m hint  : `input` must have `var`
+[94m    |[33m                           [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:255:4
+[94m    |
+[94m255 |[37m     input `PORT_REAL(``port``)
+[94m    |[93m    ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m        [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: output_with_var
+[94m   -->[37m svreal.sv:257:26
+[94m    |
+[94m257 |[37m `define OUTPUT_REAL(port) \
+[94m    |[93m                          ^^[93m hint  : `output` must have `var`
+[94m    |[33m                            [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:258:5
+[94m    |
+[94m258 |[37m     output `PORT_REAL(``port``)
+[94m    |[93m     ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m         [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:1164:5
+[94m     |
+[94m1164 |[37m     input wire logic rst,
+[94m     |[93m     ^^^^^[93m hint  : `input` must have `var`
+[94m     |[33m          [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:1164:11
+[94m     |
+[94m1164 |[37m     input wire logic rst,
+[94m     |[93m           ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m     |[33m               [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:1165:5
+[94m     |
+[94m1165 |[37m     input wire logic clk,
+[94m     |[93m     ^^^^^[93m hint  : `input` must have `var`
+[94m     |[33m          [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:1165:11
+[94m     |
+[94m1165 |[37m     input wire logic clk,
+[94m     |[93m           ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m     |[33m               [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:1166:5
+[94m     |
+[94m1166 |[37m     input wire logic cke
+[94m     |[93m     ^^^^^[93m hint  : `input` must have `var`
+[94m     |[33m          [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:1166:11
+[94m     |
+[94m1166 |[37m     input wire logic cke
+[94m     |[93m           ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m     |[33m               [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: tab_character
+[94m   -->[37m svreal.sv:1179:1
+[94m     |
+[94m1179 |[37m 	`ASSIGN_CONST_REAL(init, init_aligned); 
+[94m     |[93m ^[93m hint  : tab character is forbidden
+[94m     |[33m  [33m reason: may cause misalignment depending on editor setting
+(B[m
+[91mFail[97m: legacy_always
+[94m   -->[37m svreal.sv:1182:5
+[94m     |
+[94m1182 |[37m     always @(posedge clk) begin
+[94m     |[93m     ^^^^^^[93m hint  : `always_comb`/`always_ff`/`always_latch` must be used
+[94m     |[33m           [33m reason: `always` can't detect blocking/non-blocking mistake
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:1200:5
+[94m     |
+[94m1200 |[37m     input wire logic [(addr_bits-1):0] addr,
+[94m     |[93m     ^^^^^[93m hint  : `input` must have `var`
+[94m     |[33m          [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:1200:11
+[94m     |
+[94m1200 |[37m     input wire logic [(addr_bits-1):0] addr,
+[94m     |[93m           ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m     |[33m               [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: output_with_var
+[94m   -->[37m svreal.sv:257:26
+[94m    |
+[94m257 |[37m `define OUTPUT_REAL(port) \
+[94m    |[93m                          ^^[93m hint  : `output` must have `var`
+[94m    |[33m                            [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:258:5
+[94m    |
+[94m258 |[37m     output `PORT_REAL(``port``)
+[94m    |[93m     ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m         [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:1202:5
+[94m     |
+[94m1202 |[37m     input wire logic clk,
+[94m     |[93m     ^^^^^[93m hint  : `input` must have `var`
+[94m     |[33m          [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:1202:11
+[94m     |
+[94m1202 |[37m     input wire logic clk,
+[94m     |[93m           ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m     |[33m               [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:1203:5
+[94m     |
+[94m1203 |[37m     input wire logic ce
+[94m     |[93m     ^^^^^[93m hint  : `input` must have `var`
+[94m     |[33m          [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:1203:11
+[94m     |
+[94m1203 |[37m     input wire logic ce
+[94m     |[93m           ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m     |[33m               [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: legacy_always
+[94m   -->[37m svreal.sv:1213:5
+[94m     |
+[94m1213 |[37m     always @(posedge clk) begin
+[94m     |[93m     ^^^^^^[93m hint  : `always_comb`/`always_ff`/`always_latch` must be used
+[94m     |[33m           [33m reason: `always` can't detect blocking/non-blocking mistake
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:1243:5
+[94m     |
+[94m1243 |[37m     input wire logic [(addr_bits-1):0] addr,
+[94m     |[93m     ^^^^^[93m hint  : `input` must have `var`
+[94m     |[33m          [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:1243:11
+[94m     |
+[94m1243 |[37m     input wire logic [(addr_bits-1):0] addr,
+[94m     |[93m           ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m     |[33m               [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:1244:5
+[94m     |
+[94m1244 |[37m     input wire logic signed [(data_bits-1):0] din,
+[94m     |[93m     ^^^^^[93m hint  : `input` must have `var`
+[94m     |[33m          [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:1244:11
+[94m     |
+[94m1244 |[37m     input wire logic signed [(data_bits-1):0] din,
+[94m     |[93m           ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m     |[33m               [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: output_with_var
+[94m   -->[37m svreal.sv:257:26
+[94m    |
+[94m257 |[37m `define OUTPUT_REAL(port) \
+[94m    |[93m                          ^^[93m hint  : `output` must have `var`
+[94m    |[33m                            [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:258:5
+[94m    |
+[94m258 |[37m     output `PORT_REAL(``port``)
+[94m    |[93m     ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m         [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:1246:5
+[94m     |
+[94m1246 |[37m     input wire logic clk,
+[94m     |[93m     ^^^^^[93m hint  : `input` must have `var`
+[94m     |[33m          [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:1246:11
+[94m     |
+[94m1246 |[37m     input wire logic clk,
+[94m     |[93m           ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m     |[33m               [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:1247:5
+[94m     |
+[94m1247 |[37m     input wire logic ce,
+[94m     |[93m     ^^^^^[93m hint  : `input` must have `var`
+[94m     |[33m          [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:1247:11
+[94m     |
+[94m1247 |[37m     input wire logic ce,
+[94m     |[93m           ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m     |[33m               [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:1248:5
+[94m     |
+[94m1248 |[37m     input wire logic we
+[94m     |[93m     ^^^^^[93m hint  : `input` must have `var`
+[94m     |[33m          [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:1248:11
+[94m     |
+[94m1248 |[37m     input wire logic we
+[94m     |[93m           ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m     |[33m               [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: legacy_always
+[94m   -->[37m svreal.sv:1255:5
+[94m     |
+[94m1255 |[37m     always @(posedge clk) begin
+[94m     |[93m     ^^^^^^[93m hint  : `always_comb`/`always_ff`/`always_latch` must be used
+[94m     |[33m           [33m reason: `always` can't detect blocking/non-blocking mistake
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:1285:5
+[94m     |
+[94m1285 |[37m     input wire [(in_width-1):0] in,
+[94m     |[93m     ^^^^^[93m hint  : `input` must have `var`
+[94m     |[33m          [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:1285:11
+[94m     |
+[94m1285 |[37m     input wire [(in_width-1):0] in,
+[94m     |[93m           ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m     |[33m               [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: output_with_var
+[94m   -->[37m svreal.sv:1286:5
+[94m     |
+[94m1286 |[37m     output reg [(out_width-1):0] out
+[94m     |[93m     ^^^^^^[93m hint  : `output` must have `var`
+[94m     |[33m           [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:1286:12
+[94m     |
+[94m1286 |[37m     output reg [(out_width-1):0] out
+[94m     |[93m            ^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m     |[33m               [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: level_sensitive_always
+[94m   -->[37m svreal.sv:1289:5
+[94m     |
+[94m1289 |[37m     always @(*) begin
+[94m     |[93m     ^^^^^^[93m hint  : level sensitive `always` must be `always_comb`
+[94m     |[33m           [33m reason: `always` can't detect blocking/non-blocking mistake
+(B[m
+[91mFail[97m: legacy_always
+[94m   -->[37m svreal.sv:1289:5
+[94m     |
+[94m1289 |[37m     always @(*) begin
+[94m     |[93m     ^^^^^^[93m hint  : `always_comb`/`always_ff`/`always_latch` must be used
+[94m     |[33m           [33m reason: `always` can't detect blocking/non-blocking mistake
+(B[m
+[91mFail[97m: loop_variable_declaration
+[94m   -->[37m svreal.sv:1293:18
+[94m     |
+[94m1293 |[37m             for (i=0; i<in_width; i=i+1) begin
+[94m     |[93m                  ^[93m hint  : loop variable must be declared in loop
+[94m     |[33m                   [33m reason: the scope of variable should be minimized
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:1309:5
+[94m     |
+[94m1309 |[37m     input wire [(in_width-1):0] in,
+[94m     |[93m     ^^^^^[93m hint  : `input` must have `var`
+[94m     |[33m          [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:1309:11
+[94m     |
+[94m1309 |[37m     input wire [(in_width-1):0] in,
+[94m     |[93m           ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m     |[33m               [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: output_with_var
+[94m   -->[37m svreal.sv:257:26
+[94m    |
+[94m257 |[37m `define OUTPUT_REAL(port) \
+[94m    |[93m                          ^^[93m hint  : `output` must have `var`
+[94m    |[33m                            [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:258:5
+[94m    |
+[94m258 |[37m     output `PORT_REAL(``port``)
+[94m    |[93m     ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m         [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: tab_character
+[94m   -->[37m fig3.sv:3:1
+[94m  |
+[94m3 |[37m 	`DECL_REAL(a),
+[94m  |[93m ^[93m hint  : tab character is forbidden
+[94m  |[33m  [33m reason: may cause misalignment depending on editor setting
+(B[m
+[91mFail[97m: tab_character
+[94m   -->[37m fig3.sv:4:1
+[94m  |
+[94m4 |[37m 	`DECL_REAL(b), 
+[94m  |[93m ^[93m hint  : tab character is forbidden
+[94m  |[33m  [33m reason: may cause misalignment depending on editor setting
+(B[m
+[91mFail[97m: tab_character
+[94m   -->[37m fig3.sv:5:1
+[94m  |
+[94m5 |[37m 	`DECL_REAL(z)) 
+[94m  |[93m ^[93m hint  : tab character is forbidden
+[94m  |[33m  [33m reason: may cause misalignment depending on editor setting
+(B[m
+[91mFail[97m: tab_character
+[94m   -->[37m fig3.sv:7:1
+[94m  |
+[94m7 |[37m 	`INPUT_REAL(a), 
+[94m  |[93m ^[93m hint  : tab character is forbidden
+[94m  |[33m  [33m reason: may cause misalignment depending on editor setting
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:254:25
+[94m    |
+[94m254 |[37m `define INPUT_REAL(port) \
+[94m    |[93m                         ^^[93m hint  : `input` must have `var`
+[94m    |[33m                           [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:255:4
+[94m    |
+[94m255 |[37m     input `PORT_REAL(``port``)
+[94m    |[93m    ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m        [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: tab_character
+[94m   -->[37m fig3.sv:8:1
+[94m  |
+[94m8 |[37m 	`INPUT_REAL(b), 
+[94m  |[93m ^[93m hint  : tab character is forbidden
+[94m  |[33m  [33m reason: may cause misalignment depending on editor setting
+(B[m
+[91mFail[97m: input_with_var
+[94m   -->[37m svreal.sv:254:25
+[94m    |
+[94m254 |[37m `define INPUT_REAL(port) \
+[94m    |[93m                         ^^[93m hint  : `input` must have `var`
+[94m    |[33m                           [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:255:4
+[94m    |
+[94m255 |[37m     input `PORT_REAL(``port``)
+[94m    |[93m    ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m        [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: tab_character
+[94m   -->[37m fig3.sv:9:1
+[94m  |
+[94m9 |[37m 	`OUTPUT_REAL(z)
+[94m  |[93m ^[93m hint  : tab character is forbidden
+[94m  |[33m  [33m reason: may cause misalignment depending on editor setting
+(B[m
+[91mFail[97m: output_with_var
+[94m   -->[37m svreal.sv:257:26
+[94m    |
+[94m257 |[37m `define OUTPUT_REAL(port) \
+[94m    |[93m                          ^^[93m hint  : `output` must have `var`
+[94m    |[33m                            [33m reason: 
+(B[m
+[91mFail[97m: wire_reg
+[94m   -->[37m svreal.sv:258:5
+[94m    |
+[94m258 |[37m     output `PORT_REAL(``port``)
+[94m    |[93m     ^^^^[93m hint  : `wire`/`reg` must be replaced to `logic`/`tri`
+[94m    |[33m         [33m reason: `logic` can detect multi-drive
+(B[m
+[91mFail[97m: tab_character
+[94m   -->[37m fig3.sv:12:1
+[94m   |
+[94m12 |[37m 	`MAKE_CONST_REAL(4.3, c);
+[94m   |[93m ^[93m hint  : tab character is forbidden
+[94m   |[33m  [33m reason: may cause misalignment depending on editor setting
+(B[m
+[91mFail[97m: tab_character
+[94m   -->[37m fig3.sv:14:1
+[94m   |
+[94m14 |[37m 	`MAKE_GENERIC_REAL(d, -16.0, 17);
+[94m   |[93m ^[93m hint  : tab character is forbidden
+[94m   |[33m  [33m reason: may cause misalignment depending on editor setting
+(B[m
+[91mFail[97m: tab_character
+[94m   -->[37m fig3.sv:15:1
+[94m   |
+[94m15 |[37m 	`MUL_INTO_REAL(a, b, d);
+[94m   |[93m ^[93m hint  : tab character is forbidden
+[94m   |[33m  [33m reason: may cause misalignment depending on editor setting
+(B[m
+[91mFail[97m: tab_character
+[94m   -->[37m fig3.sv:17:1
+[94m   |
+[94m17 |[37m 	`MAKE_GENERIC_REAL(e, -16.0, 18);
+[94m   |[93m ^[93m hint  : tab character is forbidden
+[94m   |[33m  [33m reason: may cause misalignment depending on editor setting
+(B[m
+[91mFail[97m: tab_character
+[94m   -->[37m fig3.sv:18:1
+[94m   |
+[94m18 |[37m 	`ADD_INTO_REAL(d, c, e);
+[94m   |[93m ^[93m hint  : tab character is forbidden
+[94m   |[33m  [33m reason: may cause misalignment depending on editor setting
+(B[m
+[91mFail[97m: tab_character
+[94m   -->[37m svreal.sv:467:3
+[94m    |
+[94m467 |[37m     `ADD_REAL_GENERIC(``a_name``, ``b_name``, ``c_name``, `LONG_WIDTH_REAL)
+[94m    |[93m   ^[93m hint  : tab character is forbidden
+[94m    |[33m    [33m reason: may cause misalignment depending on editor setting
+(B[m
+[91mFail[97m: tab_character
+[94m   -->[37m fig3.sv:20:1
+[94m   |
+[94m20 |[37m 	`SUB_INTO_REAL(e, b, z);
+[94m   |[93m ^[93m hint  : tab character is forbidden
+[94m   |[33m  [33m reason: may cause misalignment depending on editor setting
+(B[m
+[91mFail[97m: tab_character
+[94m   -->[37m svreal.sv:513:3
+[94m    |
+[94m513 |[37m     `SUB_REAL_GENERIC(``a_name``, ``b_name``, ``c_name``, `LONG_WIDTH_REAL)
+[94m    |[93m   ^[93m hint  : tab character is forbidden
+[94m    |[33m    [33m reason: may cause misalignment depending on editor setting
+(B[m

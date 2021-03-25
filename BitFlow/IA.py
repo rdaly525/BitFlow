@@ -1,4 +1,6 @@
 from itertools import product
+
+
 class Interval:
     def __init__(self, lo, hi):
         assert lo <= hi, f"{lo} must be less than {hi}"
@@ -9,7 +11,7 @@ class Interval:
         if isinstance(rhs, Interval):
             return Interval(self.lo + rhs.lo, self.hi + rhs.hi)
         else:
-            assert isinstance(rhs, int)
+            assert isinstance(rhs, (int, float))
             return Interval(self.lo + rhs, self.hi + rhs)
 
     def __sub__(self, rhs):
@@ -22,10 +24,11 @@ class Interval:
 
     def __mul__(self, rhs):
         if isinstance(rhs, Interval):
-            poss = list(map(lambda x: x[0]*x[1], product(self.interval, rhs.interval) ))
+            poss = list(map(lambda x: x[0]*x[1],
+                            product(self.interval, rhs.interval)))
             return Interval(min(poss), max(poss))
         else:
-            return Interval(self.lo * rhs, self.hi *rhs)
+            return Interval(self.lo * rhs, self.hi * rhs)
 
     def __eq__(self, rhs):
         assert isinstance(rhs, Interval)
