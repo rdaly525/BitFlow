@@ -97,15 +97,15 @@ def gen_ex3():
 #         "fig3", bf.P, bf.R, bf.filtered_vars, original_dag, {"z": 8.})
 #     verilog_gen.evaluate()
 
-#     # # check saving object works
-#     # BitFlow.save("./models/fig3", bf)
-#     # new_bf = BitFlow.load("./models/fig3")
+    # # check saving object works
+    # BitFlow.save("./models/fig3", bf)
+    # new_bf = BitFlow.load("./models/fig3")
 
-#     # new_bf.train(epochs=5)
+    # new_bf.train(epochs=5)
 
-#     # assert new_bf.range_lr == bf.range_lr
+    # assert new_bf.range_lr == bf.range_lr
 
-#     return
+    return
 
 
 # def test_fig3_4():
@@ -201,40 +201,40 @@ def RGB_to_YCbCr():
     return casestudy_dag
 
 
-def test_rgb_case_study():
-    print("\n=== RGB ===")
+# def test_rgb_case_study():
+#     print("\n=== RGB ===")
 
-    dag = RGB_to_YCbCr()
+#     dag = RGB_to_YCbCr()
 
-    params = dict(
-        training_size=50000,
-        testing_size=10000,
-        batch_size=16,
-        lr=1e-2,
-        train_range=True,
-        range_lr=1e-2,
-        distribution=2,
-        test_optimizer=True,
-        incorporate_ulp_loss=False,
-        graph_loss=False
-    )
+#     params = dict(
+#         training_size=50000,
+#         testing_size=10000,
+#         batch_size=16,
+#         lr=1e-2,
+#         train_range=True,
+#         range_lr=1e-2,
+#         distribution=2,
+#         test_optimizer=True,
+#         incorporate_ulp_loss=False,
+#         graph_loss=False
+#     )
 
-    bf = BitFlow(dag, {"col_1": 8., "col_2": 8., "col_3": 8.}, {
-        'r': (0., 255.), 'b': (0., 255.), 'g': (0., 255.)}, **params)
-    bf.train(epochs=10, limit=-1e-3, decay=0.6)
+#     bf = BitFlow(dag, {"col_1": 8., "col_2": 8., "col_3": 8.}, {
+#         'r': (0., 255.), 'b': (0., 255.), 'g': (0., 255.)}, **params)
+#     bf.train(epochs=10, limit=-1e-3, decay=0.6)
 
-    rounded_dag = bf.rounded_dag
-    original_dag = bf.original_dag
+#     rounded_dag = bf.rounded_dag
+#     original_dag = bf.original_dag
 
-    verilog_gen = BitFlow2Verilog(
-        "rgb_to_ycbcr", bf.P, bf.R, bf.filtered_vars, original_dag, {"col_1": 8., "col_2": 8., "col_3": 8.})
-    verilog_gen.evaluate()
+#     verilog_gen = BitFlow2Verilog(
+#         "rgb_to_ycbcr", bf.P, bf.R, bf.filtered_vars, original_dag, {"col_1": 8., "col_2": 8., "col_3": 8.})
+#     verilog_gen.evaluate()
 
-    # Sample Matrix Product
-    test = {"r": 252., "g": 59., "b": 32., "P": bf.P, "R": bf.R, "O": bf.O}
-    print(bf.model(**test))
+#     # Sample Matrix Product
+#     test = {"r": 252., "g": 59., "b": 32., "P": bf.P, "R": bf.R, "O": bf.O}
+#     print(bf.model(**test))
 
-    return
+#     return
 
 
 # def test_rgb_case_study_4():

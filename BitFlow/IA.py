@@ -11,7 +11,7 @@ class Interval:
         if isinstance(rhs, Interval):
             return Interval(self.lo + rhs.lo, self.hi + rhs.hi)
         else:
-            assert isinstance(rhs, float)
+            assert isinstance(rhs, (int, float))
             return Interval(self.lo + rhs, self.hi + rhs)
 
     def __sub__(self, rhs):

@@ -6,7 +6,7 @@ import math
 
 
 class TorchEval(AbstractEval):
-    def __init__(self, dag: Dag, intervals):
+    def __init__(self, dag: Dag, intervals=None):
         super().__init__(dag)
         self.saturation = t.Tensor([0.])
         self.intervals = intervals

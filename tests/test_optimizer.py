@@ -40,6 +40,7 @@ def test_fig3():
     evaluator.eval(a=a, b=b)
 
     bfo = BitFlowOptimizer(evaluator, {'z': 8})
+    bfo.calculateInitialValues()
     bfo.solve()
 
     assert bfo.visitor.IBs == {'a': 4, 'b': 5, 'd': 7, 'c': 4, 'e': 6, 'z': 7}
@@ -54,6 +55,7 @@ def test_dag1():
     evaluator.eval(x=x, y=y, z=z)
 
     bfo = BitFlowOptimizer(evaluator, {'k': 5})
+    bfo.calculateInitialValues()
     bfo.solve()
 
     print(bfo.visitor.IBs)
@@ -71,6 +73,7 @@ def test_print():
     evaluator.eval(a=a, b=b)
 
     bfo = BitFlowOptimizer(evaluator, {'z': 5})
+    bfo.calculateInitialValues()
     bfo.solve()
 
     print("\nRESULTS:")
