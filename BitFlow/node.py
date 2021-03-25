@@ -3,12 +3,15 @@ from BitFlow.IA import Interval
 import abc
 import typing as tp
 import random
+import torch
+
 
 
 # Passes will be run on this
 class DagNode(Visited):
-    def __init__(self, name, *children):
+    def __init__(self, name, type, *children):
         self.name = name
+        self.type = type
         self.set_children(*children)
 
     def set_children(self, *children):
@@ -44,27 +47,38 @@ class DagNode(Visited):
 
 
 class Input(DagNode):
-    def __init__(self, name):
-        super().__init__(name)
+    def __init__(self, name, type=()):
+        super().__init__(name, type)
 
 
 class Output(DagNode):
-    def __init__(self, name):
+    def __init__(self, name, type=()):
         super().__init__(name)
 
 
 class Constant(DagNode):
     def __init__(self, value, name=None):
         self.value = value
+        if isinstance(value, (int, float)):
+            type = ();
+        elif isinstance(value, torch.Tensor):
+            type = tuple(value.shape)
+        else:
+            raise NotImplementedError(f"Value of type {type(value)}")
         if name is None:
             name = f"Constant_{random.randint(0, 100000)}"
-        super().__init__(name)
+        super().__init__(name, type)
 
+
+def check_same_type(a: DagNode, b: DagNode):
+    if a.type != b.type:
+        raise ValueError
 
 class Add(DagNode):
     def __init__(self, a: DagNode, b: DagNode, *, name=None):
         if name is None:
             name = f"{a.name}_add_{b.name}"
+        if (a.type != b.type)
         super().__init__(name, a, b)
 
 
