@@ -45,7 +45,7 @@ class LookupTableTransformer(Transformer):
 
 class AddRoundNodes(Transformer):
 
-    def __init__(self, P, R, O, area_map):
+    def __init__(self, P, R, O, area_map={}):
         self.P = P
         self.R = R
         self.O = O
