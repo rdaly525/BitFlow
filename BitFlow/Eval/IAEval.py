@@ -1,5 +1,7 @@
 from .AbstractEval import AbstractEval
-from ..node import DagNode
+from ..AA import AInterval
+from ..node import DagNode, LookupTable
+
 
 class IAEval(AbstractEval):
     def eval_Constant(self, node: DagNode):
@@ -15,4 +17,10 @@ class IAEval(AbstractEval):
         return a * b
 
     def eval_Select(self, a, node: DagNode):
-        raise NotImplementedError("TODO")
+        return a[node.index]
+
+    def eval_LookupTable(self, a, node: LookupTable):
+        if hasattr(node, 'lut'):
+            return node.lut[a]
+        else:
+            return AInterval(node.func(a.base), a.noise)

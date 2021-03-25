@@ -61,7 +61,7 @@ class FPEpsilonMultiplier:
 
 
 class PrecisionNode:
-    def __init__(self, val, symbol, error):
+    def __init__(self, val, symbol, error, add_self_error=True):
         assert isinstance(val, (int, float))
         assert isinstance(symbol, str)
         assert isinstance(error, list)
@@ -69,7 +69,8 @@ class PrecisionNode:
         self.val = val
         self.symbol = symbol
         self.error = error
-        self.error.append(FPEpsilon(symbol))
+        if add_self_error:
+            self.error.append(FPEpsilon(symbol))
         self.output = ""
 
     def generate_print(self, errors):
@@ -88,7 +89,7 @@ class PrecisionNode:
             if isinstance(err, FPEpsilon):
                 if err.node == self.symbol:
                     return myfn
-                myfn += f"+{err.val}*2**(-{err.node}-1)" if err.val > 0 else f"{err.val}*2**(-{err.node}-1)"
+                myfn += f"+{err.val}*2**(-{err.node}-1)" if err.val >= 0 else f"{err.val}*2**(-{err.node}-1)"
             elif isinstance(err, FPEpsilonMultiplier):
                 myfn += f"+{err.val}*("
                 myfn += self.constructErrorFn(err.Ex)
@@ -101,7 +102,7 @@ class PrecisionNode:
         myfn = ""
         for err in errors:
             if isinstance(err, FPEpsilon):
-                myfn += f"+{err.val}*2**(-UFB-1)" if err.val > 0 else f"{err.val}*2**(-UFB-1)"
+                myfn += f"+{err.val}*2**(-UFB-1)" if err.val >= 0 else f"{err.val}*2**(-UFB-1)"
             elif isinstance(err, FPEpsilonMultiplier):
                 myfn += f"+{err.val}*("
                 myfn += self.constructUFBFn(err.Ex)
@@ -152,6 +153,13 @@ class PrecisionNode:
         total_err.append(mixed_err)
 
         return PrecisionNode(self.val * rhs.val, symbol, total_err)
+
+    @staticmethod
+    def reduce(list_of_precs, symbol):
+        total_err = []
+        for prec in list_of_precs:
+            total_err += prec.error
+        return PrecisionNode(sum([p.val for p in list_of_precs]), symbol, total_err)
 
     def check_error_equality(self, rhs):
         rhs_error = copy.deepcopy(rhs)

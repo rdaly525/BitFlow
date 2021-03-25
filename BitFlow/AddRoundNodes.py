@@ -1,86 +1,92 @@
-from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, DagNode, Round, Output, Select
+from BitFlow.node import Input, Constant, Dag, Add, Sub, Mul, DagNode, Round, Output, Select, LookupTable, BitShift
 from DagVisitor import Visitor, Transformer, AbstractDag
 from BitFlow.IA import Interval
 from BitFlow.Eval import IAEval, NumEval, AbstractEval
+from BitFlow.utils import LUTGenerator
 import torch
 
 
-class NodePrinter(Visitor):
-    def __init__(self, node_values):
-        self.node_values = node_values
+class LookupTableTransformer(Transformer):
+    def __init__(self, P, R, order):
+        self.P = P
+        self.R = R
+        self.order = order
 
-    def test_print(self):
-        fig3 = gen_fig3()
-        evaluator = NumEval(fig3)
+    def doit(self, dag: Dag):
+        self.run(dag)
+        return Dag(outputs=dag.outputs, inputs=dag.inputs)
 
-        a, b = 3, 5
-        evaluator.eval(a=a, b=b)
-        node_values = evaluator.node_values
-        node_printer = NodePrinter(node_values)
-
-        # Visitor classes have a method called 'run' that takes in a dag and runs all the
-        # visit methods on each node
-        node_printer.run(fig3)
-
-    # Generic visitor method for a node
-    # This method will be run on each node unless
-    # a visit_<NodeType> method is defined
     def generic_visit(self, node: DagNode):
-        # Call this to visit node's children first
-        Visitor.generic_visit(self, node)
+        Transformer.generic_visit(self, node)
+        if isinstance(node, LookupTable):
+            return node
+            child = node.child
+            child_index = self.order.index(child.name)
+            child_precision = int(self.P[child_index])
+            child_range = int(self.R[child_index])
 
-        print(
-            f"Generic Node {node} has a value of {self.node_values[node]} and children values")
-        for child_node in node.children():
-            print(f"  {child_node}:  {self.node_values[child_node]}")
+            min_val = -1 * (2 ** (child_precision + child_range - 1)) * \
+                2 ** -child_precision
+            max_val = (2 ** (child_precision + child_range - 1) - 1) * \
+                2 ** -child_precision
 
-    # I could also define a custom visitor for Add
+            num_entries = 2 ** (child_precision + child_range)
+            print(
+                f"LOOKUP TABLE: [{min_val}, {max_val}] with {num_entries} entries")
+            lut = LUTGenerator(
+                node.func, [min_val, max_val], numel=num_entries)
+            node.lut = lut
+            return node
 
-    def visit_Add(self, node: Add):
-        Visitor.generic_visit(self, node)
-        assert isinstance(node, Add)
-        print(f"Add Node {node} has a value of {self.node_values[node]}")
-        for child_node in node.children():
-            print(f"  {child_node}:  {self.node_values[child_node]}")
+            #  (2 ** ({input_signal.name} + {input_signal.name}_ib)) * ({node.name} + {node.name}_ib)
+        else:
+            return node
 
 
 class AddRoundNodes(Transformer):
 
-    def __init__(self, W, O):
-        self.W = W
-        #self.X = X
+    def __init__(self, P, R, O):
+        self.P = P
+        self.R = R
         self.O = O
+        self.area_weight = 0
+        self.num_nodes = 0
         self.round_count = 0
         self.input_count = 0
         self.output_count = 0
+        self.range_count = 0
         self.rounded_outputs = []
         self.allroots = []
-        self.sharedNodes = True
-        self.nodesToShare = {3:3,4:3}
 
-    def doit(self, dag: Dag):  # takes a Dag and returns new Dag with round nodes added in
+        self.sharedNodes = True
+        self.nodesToShare = {}
+        #self.nodesToShare = {3:3,4:3}
+
+        self.order = []
+
+
+    # takes a Dag and returns new Dag with round nodes added in
+    def doit(self, dag: Dag):
 
         new_inputs = dag.inputs
 
         self.allroots = list(dag.roots())
         self.run(dag)
 
-        new_inputs.append(self.W)
-        # new_inputs.append(self.X)
+        new_inputs.append(self.P)
+        new_inputs.append(self.R)
         new_inputs.append(self.O)
 
-        new_outputs = list(self.rounded_outputs)
-
         # return dag that has taken precision as an input
-        return Dag(outputs=new_outputs, inputs=new_inputs)
+        return Dag(outputs=dag.outputs, inputs=new_inputs)
 
     def generic_visit(self, node: DagNode):
-
-        if isinstance(node, Output):
-            return None
-
         # make sure code run on all children nodes first
         Transformer.generic_visit(self, node)
+        self.num_nodes += 1
+
+        self.area_weight += 1
+
 
         for child in node.children():
             assert isinstance(child, Round)
@@ -89,42 +95,50 @@ class AddRoundNodes(Transformer):
         #     #we are sharing precision/range weights between nodes
         print("sharing nodes",self.round_count, node)
         if self.round_count in self.nodesToShare:
-                round_index = self.nodesToShare[self.round_count]
-                returnNode = Round(node, Select(self.W, round_index),
-                                   name=node.name + "_round_W")
-                self.round_count += 1
+            round_index = self.nodesToShare[self.round_count]
+            returnNode = Round(node, Select(self.P, round_index), Select(
+                self.R, round_index), name=node.name + "_round")
+            self.round_count += 1
+            self.range_count += 1
+            self.order.append(node.name)
+            return returnNode
 
-
-
-
-        # else:
-        #     #where we need to account for shared node for multipliers
-        #     #maybe like a sharedNodes boolean for node or a list that keeps track of shared nodes
-        #     if(shareNodes == true):
-        #             #two options:
-        #             #have self.P and self.R only have one pair of range/precision values for the nodes to share
-        #             #still maintain self.P and self.R size but ensure that sharedNodes have same precision/range
-        #             returnNode = Round(node, Select(self.P, self.round_count), Select(
-        #             self.R, self.range_count), name=node.name + "_round")
-        #
+        if isinstance(node, LookupTable):
+            self.area_weight += 9
 
         elif isinstance(node, Input):
             # current node + need to get prec_input
             returnNode = Round(node, Select(
-                self.W, self.round_count), name=node.name + "_round")
+                self.P, self.round_count), Select(self.R, self.range_count), name=node.name + "_round")
+
             self.input_count += 1
             self.round_count += 1
+            self.range_count += 1
+            self.order.append(node.name)
+
+            return returnNode
+
+        if isinstance(node, BitShift):
+            self.round_count += 1
+            self.range_count += 1
+            return Round(node, 0., 0., name=node.name + "_round")
+
+        # elif isinstance(node, LookupTable):
+
+        #     self.round_count += 1
+        #     self.range_count += 1
+
+        #     return node
+
+        elif (node in self.allroots):
+
+            self.output_count += 1
+            return Select(self.O, self.output_count)
 
         else:
-            if(node in self.allroots):
-
-                returnNode = Round(node, Select(self.O, self.output_count),
-                                   name=node.name + "_round")
-                self.rounded_outputs.append(returnNode)
-                self.output_count += 1
-
-            else:
-                returnNode = Round(node, Select(self.W, self.round_count),
-                                   name=node.name + "_round_W")
-                self.round_count += 1
-        return returnNode
+            returnNode = Round(node, Select(self.P, self.round_count), Select(
+                self.R, self.range_count), name=node.name + "_round")
+            self.round_count += 1
+            self.range_count += 1
+            self.order.append(node.name)
+            return returnNode

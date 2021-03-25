@@ -1,19 +1,21 @@
 from DagVisitor import Visitor
 from abc import abstractmethod
-from ..node import Dag, DagNode, Input, Constant, Add, Mul, Select, Output, Round
+from ..node import Dag, DagNode, Input, Constant, Add, Mul, Select, Output, Round, LookupTable
 
 
 class AbstractEval(Visitor):
     def __init__(self, dag: Dag):
         self.dag = dag
         self.node_values = {}
+        self.train_MNIST = True
 
     def eval(self, **input_values):
         self.input_values = input_values
         self.node_values = {}
         for dag_input in self.dag.inputs:
             if dag_input.name not in input_values:
-                raise ValueError(f"Missing {dag_input} in input values")
+                if not self.train_MNIST:
+                    raise ValueError(f"Missing {dag_input} in input values")
         super().run(self.dag)
         outputs = [self.node_values[root] for root in self.dag.roots()]
         #print(outputs, len(outputs), outputs[0])
@@ -52,4 +54,8 @@ class AbstractEval(Visitor):
 
     @abstractmethod
     def eval_Select(self, a, node: DagNode):
+        pass
+
+    @abstractmethod
+    def eval_LookupTable(self, a, node: LookupTable):
         pass
