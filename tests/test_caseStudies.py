@@ -35,9 +35,9 @@ def test_Matrix_Multiplication():
     a = [[1, 2], [3, 4]]
     b = [[5, 6], [7, 8]]
 
-    print("h")
+    print("matrix")
     print(a)
-    res = evaluator.eval(a=a, b=b)
+    res = evaluator.eval(a=a, b= b)
     print(res)
     gold = [19, 22, 43, 50]
     assert res == gold

@@ -8,6 +8,7 @@ from BitFlow.casestudies.caseStudies import caseStudy
 from BitFlow.Eval import IAEval, NumEval
 
 
+
 def update_dag(dag):
     """ TODO: Adds Round Nodes, Weight Input Nodes (grad allowed) and Output Precision Nodes (grad not allowed)
     Args:
@@ -45,6 +46,13 @@ def gen_fig3():
     fig3_dag = Dag(outputs=[z], inputs=[a, b])
     return fig3_dag
 
+# def gen_dotproduct():
+#     #(a*b) + 4 - b
+#     a = Input(name="a")
+#     b = Input(name="b")
+#     d = dotproduct(a, b, name="d")
+#     fig3_dag = Dag(outputs=[z], inputs=[a, b])
+#     return fig3_dag
 
 def gen_ex1():
     #(a * b) + (b * c)
@@ -76,9 +84,10 @@ def test_fig3():
 
     newDag = update_dag(fig3)
 
-    P1 = torch.tensor([20., 20., 20., 20., 20.])
-    R1 = torch.tensor([20., 20., 20., 20., 20., 20.])
+    P1 = torch.tensor([20., 20., 20., 2., 20.])
+    R1 = torch.tensor([20., 20., 20., 20., 20.])
     O1 = torch.tensor([20])
+
     a1, b1 = 10.45454524545452, 10.2323223232
 
     print("EVAL After Rounding")
@@ -297,8 +306,8 @@ def test_Matrix_Multiplication():
 
 
 test_fig3()
-test_ex1()
-test_fig3_integers()
-test_poly_approx()
-test_RGB_to_YCbCr()
-test_Matrix_Multiplication()
+# test_ex1()
+# test_fig3_integers()
+# test_poly_approx()
+# test_RGB_to_YCbCr()
+#test_Matrix_Multiplication()

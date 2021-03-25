@@ -57,7 +57,13 @@ class AddRoundNodes(Transformer):
         self.range_count = 0
         self.rounded_outputs = []
         self.allroots = []
+
+        self.sharedNodes = False
+        self.nodesToShare = {}
+        #self.nodesToShare = {3:3,4:3}
+
         self.order = []
+
 
     # takes a Dag and returns new Dag with round nodes added in
     def doit(self, dag: Dag):
@@ -81,13 +87,26 @@ class AddRoundNodes(Transformer):
 
         self.area_weight += 1
 
+
+        for child in node.children():
+            assert isinstance(child, Round)
+
         if isinstance(node, LookupTable):
             self.area_weight += 9
 
-        # if isinstance(node, LookupTable):
-        #     return None
+        # if self.sharedNodes is True:
+        #     #we are sharing precision/range weights between nodes
+        #print("sharing nodes",self.round_count, node)
+        if self.round_count in self.nodesToShare:
+            round_index = self.nodesToShare[self.round_count]
+            returnNode = Round(node, Select(self.P, round_index), Select(
+                self.R, round_index), name=node.name + "_round")
+            self.round_count += 1
+            self.range_count += 1
+            self.order.append(node.name)
+            return returnNode
 
-        if isinstance(node, Input):
+        elif isinstance(node, Input):
             # current node + need to get prec_input
             returnNode = Round(node, Select(
                 self.P, self.round_count), Select(self.R, self.range_count), name=node.name + "_round")
@@ -103,13 +122,6 @@ class AddRoundNodes(Transformer):
             self.round_count += 1
             self.range_count += 1
             return Round(node, 0., 0., name=node.name + "_round")
-
-        # elif isinstance(node, LookupTable):
-
-        #     self.round_count += 1
-        #     self.range_count += 1
-
-        #     return node
 
         elif (node in self.allroots):
 
