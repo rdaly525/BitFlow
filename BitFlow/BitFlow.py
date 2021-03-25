@@ -8,6 +8,8 @@ from .Optimization import BitFlowVisitor, BitFlowOptimizer
 from .AddRoundNodes import AddRoundNodes, LookupTableTransformer
 from .utils import GeneratedDataset, DAGGrapher
 
+import os
+
 import torch
 from torch.utils import data
 
@@ -675,7 +677,9 @@ class BitFlow:
 
         if test_optimizer:
             print("\n##### FROM OPTIMIZER ######")
-
+            is_travis = 'TRAVIS' in os.environ
+            if is_travis:
+                return
             bfo.solve()
             test = list(bfo.fb_sols.values())
             print(test)
