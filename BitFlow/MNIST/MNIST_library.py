@@ -90,8 +90,6 @@ def linear_layer(X: DagNode, weight: DagNode, bias: DagNode, batch_dim, output_d
     else:
 
         bias_array = [bias]
-        print("HERE")
-        print(len(bias_array))
         with_bias = Concat(*bias_array, concat_dim=0, name="final_bias")
 
         #with_bias = Concat(*bias_array, concat_dim=0, name="final_bias")
