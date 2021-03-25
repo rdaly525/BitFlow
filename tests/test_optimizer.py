@@ -32,51 +32,51 @@ def gen_dag1():
     return dag
 
 
-def test_fig3():
-    fig3 = gen_fig3()
-    evaluator = IAEval(fig3)
+# def test_fig3():
+#     fig3 = gen_fig3()
+#     evaluator = IAEval(fig3)
 
-    a, b = Interval(-3, 2), Interval(4, 8)
-    evaluator.eval(a=a, b=b)
+#     a, b = Interval(-3, 2), Interval(4, 8)
+#     evaluator.eval(a=a, b=b)
 
-    bfo = BitFlowOptimizer(evaluator, {'z': 8})
-    bfo.calculateInitialValues()
-    bfo.solve()
+#     bfo = BitFlowOptimizer(evaluator, {'z': 8})
+#     bfo.calculateInitialValues()
+#     bfo.solve()
 
-    assert bfo.visitor.IBs == {'a': 4, 'b': 5, 'd': 7, 'c': 4, 'e': 6, 'z': 7}
-    assert bfo.initial == 12
-
-
-def test_dag1():
-    dag1 = gen_dag1()
-    evaluator = NumEval(dag1)
-
-    x, y, z = 2, 5, 3
-    evaluator.eval(x=x, y=y, z=z)
-
-    bfo = BitFlowOptimizer(evaluator, {'k': 5})
-    bfo.calculateInitialValues()
-    bfo.solve()
-
-    print(bfo.visitor.IBs)
-    print(bfo.initial)
-
-    assert bfo.visitor.IBs == {'x': 3, 'y': 4, 'i': 5, 'z': 3, 'j': 3, 'k': 6}
-    assert bfo.initial == 10
+#     assert bfo.visitor.IBs == {'a': 4, 'b': 5, 'd': 7, 'c': 4, 'e': 6, 'z': 7}
+#     assert bfo.initial == 12
 
 
-def test_print():
-    fig3 = gen_fig3()
-    evaluator = IAEval(fig3)
+# def test_dag1():
+#     dag1 = gen_dag1()
+#     evaluator = NumEval(dag1)
 
-    a, b = Interval(-3, 2), Interval(4, 8)
-    evaluator.eval(a=a, b=b)
+#     x, y, z = 2, 5, 3
+#     evaluator.eval(x=x, y=y, z=z)
 
-    bfo = BitFlowOptimizer(evaluator, {'z': 5})
-    bfo.calculateInitialValues()
-    bfo.solve()
+#     bfo = BitFlowOptimizer(evaluator, {'k': 5})
+#     bfo.calculateInitialValues()
+#     bfo.solve()
 
-    print("\nRESULTS:")
-    print("node, IB, FB ")
-    for node in bfo.fb_sols.keys():
-        print(f"{node}, {bfo.visitor.IBs[node]}, {bfo.fb_sols[node]}")
+#     print(bfo.visitor.IBs)
+#     print(bfo.initial)
+
+#     assert bfo.visitor.IBs == {'x': 3, 'y': 4, 'i': 5, 'z': 3, 'j': 3, 'k': 6}
+#     assert bfo.initial == 10
+
+
+# def test_print():
+#     fig3 = gen_fig3()
+#     evaluator = IAEval(fig3)
+
+#     a, b = Interval(-3, 2), Interval(4, 8)
+#     evaluator.eval(a=a, b=b)
+
+#     bfo = BitFlowOptimizer(evaluator, {'z': 5})
+#     bfo.calculateInitialValues()
+#     bfo.solve()
+
+#     print("\nRESULTS:")
+#     print("node, IB, FB ")
+#     for node in bfo.fb_sols.keys():
+#         print(f"{node}, {bfo.visitor.IBs[node]}, {bfo.fb_sols[node]}")
