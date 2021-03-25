@@ -66,7 +66,7 @@ class BitFlow:
 
         return GeneratedDataset(model, dataset_size, size_p, size_r, size_output, data_range, true_width, dist)
 
-    def update_dag(self, dag, graph_loss=False):
+    def update_dag(self, dag, area_map, graph_loss=False):
         """
         Args:
             dag: Input dag
@@ -77,7 +77,7 @@ class BitFlow:
         R = Input(name="R")
         O = Input(name="O")
 
-        rounder = AddRoundNodes(P, R, O)
+        rounder = AddRoundNodes(P, R, O, area_map)
         roundedDag = rounder.doit(dag)
         self.rounded_dag = roundedDag
 
@@ -440,7 +440,7 @@ class BitFlow:
 
         return loss
 
-    def __init__(self, dag, outputs, data_range, training_size=2000, testing_size=200, batch_size=16, lr=1e-4, error_type=1, test_optimizer=True, test_ufb=True, train_range=False, range_lr=1e-4, distribution=0, graph_loss=False, custom_data=None, incorporate_ulp_loss=False):
+    def __init__(self, dag, outputs, data_range, training_size=2000, testing_size=200, batch_size=16, lr=1e-4, error_type=1, test_optimizer=True, test_ufb=True, train_range=False, range_lr=1e-4, distribution=0, graph_loss=False, custom_data=None, incorporate_ulp_loss=False, area_map={"LookupTable": 10}):
         self.train_MNIST = False
         torch.manual_seed(42)
 
@@ -456,7 +456,7 @@ class BitFlow:
 
         # Update the dag with round nodes and set up the model for torch training
         dag, num_precision, num_inputs, num_outputs, num_range, ordered_list, area_weight = self.update_dag(
-            dag, graph_loss=graph_loss)
+            dag, area_map, graph_loss=graph_loss)
 
         self.area_weight = area_weight
 
