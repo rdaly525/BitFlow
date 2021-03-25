@@ -45,10 +45,11 @@ class LookupTableTransformer(Transformer):
 
 class AddRoundNodes(Transformer):
 
-    def __init__(self, P, R, O):
+    def __init__(self, P, R, O, area_map={}):
         self.P = P
         self.R = R
         self.O = O
+        self.area_map = area_map
         self.area_weight = 0
         self.num_nodes = 0
         self.round_count = 0
@@ -79,10 +80,11 @@ class AddRoundNodes(Transformer):
         Transformer.generic_visit(self, node)
         self.num_nodes += 1
 
-        self.area_weight += 1
-
-        if isinstance(node, LookupTable):
-            self.area_weight += 9
+        nodetype = type(node).__name__
+        if nodetype in self.area_map:
+            self.area_weight += self.area_map[nodetype]
+        else:
+            self.area_weight += 1
 
         # if isinstance(node, LookupTable):
         #     return None

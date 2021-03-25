@@ -82,28 +82,28 @@ def gen_ex3():
     return dag
 
 
-# def test_fig3():
+def test_fig3():
 
-#     dag = gen_fig3()
+    dag = gen_fig3()
 
-#     bf = BitFlow(dag, {"z": 8.}, {'a': (-3., 2.),
-#                                   'b': (4., 8.)}, lr=1e-2, range_lr=1e-2, train_range=True, training_size=50000, testing_size=10000, distribution=2, incorporate_ulp_loss=False, batch_size=16, test_optimizer=True)
-#     bf.train(epochs=10, decay=0.8)
+    bf = BitFlow(dag, {"z": 8.}, {'a': (-3., 2.),
+                                  'b': (4., 8.)}, lr=1e-2, range_lr=1e-2, train_range=True, training_size=5000, testing_size=1000, distribution=2, incorporate_ulp_loss=False, batch_size=16, test_optimizer=True, area_map={"Add": 4, "Mul": 2})
+    bf.train(epochs=10, decay=0.8)
 
-#     rounded_dag = bf.rounded_dag
-#     original_dag = bf.original_dag
+    rounded_dag = bf.rounded_dag
+    original_dag = bf.original_dag
 
-#     verilog_gen = BitFlow2Verilog(
-#         "fig3", bf.P, bf.R, bf.filtered_vars, original_dag, {"z": 8.})
-#     verilog_gen.evaluate()
+    verilog_gen = BitFlow2Verilog(
+        "fig3", bf.P, bf.R, bf.filtered_vars, original_dag, {"z": 8.})
+    verilog_gen.evaluate()
 
-    # # check saving object works
-    # BitFlow.save("./models/fig3", bf)
-    # new_bf = BitFlow.load("./models/fig3")
+    # check saving object works
+    BitFlow.save("./models/fig3", bf)
+    new_bf = BitFlow.load("./models/fig3")
 
-    # new_bf.train(epochs=5)
+    new_bf.train(epochs=5)
 
-    # assert new_bf.range_lr == bf.range_lr
+    assert new_bf.range_lr == bf.range_lr
 
     return
 
